@@ -81,6 +81,11 @@
   .win .day { width: 64px; font-weight: 600; font-size: 14px; }
   .win .time { font-variant-numeric: tabular-nums; font-weight: 600; }
   .win .meta { margin-left: auto; font-size: 12.5px; color: var(--ink-2); text-align: right; }
+  .strip { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 0; }
+  .chip { display: flex; align-items: center; gap: 7px; background: rgba(127,150,165,0.12);
+    border-radius: 11px; padding: 8px 13px; font-size: 13.5px; }
+  .chip b { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .chip .k { color: var(--ink-2); }
   .foot { margin-top: 16px; color: var(--ink-2); font-size: 12px; }
   .foot a { color: inherit; }
   .err { background: #fff; color: #7c2d22; border-radius: 12px; padding: 16px; }
@@ -137,8 +142,11 @@ async function load() {
 
 function render(weather, marine) {
   const now = dublinNow();
-  const { slots, tides } = buildForecast(weather, marine);
+  const { slots, tides, daylight } = buildForecast(weather, marine);
   const nowSlot = slots.find((s) => now >= s.t && now < s.t + HOUR) || slots[0];
+  const today = new Date(now).toISOString().slice(0, 10);
+  const dl = daylight[today];
+  const isDay = dl ? now >= dl.sunrise && now <= dl.sunset : true;
 
   // ---- Tide: last & next relative to now ----
   const past = tides.filter((e) => e.time <= now);
@@ -170,6 +178,14 @@ function render(weather, marine) {
       <span class="big">${go ? "🟢" : "🔴"} ${VL[nowSlot.verdict]}</span>
       <span class="why">${whyNow}</span>
       ${next ? `<span class="next">Next window<b>${fmtDay(next.start) === fmtDay(now) ? "Today" : fmtDay(next.start)} ${fmtTime(next.start)}–${fmtTime(next.end)}</b>${next.tide ? `${next.tide.type === "high" ? "HW" : "LW"} ${fmtTime(next.tide.time)} · from ${Math.round(next.minWind)}kn` : ""}</span>` : `<span class="next">No window in 7 days</span>`}
+    </div>
+
+    <div class="strip">
+      ${nowSlot.tempC != null ? `<span class="chip">🌡️ <b>${Math.round(nowSlot.tempC)}°C</b> <span class="k">air</span></span>` : ""}
+      ${dl ? `<span class="chip">🌅 <span class="k">Sunrise</span> <b>${fmtTime(dl.sunrise)}</b></span>
+             <span class="chip">🌇 <span class="k">Sunset</span> <b>${fmtTime(dl.sunset)}</b></span>` : ""}
+      ${nowSlot.rainPct != null ? `<span class="chip">🌧️ <b>${nowSlot.rainPct}%</b> <span class="k">rain</span></span>` : ""}
+      ${dl && !isDay ? `<span class="chip">🌙 <span class="k">before sunrise / after sunset</span></span>` : ""}
     </div>
 
     <div class="grid">

@@ -26,8 +26,8 @@ export const DEFAULT_RULES = {
 export const API = {
   weather: (lat, lon, days = 7) =>
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-    `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation_probability` +
-    `&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=${days}`,
+    `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation_probability,temperature_2m` +
+    `&daily=sunrise,sunset&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=${days}`,
   marine: (lat, lon, days = 7) =>
     `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}` +
     `&hourly=sea_level_height_msl&timezone=Europe%2FDublin&forecast_days=${days}`,
@@ -134,10 +134,21 @@ export function buildForecast(weather, marine, rules = DEFAULT_RULES) {
       gustKn,
       windDir: w.wind_direction_10m[i],
       rainPct: w.precipitation_probability ? w.precipitation_probability[i] : null,
+      tempC: w.temperature_2m ? w.temperature_2m[i] : null,
       ...scored,
     };
   });
-  return { slots, tides };
+  // Daily sunrise/sunset (naive Dublin strings) keyed by date, when present.
+  const daylight = {};
+  if (weather.daily && weather.daily.sunrise) {
+    weather.daily.time.forEach((d, i) => {
+      daylight[d] = {
+        sunrise: parseNaive(weather.daily.sunrise[i]),
+        sunset: parseNaive(weather.daily.sunset[i]),
+      };
+    });
+  }
+  return { slots, tides, daylight };
 }
 
 const PADDLEABLE = new Set(["great", "good", "ok"]);
