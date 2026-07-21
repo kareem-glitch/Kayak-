@@ -77,7 +77,7 @@
   <h1>Wexford Kayak Clock 🛶</h1>
   <p class="sub">Wexford Harbour · wind &lt;10kn for ≥1h · ±1h of high water (low water = fallback) · 08:00–19:00</p>
   <div id="app">Loading forecast…</div>
-  <p class="rules">Wind: Open-Meteo · Tide: Open-Meteo Marine (sea level vs MSL, timings interpolated).
+  <p class="rules">Wind: Open-Meteo · Tide: harmonic model fitted to the official Wexford Harbour station (~10 min accuracy).
   Refreshes hourly. Always eyeball the water before launching — this is a forecast, not a lifeguard.</p>
 </main>
 <div id="tip"></div>
@@ -105,14 +105,9 @@ function dublinNow() {
 
 async function load() {
   try {
-    const [weather, marine] = await Promise.all(
-      [API.weather(SPOT.lat, SPOT.lon), API.marine(SPOT.lat, SPOT.lon)].map(async (u) => {
-        const r = await fetch(u);
-        if (!r.ok) throw new Error(`API error ${r.status}`);
-        return r.json();
-      })
-    );
-    render(buildForecast(weather, marine));
+    const r = await fetch(API.weather(SPOT.lat, SPOT.lon));
+    if (!r.ok) throw new Error(`API error ${r.status}`);
+    render(buildForecast(await r.json()));
   } catch (e) {
     app.innerHTML = `<div class="err">Couldn't load the forecast: ${e.message}. Retrying in a minute.</div>`;
     setTimeout(load, 60_000);

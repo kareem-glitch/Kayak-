@@ -88,8 +88,12 @@ test("paddleWindows merges consecutive slots", () => {
   assert.equal(windows[0].end - windows[0].start, 2 * 3600 * 1000);
 });
 
-test("buildForecast wires the payloads together", () => {
-  const { times, heights } = syntheticTide(24);
+test("buildForecast scores wind against the harmonic tide", () => {
+  // A calm day (5kn) on 2026-07-21; official Wexford HW is 12:34.
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    times.push(`2026-07-21T${String(h).padStart(2, "0")}:00`);
+  }
   const weather = {
     hourly: {
       time: times,
@@ -97,12 +101,16 @@ test("buildForecast wires the payloads together", () => {
       wind_gusts_10m: times.map(() => 8),
       wind_direction_10m: times.map(() => 180),
       precipitation_probability: times.map(() => 10),
+      temperature_2m: times.map(() => 17),
     },
   };
-  const marine = { hourly: { time: times, sea_level_height_msl: heights } };
-  const { slots } = buildForecast(weather, marine);
+  const { slots, tides } = buildForecast(weather);
   assert.equal(slots.length, 24);
-  // HW ~16:24: the 16:00 slot (mid 16:30) must be paddleable in 5kn wind.
-  const four = slots.find((s) => s.iso.endsWith("16:00"));
-  assert.equal(four.verdict, "great");
+  assert.ok(tides.some((e) => e.type === "high"));
+  // The 12:00 slot (midpoint 12:30) is within ±1h of HW 12:34 → great in 5kn.
+  const noon = slots.find((s) => s.iso.endsWith("12:00"));
+  assert.equal(noon.verdict, "great");
+  // Mid-tide morning slot is a no-go even though it's calm.
+  const nine = slots.find((s) => s.iso.endsWith("09:00"));
+  assert.equal(nine.verdict, "no");
 });

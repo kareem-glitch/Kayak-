@@ -11,17 +11,11 @@ import {
   fmtTime,
 } from "./kayak-logic.js";
 
-const [weather, marine] = await Promise.all(
-  [API.weather(SPOT.lat, SPOT.lon), API.marine(SPOT.lat, SPOT.lon)].map(
-    async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${res.status} from ${url}`);
-      return res.json();
-    }
-  )
-);
+const res = await fetch(API.weather(SPOT.lat, SPOT.lon));
+if (!res.ok) throw new Error(`${res.status} from weather API`);
+const weather = await res.json();
 
-const { slots, tides } = buildForecast(weather, marine);
+const { slots, tides } = buildForecast(weather);
 const windows = paddleWindows(slots);
 
 console.log(`Wexford Kayak Clock — ${SPOT.name}\n`);

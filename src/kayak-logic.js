@@ -1,10 +1,16 @@
 // Core scoring logic for the Wexford kayak clock.
 //
-// All times are handled as "Dublin wall-clock" values: the Open-Meteo APIs are
-// asked for timezone=Europe/Dublin and return naive ISO strings, which we parse
-// as if they were UTC. That keeps every comparison timezone-free and gives the
-// same result in Node and in any viewer's browser. Use the fmt* helpers to
+// All times are handled as "Dublin wall-clock" values: the Open-Meteo wind API
+// is asked for timezone=Europe/Dublin and returns naive ISO strings, which we
+// parse as if they were UTC. That keeps every comparison timezone-free and gives
+// the same result in Node and in any viewer's browser. Use the fmt* helpers to
 // display these values — never local Date getters.
+//
+// Wind comes from Open-Meteo. Tide is NOT from Open-Meteo's marine model (it's
+// 1–3 h out for Wexford Harbour) — it's predicted from a fitted harmonic model
+// of the official station, see src/wexford-tide.js.
+
+import { tideEvents } from "./wexford-tide.js";
 
 export const SPOT = {
   name: "Wexford Harbour",
@@ -28,9 +34,6 @@ export const API = {
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     `&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation_probability,temperature_2m` +
     `&daily=sunrise,sunset&wind_speed_unit=kn&timezone=Europe%2FDublin&forecast_days=${days}`,
-  marine: (lat, lon, days = 7) =>
-    `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}` +
-    `&hourly=sea_level_height_msl&timezone=Europe%2FDublin&forecast_days=${days}`,
 };
 
 // "2026-07-20T14:00" -> ms, treating the naive Dublin timestamp as UTC.
@@ -115,13 +118,14 @@ export function scoreSlot({ t, windKn, gustKn, tides, rules = DEFAULT_RULES }) {
   return { verdict, tide, reasons };
 }
 
-// Combine the two API payloads into scored hourly slots.
-export function buildForecast(weather, marine, rules = DEFAULT_RULES) {
-  const tides = findTideEvents(
-    marine.hourly.time,
-    marine.hourly.sea_level_height_msl
-  );
+// Score the wind forecast against the predicted tide. Tides come from the
+// harmonic model (src/wexford-tide.js), spanning the wind window plus a 6h
+// margin each side so the nearest high/low is always available.
+export function buildForecast(weather, rules = DEFAULT_RULES) {
   const w = weather.hourly;
+  const t0 = parseNaive(w.time[0]);
+  const t1 = parseNaive(w.time[w.time.length - 1]);
+  const tides = tideEvents(t0 - 6 * HOUR, t1 + 6 * HOUR);
   const slots = w.time.map((iso, i) => {
     const t = parseNaive(iso);
     const windKn = w.wind_speed_10m[i];

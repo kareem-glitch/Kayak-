@@ -103,8 +103,9 @@
 <script type="module">
 import {
   API, SPOT, DEFAULT_RULES, buildForecast, paddleWindows,
-  findTideEvents, fmtTime, fmtDay, hourOf, parseNaive,
+  fmtTime, fmtDay, hourOf, parseNaive,
 } from "./src/kayak-logic.js";
+import { tideSeries } from "./src/wexford-tide.js";
 
 const app = document.getElementById("app");
 const HOUR = 3_600_000;
@@ -126,23 +127,18 @@ function human(ms) {
 
 async function load() {
   try {
-    const [weather, marine] = await Promise.all(
-      [API.weather(SPOT.lat, SPOT.lon), API.marine(SPOT.lat, SPOT.lon)].map(async (u) => {
-        const r = await fetch(u);
-        if (!r.ok) throw new Error(`API ${r.status}`);
-        return r.json();
-      })
-    );
-    render(weather, marine);
+    const r = await fetch(API.weather(SPOT.lat, SPOT.lon));
+    if (!r.ok) throw new Error(`API ${r.status}`);
+    render(await r.json());
   } catch (e) {
-    app.innerHTML = `<div class="err">Couldn't load live data (${e.message}). Retrying in a minute.</div>`;
+    app.innerHTML = `<div class="err">Couldn't load live wind data (${e.message}). Retrying in a minute.</div>`;
     setTimeout(load, 60_000);
   }
 }
 
-function render(weather, marine) {
+function render(weather) {
   const now = dublinNow();
-  const { slots, tides, daylight } = buildForecast(weather, marine);
+  const { slots, tides, daylight } = buildForecast(weather);
   const nowSlot = slots.find((s) => now >= s.t && now < s.t + HOUR) || slots[0];
   const today = new Date(now).toISOString().slice(0, 10);
   const dl = daylight[today];
@@ -207,7 +203,7 @@ function render(weather, marine) {
         </div>
         <div class="block">
           <div class="k">Next 24 h</div>
-          ${tideCurve(marine, now)}
+          ${tideCurve(now)}
         </div>
       </section>
 
@@ -237,7 +233,7 @@ function render(weather, marine) {
 
     ${windowsList(windows, now)}
 
-    <p class="foot">Live: wind from Open-Meteo, tide from Open-Meteo Marine (height vs mean sea level — trust the timing, not absolute depth). Rules: wind &lt;${DEFAULT_RULES.maxWindKn}kn, ±1h of high water (low water OK), 8am–7pm. Auto-refreshes every 10 min. Always eyeball the water first.</p>
+    <p class="foot">Live wind from Open-Meteo. Tide from a harmonic model fitted to the official Wexford Harbour station (heights in m above chart datum), accurate to ~10 min. Rules: wind &lt;${DEFAULT_RULES.maxWindKn}kn, ±1h of high water (low water OK), 8am–7pm. Auto-refreshes every 10 min. Always eyeball the water first.</p>
   `;
 
   // spin the wind arrow to point the way the wind blows TO
@@ -245,13 +241,12 @@ function render(weather, marine) {
   if (a) a.style.transform = `rotate(${(nowSlot.windDir + 180) % 360}deg)`;
 }
 
-// 24h tide curve as an SVG area + "now" marker
-function tideCurve(marine, now) {
-  const t = marine.hourly.time.map(parseNaive);
-  const h = marine.hourly.sea_level_height_msl;
-  const i0 = t.findIndex((x) => x >= now - HOUR);
-  const s = Math.max(0, i0), e = Math.min(t.length, s + 25);
-  const xs = t.slice(s, e), ys = h.slice(s, e);
+// 24h tide curve as an SVG area + "now" marker, from the harmonic model.
+// Start on a whole hour so the 6-hourly axis labels land cleanly.
+function tideCurve(now) {
+  const start = Math.floor((now - HOUR) / HOUR) * HOUR;
+  const series = tideSeries(start, start + 24 * HOUR, HOUR / 2);
+  const xs = series.map((p) => p.t), ys = series.map((p) => p.h);
   if (xs.length < 3) return "";
   const W = 460, H = 90, pad = 6;
   const minY = Math.min(...ys), maxY = Math.max(...ys), span = maxY - minY || 1;
@@ -260,7 +255,10 @@ function tideCurve(marine, now) {
   const pts = ys.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`);
   const area = `M${px(0)},${H - pad} L${pts.join(" L")} L${px(xs.length - 1)},${H - pad} Z`;
   const nx = px((now - xs[0]) / (xs[xs.length - 1] - xs[0]) * (xs.length - 1));
-  const ticks = xs.map((x, i) => (hourOf(x) % 6 === 0 ? `<text x="${px(i)}" y="${H - 1}" text-anchor="middle">${fmtTime(x)}</text>` : "")).join("");
+  const ticks = xs.map((x, i) =>
+    (x % HOUR === 0 && hourOf(x) % 6 === 0)
+      ? `<text x="${px(i)}" y="${H - 1}" text-anchor="middle">${fmtTime(x)}</text>` : ""
+  ).join("");
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block;height:96px">
     <path class="fill" d="${area}"/><polyline class="curve" points="${pts.join(" ")}"/>
     <line class="now" x1="${nx}" y1="${pad}" x2="${nx}" y2="${H - pad}"/>${ticks}</svg>`;
