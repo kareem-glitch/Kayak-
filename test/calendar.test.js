@@ -15,12 +15,16 @@ test("only great/good windows become calendar events", () => {
   const slots = [
     mk("2026-07-20T09:00", "great"),
     mk("2026-07-20T10:00", "great"),
-    mk("2026-07-20T15:00", "ok"), // low-water fallback — excluded
     mk("2026-07-20T11:00", "no"),
+    mk("2026-07-20T15:00", "ok"), // low-water fallback — excluded
   ];
   const events = windowsToEvents(slots);
   assert.equal(events.length, 1);
   assert.match(events[0].summary, /Great/);
+  // Event starts 15 min before the 09:00 on-water window for prep.
+  assert.equal(events[0].startTime, "2026-07-20T08:45");
+  assert.equal(events[0].endTime, "2026-07-20T11:00");
+  assert.match(events[0].description, /on-water window is 09:00–11:00/);
   assert.equal(events[0].availability, "AVAILABILITY_FREE");
   assert.equal(events[0].timeZone, "Europe/Dublin");
   assert.match(events[0].description, new RegExp(SYNC_TAG));
