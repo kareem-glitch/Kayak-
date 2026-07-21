@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#0b3d5c" />
+<title>Wexford Paddle — Tide & Wind</title>
+<style>
+  :root {
+    --bg: #eef2f5; --ink: #10202b; --ink-2: #5a6b78; --card-line: rgba(255,255,255,0.14);
+    --tide-1: #1f7fb8; --tide-2: #0b3d5c;      /* tide panel gradient (blue) */
+    --wind-1: #17998a; --wind-2: #0c5148;      /* wind panel gradient (teal) */
+    --amber: #b8860b; --amber-2: #6b4e00;
+    --go: #0b8f7d; --nogo: #c24a3a;
+    --panel-ink: #ffffff; --panel-sub: rgba(255,255,255,0.72);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0c1116; --ink: #e6edf2; --ink-2: #93a2ad; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: linear-gradient(100deg, #0b3d5c, #0c5148);
+    color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 10px;
+  }
+  header .logo { font-size: 22px; }
+  header h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  header .loc { margin-left: auto; font-size: 12.5px; color: rgba(255,255,255,0.7); }
+  main { max-width: 1040px; margin: 0 auto; padding: 18px 16px 44px; }
+
+  /* Verdict banner */
+  .verdict {
+    border-radius: 16px; padding: 18px 22px; margin-bottom: 18px; color: #fff;
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    background: linear-gradient(120deg, #0b8f7d, #0c5148);
+  }
+  .verdict.no { background: linear-gradient(120deg, #7c8791, #4a545c); }
+  .verdict .big { font-size: 27px; font-weight: 680; letter-spacing: -0.02em; }
+  .verdict .why { font-size: 14px; color: rgba(255,255,255,0.85); }
+  .verdict .next { margin-left: auto; text-align: right; font-size: 13.5px; color: rgba(255,255,255,0.9); }
+  .verdict .next b { display: block; font-size: 16px; font-weight: 640; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { border-radius: 16px; overflow: hidden; color: var(--panel-ink); box-shadow: 0 6px 22px rgba(10,40,60,0.12); }
+  .panel.tide { background: linear-gradient(160deg, var(--tide-1), var(--tide-2)); }
+  .panel.wind { background: linear-gradient(160deg, var(--wind-1), var(--wind-2)); }
+  .panel h2 { margin: 0; padding: 13px 18px; font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.07em; background: rgba(0,0,0,0.13); }
+  .block { padding: 15px 18px; border-top: 1px solid var(--card-line); }
+  .block:first-of-type { border-top: none; }
+  .block .k { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--panel-sub); }
+  .block .v { font-size: 34px; font-weight: 680; letter-spacing: -0.02em; line-height: 1.15; }
+  .block .v small { font-size: 15px; font-weight: 500; color: var(--panel-sub); letter-spacing: 0; }
+  .block .sub { font-size: 13px; color: var(--panel-sub); }
+  .row { display: flex; gap: 16px; }
+  .row > div { flex: 1; }
+  .arrow { display: inline-block; transition: transform .2s; }
+
+  svg .axis { stroke: var(--panel-sub); stroke-width: 1; opacity: 0.35; }
+  svg .now { stroke: #ffd75e; stroke-width: 2; }
+  svg .curve { fill: none; stroke: #fff; stroke-width: 2; opacity: 0.9; }
+  svg .fill { fill: rgba(255,255,255,0.14); }
+  svg .bar { fill: rgba(255,255,255,0.7); }
+  svg .bar.over { fill: #ffd75e; }
+  svg text { fill: var(--panel-sub); font-size: 10px; }
+
+  .windows { margin-top: 18px; background: rgba(127,150,165,0.10); border-radius: 16px; padding: 6px 4px; }
+  .windows h3 { margin: 10px 14px 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); }
+  .win { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-top: 1px solid rgba(127,150,165,0.16); }
+  .win:first-of-type { border-top: none; }
+  .win .dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .win .dot.great, .win .dot.good { background: var(--go); }
+  .win .dot.ok { background: var(--amber); }
+  .win .day { width: 64px; font-weight: 600; font-size: 14px; }
+  .win .time { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .win .meta { margin-left: auto; font-size: 12.5px; color: var(--ink-2); text-align: right; }
+  .foot { margin-top: 16px; color: var(--ink-2); font-size: 12px; }
+  .foot a { color: inherit; }
+  .err { background: #fff; color: #7c2d22; border-radius: 12px; padding: 16px; }
+  @media (prefers-color-scheme: dark) { .err { background: #1b1f24; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🛶</span>
+  <h1>Wexford Paddle</h1>
+  <span class="loc">Wexford Harbour · 52.34°N, 6.46°W</span>
+</header>
+<main id="app"><p style="color:var(--ink-2)">Loading live tide &amp; wind…</p></main>
+
+<script type="module">
+import {
+  API, SPOT, DEFAULT_RULES, buildForecast, paddleWindows,
+  findTideEvents, fmtTime, fmtDay, hourOf, parseNaive,
+} from "./src/kayak-logic.js";
+
+const app = document.getElementById("app");
+const HOUR = 3_600_000;
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const dirName = (d) => COMPASS[Math.round(d / 22.5) % 16];
+
+function dublinNow() {
+  const s = new Date().toLocaleString("sv-SE", { timeZone: "Europe/Dublin" });
+  return parseNaive(s.replace(" ", "T").slice(0, 16));
+}
+
+// "3h 12m", "23m", "just now"
+function human(ms) {
+  const m = Math.round(Math.abs(ms) / 60000);
+  if (m < 1) return "just now";
+  const h = Math.floor(m / 60), mm = m % 60;
+  return (h ? `${h}h ` : "") + `${mm}m`;
+}
+
+async function load() {
+  try {
+    const [weather, marine] = await Promise.all(
+      [API.weather(SPOT.lat, SPOT.lon), API.marine(SPOT.lat, SPOT.lon)].map(async (u) => {
+        const r = await fetch(u);
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json();
+      })
+    );
+    render(weather, marine);
+  } catch (e) {
+    app.innerHTML = `<div class="err">Couldn't load live data (${e.message}). Retrying in a minute.</div>`;
+    setTimeout(load, 60_000);
+  }
+}
+
+function render(weather, marine) {
+  const now = dublinNow();
+  const { slots, tides } = buildForecast(weather, marine);
+  const nowSlot = slots.find((s) => now >= s.t && now < s.t + HOUR) || slots[0];
+
+  // ---- Tide: last & next relative to now ----
+  const past = tides.filter((e) => e.time <= now);
+  const future = tides.filter((e) => e.time > now);
+  const lastTide = past[past.length - 1];
+  const nextTide = future[0];
+
+  // ---- Wind: now, and when it next drops under the ceiling for >= 1h ----
+  const futureSlots = slots.filter((s) => s.t + HOUR > now);
+  let calmFrom = null;
+  for (let i = 0; i < futureSlots.length - 1; i++) {
+    const a = futureSlots[i], b = futureSlots[i + 1];
+    if (a.windKn < DEFAULT_RULES.maxWindKn && b.windKn < DEFAULT_RULES.maxWindKn) { calmFrom = a; break; }
+  }
+
+  // ---- Verdict ----
+  const VL = { great: "Great to paddle", good: "Good to paddle", ok: "OK to paddle", no: "Not right now", off: "Outside hours" };
+  const go = ["great", "good", "ok"].includes(nowSlot.verdict);
+  const windows = paddleWindows(slots).filter((w) => w.end > now);
+  const next = windows.find((w) => ["great", "good"].includes(w.verdict)) || windows[0];
+
+  const whyNow = nowSlot.verdict === "no"
+    ? (nowSlot.windKn >= DEFAULT_RULES.maxWindKn ? `Wind ${Math.round(nowSlot.windKn)}kn — over ${DEFAULT_RULES.maxWindKn}kn` : "Between tides")
+    : nowSlot.verdict === "off" ? "Before 8am / after 7pm"
+    : `Wind ${Math.round(nowSlot.windKn)}kn ${dirName(nowSlot.windDir)}${nowSlot.tide ? `, ${nowSlot.tide.type === "high" ? "high" : "low"} water ${fmtTime(nowSlot.tide.time)}` : ""}`;
+
+  app.innerHTML = `
+    <div class="verdict ${go ? "" : "no"}">
+      <span class="big">${go ? "🟢" : "🔴"} ${VL[nowSlot.verdict]}</span>
+      <span class="why">${whyNow}</span>
+      ${next ? `<span class="next">Next window<b>${fmtDay(next.start) === fmtDay(now) ? "Today" : fmtDay(next.start)} ${fmtTime(next.start)}–${fmtTime(next.end)}</b>${next.tide ? `${next.tide.type === "high" ? "HW" : "LW"} ${fmtTime(next.tide.time)} · from ${Math.round(next.minWind)}kn` : ""}</span>` : `<span class="next">No window in 7 days</span>`}
+    </div>
+
+    <div class="grid">
+      <section class="panel tide">
+        <h2>🌊 Tide</h2>
+        <div class="block">
+          <div class="row">
+            <div>
+              <div class="k">${lastTide ? (lastTide.type === "high" ? "Last — High ↑" : "Last — Low ↓") : "Last tide"}</div>
+              <div class="v">${lastTide ? fmtTime(lastTide.time) : "—"}</div>
+              <div class="sub">${lastTide ? `${lastTide.height.toFixed(1)} m · ${human(now - lastTide.time)} ago` : ""}</div>
+            </div>
+            <div>
+              <div class="k">${nextTide ? (nextTide.type === "high" ? "Next — High ↑" : "Next — Low ↓") : "Next tide"}</div>
+              <div class="v">${nextTide ? fmtTime(nextTide.time) : "—"}</div>
+              <div class="sub">${nextTide ? `${nextTide.height.toFixed(1)} m · in ${human(nextTide.time - now)}` : ""}</div>
+            </div>
+          </div>
+        </div>
+        <div class="block">
+          <div class="k">Next 24 h</div>
+          ${tideCurve(marine, now)}
+        </div>
+      </section>
+
+      <section class="panel wind">
+        <h2>💨 Wind</h2>
+        <div class="block">
+          <div class="row">
+            <div>
+              <div class="k">Now</div>
+              <div class="v">${Math.round(nowSlot.windKn)}<small> kn</small>
+                <span class="arrow" style="transform:rotate(${nowSlot.windDir + 180}deg)">↑</span></div>
+              <div class="sub">${dirName(nowSlot.windDir)} · gusts ${Math.round(nowSlot.gustKn)}kn</div>
+            </div>
+            <div>
+              <div class="k">Under ${DEFAULT_RULES.maxWindKn}kn</div>
+              <div class="v" style="font-size:26px">${nowSlot.windKn < DEFAULT_RULES.maxWindKn ? "Now ✓" : (calmFrom ? (fmtDay(calmFrom.t) === fmtDay(now) ? fmtTime(calmFrom.t) : fmtDay(calmFrom.t)) : "—")}</div>
+              <div class="sub">${nowSlot.windKn < DEFAULT_RULES.maxWindKn ? "good to launch on wind" : (calmFrom ? `first calm hour${fmtDay(calmFrom.t) !== fmtDay(now) ? " " + fmtTime(calmFrom.t) : ""}` : "windy all week")}</div>
+            </div>
+          </div>
+        </div>
+        <div class="block">
+          <div class="k">Next 24 h · dashed = ${DEFAULT_RULES.maxWindKn}kn limit</div>
+          ${windBars(slots, now)}
+        </div>
+      </section>
+    </div>
+
+    ${windowsList(windows, now)}
+
+    <p class="foot">Live: wind from Open-Meteo, tide from Open-Meteo Marine (height vs mean sea level — trust the timing, not absolute depth). Rules: wind &lt;${DEFAULT_RULES.maxWindKn}kn, ±1h of high water (low water OK), 8am–7pm. Auto-refreshes every 10 min. Always eyeball the water first.</p>
+  `;
+
+  // spin the wind arrow to point the way the wind blows TO
+  const a = app.querySelector(".arrow");
+  if (a) a.style.transform = `rotate(${(nowSlot.windDir + 180) % 360}deg)`;
+}
+
+// 24h tide curve as an SVG area + "now" marker
+function tideCurve(marine, now) {
+  const t = marine.hourly.time.map(parseNaive);
+  const h = marine.hourly.sea_level_height_msl;
+  const i0 = t.findIndex((x) => x >= now - HOUR);
+  const s = Math.max(0, i0), e = Math.min(t.length, s + 25);
+  const xs = t.slice(s, e), ys = h.slice(s, e);
+  if (xs.length < 3) return "";
+  const W = 460, H = 90, pad = 6;
+  const minY = Math.min(...ys), maxY = Math.max(...ys), span = maxY - minY || 1;
+  const px = (i) => pad + (i / (xs.length - 1)) * (W - 2 * pad);
+  const py = (v) => pad + (1 - (v - minY) / span) * (H - 2 * pad);
+  const pts = ys.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`);
+  const area = `M${px(0)},${H - pad} L${pts.join(" L")} L${px(xs.length - 1)},${H - pad} Z`;
+  const nx = px((now - xs[0]) / (xs[xs.length - 1] - xs[0]) * (xs.length - 1));
+  const ticks = xs.map((x, i) => (hourOf(x) % 6 === 0 ? `<text x="${px(i)}" y="${H - 1}" text-anchor="middle">${fmtTime(x)}</text>` : "")).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block;height:96px">
+    <path class="fill" d="${area}"/><polyline class="curve" points="${pts.join(" ")}"/>
+    <line class="now" x1="${nx}" y1="${pad}" x2="${nx}" y2="${H - pad}"/>${ticks}</svg>`;
+}
+
+// 24h wind bar chart with the 10kn ceiling as a dashed line
+function windBars(slots, now) {
+  const fut = slots.filter((s) => s.t + HOUR > now).slice(0, 24);
+  if (!fut.length) return "";
+  const W = 460, H = 90, pad = 6, n = fut.length;
+  const maxKn = Math.max(DEFAULT_RULES.maxWindKn + 4, ...fut.map((s) => s.gustKn));
+  const bw = (W - 2 * pad) / n;
+  const y = (v) => pad + (1 - v / maxKn) * (H - 2 * pad - 10);
+  const bars = fut.map((s, i) => {
+    const x = pad + i * bw, top = y(s.windKn);
+    const over = s.windKn >= DEFAULT_RULES.maxWindKn;
+    return `<rect class="bar ${over ? "over" : ""}" x="${x + 1}" y="${top}" width="${bw - 2}" height="${H - pad - 10 - top}" rx="1.5"/>`;
+  }).join("");
+  const ceil = y(DEFAULT_RULES.maxWindKn);
+  const ticks = fut.map((s, i) => (hourOf(s.t) % 6 === 0 ? `<text x="${pad + i * bw + bw / 2}" y="${H - 1}" text-anchor="middle">${fmtTime(s.t)}</text>` : "")).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="display:block;height:96px">
+    ${bars}<line class="axis" x1="${pad}" y1="${ceil}" x2="${W - pad}" y2="${ceil}" stroke-dasharray="4 3"/>${ticks}</svg>`;
+}
+
+function windowsList(windows, now) {
+  if (!windows.length) return "";
+  const rows = windows.slice(0, 8).map((w) => {
+    const tide = w.tide ? `${w.tide.type === "high" ? "HW" : "LW"} ${fmtTime(w.tide.time)}` : "";
+    const label = { great: "Great", good: "Good", ok: "OK" }[w.verdict];
+    return `<div class="win"><span class="dot ${w.verdict}"></span>
+      <span class="day">${fmtDay(w.start) === fmtDay(now) ? "Today" : fmtDay(w.start)}</span>
+      <span class="time">${fmtTime(w.start)}–${fmtTime(w.end)}</span>
+      <span class="meta">${label} · ${tide} · from ${Math.round(w.minWind)}kn</span></div>`;
+  }).join("");
+  return `<div class="windows"><h3>Paddle windows · next 7 days</h3>${rows}</div>`;
+}
+
+load();
+setInterval(load, 10 * 60 * 1000);
+</script>
+</body>
+</html>
