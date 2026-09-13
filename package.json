@@ -7,7 +7,8 @@
     "forecast": "node src/forecast.js",
     "test": "node --test test/*.test.js",
     "serve": "python3 -m http.server 8080",
-    "build:diglot": "node src/diglot/build.js"
+    "build:diglot": "node src/diglot/build.js",
+    "deploy:diglot": "node src/diglot/build.js && node src/diglot/deploy.js"
   },
   "engines": {
     "node": ">=18"

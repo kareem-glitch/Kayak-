@@ -10,9 +10,24 @@ things you read never leave your machine.
 
 ## Try it
 
+Live at **https://diglot-sepia.vercel.app**.
+
+Locally:
+
 ```sh
 npm run serve      # then open http://localhost:8080/diglot/
 ```
+
+To put your own copy up (static, no build step, no vercel.json):
+
+```sh
+VERCEL_API_KEY=… npm run deploy:diglot
+```
+
+That rebuilds the bundle and uploads it: the single file answers the bare
+domain, the module version sits at `/diglot/`. If an alias returns a Vercel
+login page it has Deployment Protection switched on — turn it off in the
+project's settings, or use an alias that doesn't.
 
 Or open `diglot/diglot.html` — the same app bundled into one self-contained
 file you can email to yourself or drop on any host. (Downloads are blocked in
