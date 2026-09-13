@@ -243,8 +243,14 @@
     .top-row { flex-wrap: wrap; }
     .doc-title { order: 3; flex-basis: 100%; }
     .reader { font-size: var(--reader-size, 18px); }
-    .dial-inner { gap: 10px; }
     .stage { display: none; }
+    /* The dial row has more in it than a phone is wide: let it wrap, with the
+       slider and its reading on the first line and the buttons under them. */
+    .dial-inner { gap: 8px 10px; flex-wrap: wrap; padding: 8px 16px; }
+    .dial label { display: none; }
+    .dial-inner input[type=range] { flex: 1 1 140px; }
+    .readout { font-size: 12px; }
+    .dial-inner .btn { flex: 0 0 auto; }
   }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>

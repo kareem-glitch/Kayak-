@@ -46,6 +46,15 @@ test('speaker labels are never translated', () => {
   assert.match(woven, /por favor/);              // but the dialogue itself is woven
 });
 
+test('the first word of a turn is woven, not mistaken for a name', () => {
+  // After "Stallholder:" the next capital starts the sentence. Treating it as a
+  // proper noun left the first word of every line of dialogue in English.
+  const woven = toText(weave(sceneToText(SCENES.find((s) => s.id === 'market')), { level: 100 }).nodes);
+  assert.match(woven, /^Stallholder: Que /m);
+  assert.match(woven, /^You: Para hoy\./m);
+  assert.match(woven, /Muy ripe/);
+});
+
 test('the narration knows who is speaking, and does not read the label out', () => {
   const scene = SCENES.find((s) => s.id === 'bakery');
   const narration = buildNarration(weave(sceneToText(scene), { level: 40 }).nodes, { echo: 'none' });

@@ -27,6 +27,43 @@ test('the single-file bundle contains every module and resolves cleanly', () => 
   assert.equal(bundle.match(/^\s*export\s/gm), null, 'unresolved export in the bundle');
 });
 
+// iOS Safari withholds the Web Speech API inside a sandboxed iframe. Touching
+// it unguarded once blanked the whole app: the first call sits in loadDoc, so
+// nothing rendered at all.
+test('browser APIs that may be missing are never touched directly', () => {
+  const app = readFileSync(join(root, 'diglot/app.js'), 'utf8');
+  const direct = app.match(/(?<!\/\/[^\n]*)\bspeechSynthesis\s*\./g) || [];
+  assert.deepEqual(direct, [], 'use the guarded synth/voiceList/shush helpers instead');
+  assert.match(app, /typeof speechSynthesis !== 'undefined'/, 'the guard itself should exist');
+  assert.match(app, /catch \(err\)/, 'boot should report a failure rather than render nothing');
+});
+
+// "import { article as esArticle }" leaves code calling a name that nothing
+// declares once the modules are flattened — and it only throws on the code
+// path that uses it, which was above 35% on the dial.
+test('renamed imports survive bundling', () => {
+  const bundle = readFileSync(join(root, 'diglot/diglot.html'), 'utf8');
+  const renames = [];
+  for (const name of readdirSync(join(root, 'src/diglot')).concat(['app.js'])) {
+    const path = name === 'app.js' ? join(root, 'diglot/app.js') : join(root, 'src/diglot', name);
+    if (!name.endsWith('.js') || ['build.js', 'deploy.js'].includes(name)) continue;
+    const source = readFileSync(path, 'utf8');
+    const re = /^import\s+\{([\s\S]*?)\}\s+from\s+['"]\.[^'"]*['"];?\s*$/gm;
+    let match;
+    while ((match = re.exec(source)) !== null) {
+      for (const part of match[1].split(',')) {
+        const [origin, local] = part.trim().split(/\s+as\s+/).map((x) => x.trim());
+        if (local && local !== origin) renames.push(local);
+      }
+    }
+  }
+  assert.ok(renames.length, 'expected the source to use at least one renamed import');
+  for (const local of renames) {
+    assert.match(bundle, new RegExp(`\\b(?:const|let|var|function|class)\\s+${local}\\b`),
+      `"${local}" is imported under a new name but never declared in the bundle`);
+  }
+});
+
 test('no two modules declare the same top-level name', () => {
   // Flattened into one scope, a duplicate declaration kills the whole script.
   const declared = new Map();

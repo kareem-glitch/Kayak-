@@ -215,7 +215,10 @@ export function analyze(text, index = DEFAULT_INDEX) {
       const after = tokens[i + 1];
       if (after && after.kind === 'gap' && /^\s*:/.test(after.raw)) t.speakerLabel = true;
     }
-    atStart = false;
+    // What follows the label starts the turn, so its capital is a sentence
+    // capital, not a name — otherwise the first word of every line of dialogue
+    // is mistaken for a proper noun and left in English.
+    atStart = t.speakerLabel === true;
     atLineStart = false;
   });
 

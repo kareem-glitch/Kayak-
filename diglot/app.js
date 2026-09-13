@@ -1165,7 +1165,7 @@ function panelSettings(message) {
       prefs.autoAdvance = v; savePrefs();
     }, 'A book plays chapter after chapter instead of stopping at each one.'));
 
-    const voices = speechSynthesis.getVoices();
+    const voices = voiceList();
     if (voices.length) {
       const es = el('select');
       const en = el('select');
@@ -1275,8 +1275,22 @@ const posName = (pos) => ({
 
 const player = { active: false, paused: false, sentence: 0, run: 0, timer: null, sleepTimer: null };
 
+// Not every browser hands out the Web Speech API — iOS Safari withholds it
+// inside a sandboxed iframe, for one. Everything below goes through these, so
+// a missing API costs you the Listen button and nothing else.
+const synth = (() => {
+  try { return typeof speechSynthesis !== 'undefined' ? speechSynthesis : null; } catch { return null; }
+})();
+const canSpeak = (() => {
+  try { return !!synth && typeof SpeechSynthesisUtterance === 'function'; } catch { return false; }
+})();
+const voiceList = () => {
+  try { return synth ? synth.getVoices() || [] : []; } catch { return []; }
+};
+const shush = () => { try { synth?.cancel(); } catch { /* nothing to stop */ } };
+
 function pickVoice(lang, slot = 0) {
-  const voices = speechSynthesis.getVoices();
+  const voices = voiceList();
   const second = slot === 1 && lang === 'es' && prefs.voiceEs2;
   const wanted = second || (lang === 'es' ? prefs.voiceEs : prefs.voiceEn);
   const voice = voices.find((v) => v.name === wanted)
@@ -1289,23 +1303,25 @@ function pickVoice(lang, slot = 0) {
 }
 
 function hasSpanishVoice() {  // eslint-disable-line
-  return speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith('es'));
+  return voiceList().some((v) => v.lang.toLowerCase().startsWith('es'));
 }
 
 /** Say a single word — the speaker button in the word popover. */
 function speakOne(text) {
-  speechSynthesis.cancel();
+  if (!canSpeak) return;
+  shush();
   const utterance = new SpeechSynthesisUtterance(text);
   const { voice } = pickVoice('es');
   utterance.voice = voice;
   utterance.lang = voice?.lang || 'es-ES';
   utterance.rate = Number(prefs.rate) || 1;
-  speechSynthesis.speak(utterance);
+  synth.speak(utterance);
 }
 
 function listenFrom(sentenceIndex = 0) {
   if (!state.narration?.sentences.length) return;
-  speechSynthesis.cancel();
+  if (!canSpeak) { noVoices(); return; }
+  shush();
   clearTimeout(player.timer);
   player.active = true;
   player.paused = false;
@@ -1327,6 +1343,14 @@ function listenFrom(sentenceIndex = 0) {
 }
 
 /** Where listening should pick up: where you stopped, if it was this page. */
+function noVoices() {
+  const warn = $('playWarn');
+  $('playbar').classList.add('on');
+  warn.hidden = false;
+  warn.textContent = 'This browser will not let the page speak. Safari blocks it inside an embedded frame — open the page in its own tab, or use the app on your computer.';
+  $('playLabel').textContent = 'No voices';
+}
+
 function resumePoint() {
   const saved = prefs.listen;
   const samePlace = saved && saved.doc === state.doc?.id
@@ -1380,7 +1404,7 @@ function speakStep() {
   // anyway once the run has had more than enough time to be said.
   const seconds = run.text.length / (11 * (Number(prefs.rate) || 1));
   const watchdog = setTimeout(go, Math.max(1200, seconds * 2200));
-  speechSynthesis.speak(utterance);
+  synth.speak(utterance);
 }
 
 function highlightRun(sentence, run) {
@@ -1414,7 +1438,7 @@ function finishSection() {
 function pauseListening() {
   player.paused = true;
   clearTimeout(player.timer);
-  speechSynthesis.cancel();      // pause() is unreliable across browsers; we re-speak instead
+  shush();                       // pause() is unreliable across browsers; we re-speak instead
   $('playPause').textContent = '▶';
   document.querySelectorAll('.saying').forEach((n) => n.classList.remove('saying'));
 }
@@ -1432,7 +1456,7 @@ function stopListening() {
   player.paused = false;
   clearTimeout(player.timer);
   clearTimeout(player.sleepTimer);
-  speechSynthesis.cancel();
+  shush();
   document.querySelectorAll('.speaking, .saying').forEach((n) => n.classList.remove('speaking', 'saying'));
   $('playbar').classList.remove('on');
   $('btnListen').classList.remove('on');
@@ -1445,7 +1469,7 @@ function skipSentence(delta) {
   player.sentence = Math.max(0, Math.min(player.sentence + delta, state.narration.sentences.length - 1));
   player.run = 0;
   clearTimeout(player.timer);
-  speechSynthesis.cancel();
+  shush();
   if (!player.paused) speakStep();
   else highlightRun(state.narration.sentences[player.sentence], { part: null });
 }
@@ -1484,7 +1508,7 @@ function onTextRerendered() {
   player.run = 0;
   if (player.paused) { highlightRun(sentences[player.sentence], { part: null }); return; }
   clearTimeout(player.timer);
-  speechSynthesis.cancel();
+  shush();
   player.timer = setTimeout(speakStep, 60);
 }
 
@@ -1529,7 +1553,7 @@ $('playSeek').oninput = (e) => {
   player.sentence = target;
   player.run = 0;
   clearTimeout(player.timer);
-  speechSynthesis.cancel();
+  shush();
   const sentence = state.narration?.sentences[target];
   if (sentence) highlightRun(sentence, { part: null });
 };
@@ -1559,17 +1583,29 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('keyup', (e) => { if (e.key === 'p') peek(false); });
 window.addEventListener('scroll', () => { if (popTarget) hidePop(); }, { passive: true });
-speechSynthesis.addEventListener?.('voiceschanged', () => {});
+try { synth?.addEventListener?.('voiceschanged', () => {}); } catch { /* not available */ }
 
 // ── boot ────────────────────────────────────────────────────────────────────
 
 (async function boot() {
-  document.documentElement.style.setProperty('--reader-size', prefs.readerSize + 'px');
-  $('rate').value = String(prefs.rate);
-  setLevel(prefs.level, { save: false });
+  try {
+    document.documentElement.style.setProperty('--reader-size', prefs.readerSize + 'px');
+    $('rate').value = String(prefs.rate);
+    setLevel(prefs.level, { save: false });
+    if (!canSpeak) $('btnListen').title = 'This browser will not let the page speak aloud';
 
-  let doc = null;
-  if (prefs.lastDoc) doc = await db.get(prefs.lastDoc).catch(() => null);
-  if (!doc) doc = makeDoc({ title: SAMPLE.title, author: SAMPLE.author, text: SAMPLE.text });
-  await loadDoc(doc);
+    let doc = null;
+    if (prefs.lastDoc) doc = await db.get(prefs.lastDoc).catch(() => null);
+    if (!doc) doc = makeDoc({ title: SAMPLE.title, author: SAMPLE.author, text: SAMPLE.text });
+    await loadDoc(doc);
+  } catch (err) {
+    // Whatever went wrong, say so on the page. A blank reader tells you
+    // nothing, and this is the one place that can produce one.
+    const reader = $('reader');
+    reader.textContent = '';
+    reader.append(el('h1', 'title', 'This did not start'));
+    reader.append(el('p', null, String(err && err.message ? err.message : err)));
+    reader.append(el('p', 'byline', 'Try reloading. If it keeps happening, open the page in its own tab rather than an embedded frame.'));
+    throw err;
+  }
 })();
