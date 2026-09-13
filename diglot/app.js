@@ -5,6 +5,7 @@ import { analyze, applyLevel, buildIndex, DEFAULT_INDEX } from '../src/diglot/we
 import { buildNarration, buildDrill, NARRATION_DEFAULTS } from '../src/diglot/speech.js';
 import { SCENES, sceneToText, sceneGroups, allPhrases } from '../src/diglot/scenes.js';
 import { PROVIDERS, listVoices, renderAudio, estimate as estimateAudio } from '../src/diglot/tts.js';
+import { createVoice, elevenVoices, deviceVoices, speechChunks, ELEVEN_MODELS } from '../src/diglot/voice.js';
 import { BANDS } from '../src/diglot/lexicon.js';
 import { fetchArticle, cleanText, splitIntoSections, wordCount, guessTitle } from '../src/diglot/ingest.js';
 import { readEpub, buildEpub } from '../src/diglot/epub.js';
@@ -23,6 +24,9 @@ const defaultPrefs = {
   // audio export
   ttsProvider: 'google', ttsKeys: {}, ttsVoices: {},
   voiceEs2: '', drillGap: 2600, drillRepeat: false, drillCover: true,
+  // reading aloud
+  voiceSource: 'browser', elevenKey: '', elevenModel: ELEVEN_MODELS[0].id,
+  elevenVoiceEs: '', elevenVoiceEn: '', elevenVoiceEs2: '', elevenEndpoint: null,
 };
 
 const load = (key, fallback) => {
@@ -1145,6 +1149,9 @@ function panelSettings(message) {
     );
 
     body.append(el('hr', 'section-break'));
+    buildVoiceSection(body);
+
+    body.append(el('hr', 'section-break'));
     body.append(el('div', 'note', 'Listening is harder than reading — there is no hovering a word you missed. The spoken gloss covers that: the first time each Spanish word appears, an English voice says what it meant, quietly, and the sentence carries on.'));
 
     const echo = el('select');
@@ -1165,8 +1172,8 @@ function panelSettings(message) {
       prefs.autoAdvance = v; savePrefs();
     }, 'A book plays chapter after chapter instead of stopping at each one.'));
 
-    const voices = voiceList();
-    if (voices.length) {
+    const voices = deviceVoices();
+    if (voices.length && prefs.voiceSource === 'browser') {
       const es = el('select');
       const en = el('select');
       const fill = (select, langPrefix, current) => {
@@ -1208,6 +1215,117 @@ function panelSettings(message) {
     body.append(el('hr', 'section-break'), reset);
   });
 }
+
+// ── which voice reads aloud ─────────────────────────────────────────────────
+
+function buildVoiceSection(body) {
+  const heading = el('div', 'field');
+  heading.append(el('label', null, 'Reading voice'));
+  body.append(heading);
+
+  const source = el('select');
+  [['browser', 'This device\u2019s built-in voices — free'], ['elevenlabs', 'ElevenLabs — your key, far better']]
+    .forEach(([v, label]) => { const o = el('option', null, label); o.value = v; source.append(o); });
+  source.value = prefs.voiceSource;
+
+  const status = el('div', 'status');
+  const panel = el('div');
+
+  const draw = () => {
+    panel.textContent = '';
+    if (source.value !== 'elevenlabs') {
+      panel.append(el('div', 'help', 'Built-in voices are free and work offline, but they read Spanish flatly. ElevenLabs sounds like a person.'));
+      return;
+    }
+
+    const key = el('input');
+    key.type = 'password';
+    key.autocomplete = 'off';
+    key.placeholder = 'sk_…';
+    key.value = prefs.elevenKey;
+    key.oninput = () => { prefs.elevenKey = key.value.trim(); savePrefs(); resetVoice(); };
+
+    const model = el('select');
+    ELEVEN_MODELS.forEach((m) => { const o = el('option', null, m.label); o.value = m.id; model.append(o); });
+    model.value = prefs.elevenModel;
+    model.onchange = () => { prefs.elevenModel = model.value; savePrefs(); resetVoice(); };
+
+    const esVoice = el('select');
+    const enVoice = el('select');
+    const es2Voice = el('select');
+    const fill = (select, chosen, firstLabel) => {
+      select.textContent = '';
+      const blank = el('option', null, firstLabel);
+      blank.value = '';
+      select.append(blank);
+      for (const v of voiceCache) { const o = el('option', null, v.name); o.value = v.id; select.append(o); }
+      select.value = chosen && voiceCache.some((v) => v.id === chosen) ? chosen : '';
+    };
+    const redrawVoices = () => {
+      fill(esVoice, prefs.elevenVoiceEs, voiceCache.length ? 'Choose a voice' : 'Load your voices first');
+      fill(enVoice, prefs.elevenVoiceEn, voiceCache.length ? 'Choose a voice' : 'Load your voices first');
+      fill(es2Voice, prefs.elevenVoiceEs2, 'Same as the Spanish voice');
+    };
+    esVoice.onchange = () => { prefs.elevenVoiceEs = esVoice.value; savePrefs(); resetVoice(); };
+    enVoice.onchange = () => { prefs.elevenVoiceEn = enVoice.value; savePrefs(); resetVoice(); };
+    es2Voice.onchange = () => { prefs.elevenVoiceEs2 = es2Voice.value; savePrefs(); resetVoice(); };
+
+    const load = el('button', 'btn', 'Load my voices');
+    load.onclick = async () => {
+      busy(status, 'Fetching your voices…');
+      try {
+        voiceCache = await elevenVoices({ apiKey: prefs.elevenKey, endpoint: prefs.elevenEndpoint || '' });
+        redrawVoices();
+        done(status, `${voiceCache.length} voices. A multilingual voice handles both languages well.`);
+      } catch (err) { fail(status, err.message); }
+    };
+
+    const tryIt = el('button', 'btn', 'Hear it');
+    tryIt.onclick = () => {
+      resetVoice();
+      const speaker = voice();
+      speaker.unlock();
+      const trouble = speaker.describe();
+      if (trouble) { fail(status, trouble); return; }
+      done(status, 'Playing…');
+      speaker.speak({ lang: 'es', kind: 'word', text: 'Una mesa para dos, por favor.', slot: 0 }, { rate: 1 })
+        .then(() => done(status, 'That is how it will read.'));
+    };
+
+    const forget = el('button', 'btn ghost', 'Clear cached audio');
+    forget.onclick = async () => {
+      await voice().clearCache?.();
+      done(status, 'Cleared. Clips will be fetched again as you listen.');
+    };
+
+    panel.append(
+      el('div', 'note', prefs.elevenEndpoint
+        ? 'This copy is served with a voice key of its own, so nothing needs to go in here — leave the key blank. Clips are cached on this device, so re-reading a page costs nothing.'
+        : 'Your key is kept in this browser and sent only to api.elevenlabs.io. Clips are cached on this device, so re-reading a page costs nothing. Do not paste a key into a copy you have shared with other people — put it on the server instead (see the README).'),
+      field('API key', key, prefs.elevenEndpoint ? 'Not needed here.' : 'From elevenlabs.io → your profile.'),
+      field('Model', model),
+      field('Spanish voice', esVoice),
+      field('Second speaker in a dialogue', es2Voice),
+      field('English voice (the glosses)', enVoice),
+    );
+    const row = el('div', 'row2');
+    row.append(load, tryIt, forget);
+    panel.append(row);
+    redrawVoices();
+  };
+
+  source.onchange = () => {
+    prefs.voiceSource = source.value;
+    savePrefs();
+    resetVoice();
+    draw();
+  };
+
+  body.append(field(null, source), panel, status);
+  draw();
+}
+
+let voiceCache = [];
 
 // ── word popover ────────────────────────────────────────────────────────────
 
@@ -1273,55 +1391,69 @@ const posName = (pos) => ({
 // utterances rather than one long one: long utterances get truncated by some
 // browsers, and short ones let the highlight keep up.
 
-const player = { active: false, paused: false, sentence: 0, run: 0, timer: null, sleepTimer: null };
+const player = { active: false, paused: false, sentence: 0, run: 0, timer: null, sleepTimer: null, token: 0 };
 
 // Not every browser hands out the Web Speech API — iOS Safari withholds it
 // inside a sandboxed iframe, for one. Everything below goes through these, so
 // a missing API costs you the Listen button and nothing else.
-const synth = (() => {
-  try { return typeof speechSynthesis !== 'undefined' ? speechSynthesis : null; } catch { return null; }
-})();
-const canSpeak = (() => {
-  try { return !!synth && typeof SpeechSynthesisUtterance === 'function'; } catch { return false; }
-})();
-const voiceList = () => {
-  try { return synth ? synth.getVoices() || [] : []; } catch { return []; }
-};
-const shush = () => { try { synth?.cancel(); } catch { /* nothing to stop */ } };
-
-function pickVoice(lang, slot = 0) {
-  const voices = voiceList();
-  const second = slot === 1 && lang === 'es' && prefs.voiceEs2;
-  const wanted = second || (lang === 'es' ? prefs.voiceEs : prefs.voiceEn);
-  const voice = voices.find((v) => v.name === wanted)
-    || voices.find((v) => v.lang.toLowerCase().startsWith(lang === 'es' ? 'es' : 'en'))
-    || null;
-  // With only one voice installed, drop the pitch for the second speaker so
-  // the two sides of a dialogue are still tellable apart.
-  const pitch = slot === 1 && !second ? 0.78 : 1;
-  return { voice, pitch };
+// The voice is pluggable: the device's own, or ElevenLabs with your key.
+let engine = null;
+function voice() {
+  if (engine) return engine;
+  engine = createVoice({
+    source: prefs.voiceSource,
+    apiKey: prefs.elevenKey,
+    endpoint: prefs.elevenEndpoint || '',
+    model: prefs.elevenModel,
+    voices: prefs.voiceSource === 'elevenlabs'
+      ? { es: prefs.elevenVoiceEs, en: prefs.elevenVoiceEn, es2: prefs.elevenVoiceEs2 }
+      : { es: prefs.voiceEs, en: prefs.voiceEn, es2: prefs.voiceEs2 },
+    onWarn: (message) => {
+      const warn = $('playWarn');
+      warn.hidden = false;
+      warn.textContent = message;
+    },
+  });
+  return engine;
+}
+function resetVoice() {
+  engine?.stop();
+  engine = null;
 }
 
-function hasSpanishVoice() {  // eslint-disable-line
-  return voiceList().some((v) => v.lang.toLowerCase().startsWith('es'));
+/**
+ * If this copy is served from somewhere that proxies ElevenLabs for us, use
+ * that: the key stays on the server instead of sitting in a public page.
+ */
+async function detectVoiceProxy() {
+  if (!/^https?:$/.test(location.protocol)) return;
+  try {
+    const res = await fetch('/api/tts?ping=1', { method: 'GET' });
+    if (!res.ok) return;
+    const body = await res.json();
+    const endpoint = body?.ok ? '/api/tts' : null;
+    if (endpoint !== prefs.elevenEndpoint) {
+      prefs.elevenEndpoint = endpoint;
+      savePrefs();
+      resetVoice();
+    }
+  } catch { /* no proxy here; the key in Settings is the way */ }
 }
 
 /** Say a single word — the speaker button in the word popover. */
 function speakOne(text) {
-  if (!canSpeak) return;
-  shush();
-  const utterance = new SpeechSynthesisUtterance(text);
-  const { voice } = pickVoice('es');
-  utterance.voice = voice;
-  utterance.lang = voice?.lang || 'es-ES';
-  utterance.rate = Number(prefs.rate) || 1;
-  synth.speak(utterance);
+  const speaker = voice();
+  speaker.stop();
+  speaker.unlock();
+  speaker.speak({ lang: 'es', kind: 'word', text, slot: 0 }, { rate: Number(prefs.rate) || 1 });
 }
 
 function listenFrom(sentenceIndex = 0) {
   if (!state.narration?.sentences.length) return;
-  if (!canSpeak) { noVoices(); return; }
-  shush();
+  const speaker = voice();
+  if (!speaker.available) { noVoices(speaker.describe()); return; }
+  speaker.unlock();            // must happen inside the click, or iOS stays silent
+  speaker.stop();
   clearTimeout(player.timer);
   player.active = true;
   player.paused = false;
@@ -1332,22 +1464,19 @@ function listenFrom(sentenceIndex = 0) {
   $('btnListen').textContent = '■ Stop';
   $('playPause').textContent = '❙❙';
   $('playSeek').max = String(state.narration.sentences.length - 1);
-  const warn = $('playWarn');
-  if (hasSpanishVoice()) warn.hidden = true;
-  else {
-    warn.hidden = false;
-    warn.textContent = 'No Spanish voice installed — the Spanish will be read with an English accent. Add one in your system\u2019s language settings.';
-  }
+  const trouble = voice().describe();
+  $('playWarn').hidden = !trouble;
+  $('playWarn').textContent = trouble;
   startSleepTimer();
   speakStep();
 }
 
 /** Where listening should pick up: where you stopped, if it was this page. */
-function noVoices() {
+function noVoices(reason) {
   const warn = $('playWarn');
   $('playbar').classList.add('on');
   warn.hidden = false;
-  warn.textContent = 'This browser will not let the page speak. Safari blocks it inside an embedded frame — open the page in its own tab, or use the app on your computer.';
+  warn.textContent = reason || 'This browser will not let the page speak.';
   $('playLabel').textContent = 'No voices';
 }
 
@@ -1359,15 +1488,43 @@ function resumePoint() {
   return 0;
 }
 
-function speakStep() {
+/**
+ * What actually gets sent to the voice for a sentence. A remote voice takes
+ * phrases; the device voices take one run at a time. Cached on the sentence,
+ * and thrown away whenever the narration is rebuilt.
+ */
+function chunksFor(sentence) {
+  const merge = !!voice().mergeRuns;
+  if (!sentence.chunks || sentence.chunksMerged !== merge) {
+    sentence.chunks = speechChunks(sentence.runs, { merge })
+      .map((chunk) => ({ ...chunk, slot: speakerSlot(chunk.speaker) }));
+    sentence.chunksMerged = merge;
+  }
+  return sentence.chunks;
+}
+
+/** Clips after the playhead, so they can be fetched before they are due. */
+function upcomingChunks(fromSentence, fromChunk, count) {
+  const sentences = state.narration?.sentences || [];
+  const out = [];
+  for (let s = fromSentence; s < sentences.length && out.length < count; s++) {
+    const chunks = chunksFor(sentences[s]);
+    for (let c = s === fromSentence ? fromChunk : 0; c < chunks.length && out.length < count; c++) {
+      out.push(chunks[c]);
+    }
+  }
+  return out;
+}
+
+async function speakStep() {
   clearTimeout(player.timer);
   if (!player.active || player.paused) return;
   const sentences = state.narration?.sentences || [];
   if (player.sentence >= sentences.length) { finishSection(); return; }
 
   const sentence = sentences[player.sentence];
-  const run = sentence.runs[player.run];
-  if (!run) {
+  const chunk = chunksFor(sentence)[player.run];
+  if (!chunk) {
     player.sentence += 1;
     player.run = 0;
     rememberPosition();
@@ -1375,36 +1532,20 @@ function speakStep() {
     return;
   }
 
-  highlightRun(sentence, run);
-  const utterance = new SpeechSynthesisUtterance(run.text);
-  const { voice, pitch } = pickVoice(run.lang, speakerSlot(run.speaker));
-  utterance.voice = voice;
-  utterance.lang = voice?.lang || (run.lang === 'es' ? 'es-ES' : 'en-GB');
-  utterance.rate = Number(prefs.rate) || 1;
-  utterance.pitch = pitch;
-  if (run.kind === 'prompt') utterance.rate = Math.min(2, utterance.rate * 0.95);
-  if (run.kind === 'gloss') {
-    // the gloss is an aside, not part of the sentence: quieter and quicker
-    utterance.volume = 0.72;
-    utterance.rate = Math.min(2, utterance.rate * 1.12);
-  }
-  let moved = false;
-  const go = () => {
-    if (moved || !player.active) return;
-    moved = true;
-    clearTimeout(watchdog);
-    player.run += 1;
-    const gap = Math.round((run.gapAfter || 0) / (Number(prefs.rate) || 1));
-    player.timer = setTimeout(speakStep, gap);
-  };
-  utterance.onend = go;
-  utterance.onerror = go;
-  // Browsers drop onend more often than you would like — a phone locking, a
-  // voice that isn't installed, Chrome's own long-utterance bug. Move on
-  // anyway once the run has had more than enough time to be said.
-  const seconds = run.text.length / (11 * (Number(prefs.rate) || 1));
-  const watchdog = setTimeout(go, Math.max(1200, seconds * 2200));
-  synth.speak(utterance);
+  highlightRun(sentence, chunk);
+  const speaker = voice();
+  // Fetch what comes next while this one is playing, or a remote voice stutters.
+  speaker.prefetch(upcomingChunks(player.sentence, player.run + 1, 4));
+
+  // Anything the user does mid-clip (stop, seek, change the dial) bumps the
+  // token, so a clip that finishes afterwards cannot advance the playhead.
+  const token = ++player.token;
+  await speaker.speak(chunk, { rate: Number(prefs.rate) || 1 });
+  if (token !== player.token || !player.active || player.paused) return;
+
+  player.run += 1;
+  const gap = Math.round((chunk.gapAfter || 0) / (Number(prefs.rate) || 1));
+  player.timer = setTimeout(speakStep, gap);
 }
 
 function highlightRun(sentence, run) {
@@ -1418,8 +1559,9 @@ function highlightRun(sentence, run) {
       sentenceEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   }
-  if (run.part != null) {
-    state.partEls.get(`${sentence.index}:${run.part}`)?.classList.add('saying');
+  // A merged clip covers several words: light all of them.
+  for (const part of run.runs || [run]) {
+    if (part.part != null) state.partEls.get(`${sentence.index}:${part.part}`)?.classList.add('saying');
   }
   $('playLabel').textContent = `${sentence.index + 1} / ${state.narration.sentences.length}`;
   $('playSeek').value = String(sentence.index);
@@ -1438,7 +1580,8 @@ function finishSection() {
 function pauseListening() {
   player.paused = true;
   clearTimeout(player.timer);
-  shush();                       // pause() is unreliable across browsers; we re-speak instead
+  player.token += 1;
+  voice().stop();                // pause() is unreliable across engines; we re-speak instead
   $('playPause').textContent = '▶';
   document.querySelectorAll('.saying').forEach((n) => n.classList.remove('saying'));
 }
@@ -1456,7 +1599,8 @@ function stopListening() {
   player.paused = false;
   clearTimeout(player.timer);
   clearTimeout(player.sleepTimer);
-  shush();
+  player.token += 1;
+  voice().stop();
   document.querySelectorAll('.speaking, .saying').forEach((n) => n.classList.remove('speaking', 'saying'));
   $('playbar').classList.remove('on');
   $('btnListen').classList.remove('on');
@@ -1469,7 +1613,8 @@ function skipSentence(delta) {
   player.sentence = Math.max(0, Math.min(player.sentence + delta, state.narration.sentences.length - 1));
   player.run = 0;
   clearTimeout(player.timer);
-  shush();
+  player.token += 1;
+  voice().stop();
   if (!player.paused) speakStep();
   else highlightRun(state.narration.sentences[player.sentence], { part: null });
 }
@@ -1508,7 +1653,8 @@ function onTextRerendered() {
   player.run = 0;
   if (player.paused) { highlightRun(sentences[player.sentence], { part: null }); return; }
   clearTimeout(player.timer);
-  shush();
+  player.token += 1;
+  voice().stop();
   player.timer = setTimeout(speakStep, 60);
 }
 
@@ -1553,7 +1699,8 @@ $('playSeek').oninput = (e) => {
   player.sentence = target;
   player.run = 0;
   clearTimeout(player.timer);
-  shush();
+  player.token += 1;
+  voice().stop();
   const sentence = state.narration?.sentences[target];
   if (sentence) highlightRun(sentence, { part: null });
 };
@@ -1592,7 +1739,9 @@ try { synth?.addEventListener?.('voiceschanged', () => {}); } catch { /* not ava
     document.documentElement.style.setProperty('--reader-size', prefs.readerSize + 'px');
     $('rate').value = String(prefs.rate);
     setLevel(prefs.level, { save: false });
-    if (!canSpeak) $('btnListen').title = 'This browser will not let the page speak aloud';
+    if (!voice().available) $('btnListen').title = voice().describe();
+
+    detectVoiceProxy();
 
     let doc = null;
     if (prefs.lastDoc) doc = await db.get(prefs.lastDoc).catch(() => null);

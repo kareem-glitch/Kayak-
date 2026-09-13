@@ -121,7 +121,7 @@ async function elevenSynthesize(request, { apiKey, voices, signal }) {
   return new Uint8Array(await res.arrayBuffer());
 }
 
-async function elevenVoices({ apiKey, signal }) {
+async function elevenAccountVoices({ apiKey, signal }) {
   const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': apiKey }, signal });
   if (!res.ok) throw new Error(await describeError(res));
   const body = await res.json();
@@ -143,7 +143,7 @@ async function describeError(res) {
 
 const IMPLEMENTATIONS = {
   google: { synthesize: googleSynthesize, voices: googleVoices },
-  elevenlabs: { synthesize: elevenSynthesize, voices: elevenVoices },
+  elevenlabs: { synthesize: elevenSynthesize, voices: elevenAccountVoices },
 };
 
 export function listVoices(provider, options) {

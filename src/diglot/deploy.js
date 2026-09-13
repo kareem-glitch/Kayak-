@@ -38,6 +38,7 @@ const paths = [
   ['diglot/app.js', 'diglot/app.js'],
   ['diglot/diglot.html', 'diglot/diglot.html'],
   ['diglot/README.md', 'diglot/README.md'],
+  ['api/tts.js', 'api/tts.js'],          // the serverless ElevenLabs proxy
   ...globSync('src/diglot/*.js', { cwd: root }).sort().map((p) => [p, p]),
 ];
 

@@ -32,9 +32,18 @@ test('the single-file bundle contains every module and resolves cleanly', () => 
 // nothing rendered at all.
 test('browser APIs that may be missing are never touched directly', () => {
   const app = readFileSync(join(root, 'diglot/app.js'), 'utf8');
-  const direct = app.match(/(?<!\/\/[^\n]*)\bspeechSynthesis\s*\./g) || [];
-  assert.deepEqual(direct, [], 'use the guarded synth/voiceList/shush helpers instead');
-  assert.match(app, /typeof speechSynthesis !== 'undefined'/, 'the guard itself should exist');
+  const engine = readFileSync(join(root, 'src/diglot/voice.js'), 'utf8');
+
+  // The app talks to the voice engine; only the engine touches the API, and
+  // only behind a guard. iOS Safari withholds it inside a sandboxed iframe.
+  assert.deepEqual(app.match(/\bspeechSynthesis\s*\./g) || [], [],
+    'app.js should go through the voice engine, not speechSynthesis directly');
+  assert.match(engine, /typeof speechSynthesis !== 'undefined'/, 'the engine needs the guard');
+  // Each use must sit behind a typeof check, an optional chain, or a try.
+  for (const use of engine.match(/^.*\bspeechSynthesis\s*\./gm) || []) {
+    assert.match(use, /typeof speechSynthesis !== 'undefined'|\?\.|try\s*\{/,
+      `unguarded speech API use: ${use.trim()}`);
+  }
   assert.match(app, /catch \(err\)/, 'boot should report a failure rather than render nothing');
 });
 

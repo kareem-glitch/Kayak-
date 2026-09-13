@@ -96,6 +96,41 @@ a scrubber, and a sleep timer. Move the difficulty dial mid-sentence and the
 sentence starts again with the new wording. Stop, come back tomorrow, and Listen
 picks up where you left off. ▶ in any word's popover starts reading from there.
 
+### A voice worth listening to
+
+The device's own voices are free, instant and offline — and they read Spanish
+flatly, which is the one thing this app needs them not to do. **Settings →
+Reading voice** switches playback to ElevenLabs.
+
+It is not a different button; everything else works the same. Each Spanish run
+still goes to a Spanish voice and each gloss to an English one, each speaker in
+a dialogue still gets their own voice, and the shadowing gaps still fall where
+you set them.
+
+Three things make it usable rather than merely possible:
+
+- **Clips are fetched ahead of the playhead**, four at a time, so a network
+  round trip per phrase does not turn into a stutter.
+- **Every clip is cached on the device**, keyed by its text and voice, and kept
+  in IndexedDB between sessions. A phrase is fetched once, ever — so a second
+  read of a page, or the hundredth *la casa*, costs nothing.
+- **Requests are capped at three in flight** and retried once on a rate limit,
+  because accounts have small concurrency ceilings and a chapter is a lot of
+  short clips.
+
+Where the runs allow it, adjacent same-language runs are merged into one clip —
+*la vieja* rather than two disconnected words. With the gloss on, the language
+alternates almost every word, so expect roughly a clip per word on a page of
+new vocabulary. That is the cost of word-level bilingual audio; the cache is
+what makes it bearable.
+
+**About the key.** Pasting it into Settings keeps it in your own browser, which
+is right for your own machine. It is wrong for a URL you have sent to someone —
+anything in the page is theirs too. For a deployed copy, set
+`ELEVENLABS_API_KEY` on the deployment instead: `api/tts.js` proxies the calls
+server-side, the reader notices it on load, and the key never reaches a
+browser. Leave the key field blank in that case.
+
 ### An MP3 you can take with you
 
 Browser voices are free but cannot be recorded — the Web Speech API gives you
@@ -203,14 +238,18 @@ The key lives in your browser's local storage and is sent only to
 - `src/diglot/speech.js` — narration: sentence splitting, spoken glosses, the
   runs and silences. The reader draws from this too, so the highlight always
   matches the voice.
+- `src/diglot/voice.js` — playback: the device's voices, or ElevenLabs with
+  prefetching, a persistent clip cache and a request throttle.
 - `src/diglot/tts.js` — rendering narration to MP3 through a cloud voice service.
+- `api/tts.js` — the serverless ElevenLabs proxy, so a deployed copy can use a
+  key without putting it in the page.
 - `src/diglot/ingest.js` — URL fetching, readability, cleaning, splitting.
 - `src/diglot/epub.js` — EPUB reader and writer, dependency-free (ZIP by hand,
   `DecompressionStream` for the inflating).
 - `src/diglot/llm.js` — the optional Claude calls.
 - `src/diglot/build.js` — bundles everything into `diglot/diglot.html`.
 - `diglot/index.html`, `diglot/app.js` — the app.
-- `test/diglot-*.test.js` — `npm test` (53 tests).
+- `test/diglot-*.test.js` — `npm test` (74 tests).
 
 ## What it is not
 
