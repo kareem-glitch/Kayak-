@@ -312,7 +312,153 @@
 </aside>
 
 <script type="module">
-// ── src/diglot/lexicon.js ──────────────────────────────────────────────────
+// ── src/diglot/phrasebook.js ──────────────────────────────────
+// Situational phrases, in the same difficulty bands as the main lexicon.
+//
+// These matter more than their word count suggests. A word-for-word weave of
+// "how much is it" gives you "cómo mucho es eso", which is not Spanish and not
+// what anyone says. Phrases are matched before single words, so once the dial
+// reaches their tier the whole chunk turns into the thing a person actually
+// says at the till.
+
+// Everyday nouns the scenes lean on. They live here rather than in the main
+// lexicon because they belong to the same errand: tills, menus, platforms.
+const EVERYDAY_NOUNS = [
+  // band 1
+  [
+    'bread|pan|n|m', 'cheese|queso|n|m', 'meat|carne|n|f', 'chicken|pollo|n|m',
+    'egg|huevo|n|m', 'rice|arroz|n|m', 'fish|pescado|n|m', 'potato|patata|n|f', 'tomato|tomate|n|m',
+    'apple|manzana|n|f', 'orange|naranja|n|f', 'lemon|limón|n|m', 'onion|cebolla|n|f',
+    'salt|sal|n|f', 'sugar|azúcar|n|m', 'oil|aceite|n|m', 'soup|sopa|n|f',
+    'salad|ensalada|n|f', 'cake|tarta|n|f', 'ice cream|helado|n|m',
+    'breakfast|desayuno|n|m', 'lunch|comida|n|f', 'dinner|cena|n|f',
+    'glass|vaso|n|m', 'plate|plato|n|m', 'fork|tenedor|n|m', 'knife|cuchillo|n|m',
+    'spoon|cuchara|n|f', 'napkin|servilleta|n|f', 'menu|carta|n|f',
+    'waiter|camarero|n|m', 'bill|cuenta|n|f', 'ticket|billete|n|m',
+  ],
+  // band 2
+  [
+    'station|estación|n|f', 'airport|aeropuerto|n|m', 'platform|andén|n|m',
+    'seat|asiento|n|m', 'suitcase|maleta|n|f', 'bag|bolsa|n|f',
+    'passport|pasaporte|n|m', 'wallet|cartera|n|f', 'card|tarjeta|n|f',
+    'cash|efectivo|n|m', 'small change|cambio|n|m', 'receipt|recibo|n|m',
+    'supermarket|supermercado|n|m', 'bakery|panadería|n|f',
+    'chemist|farmacia|n|f', 'pharmacy|farmacia|n|f', 'square|plaza|n|f',
+    'corner|esquina|n|f', 'toilet|baño|n|m', 'lift|ascensor|n|m',
+    'floor|planta|n|f', 'reservation|reserva|n|f', 'password|contraseña|n|f',
+    'taxi|taxi|n|m', 'bus stop|parada de autobús|n|f', 'timetable|horario|n|m',
+    'throat|garganta|n|f', 'stomach|estómago|n|m', 'fever|fiebre|n|f',
+    'life jacket|chaleco salvavidas|n|m', 'buoy|boya|n|f', 'tide|marea|n|f',
+  ],
+];
+
+const PHRASE_BANDS = [
+  // ── Band 0 · the ones you use on day one ──────────────────────────────────
+  [
+    'hello|hola|phrase', 'hi|hola|phrase', 'goodbye|adiós|phrase',
+    'good afternoon|buenas tardes|phrase', 'good evening|buenas tardes|phrase',
+    'good night|buenas noches|phrase', 'see you later|hasta luego|phrase',
+    'see you tomorrow|hasta mañana|phrase', 'see you soon|hasta pronto|phrase',
+    'thanks|gracias|phrase', 'thank you very much|muchas gracias|phrase',
+    "you're welcome|de nada|phrase", 'excuse me|perdone|phrase',
+    "i'm sorry|lo siento|phrase", 'sorry|perdón|phrase',
+    'yes please|sí, por favor|phrase', 'no thank you|no, gracias|phrase',
+    'there is|hay|phrase', 'there are|hay|phrase', 'is there|hay|phrase',
+    'is there room|hay sitio|phrase', 'there is room|hay sitio|phrase',
+    'are there|hay|phrase', 'there was|había|phrase', 'there were|había|phrase',
+  ],
+  // ── Band 1 · meeting someone ──────────────────────────────────────────────
+  [
+    'how are you|qué tal|phrase', 'very well|muy bien|phrase',
+    'and you|y tú|phrase', 'nice to meet you|encantado|phrase',
+    'what is your name|cómo te llamas|phrase', "what's your name|cómo te llamas|phrase",
+    'my name is|me llamo|phrase', 'where are you from|de dónde eres|phrase',
+    'i am from|soy de|phrase', "i'm from|soy de|phrase", 'i live in|vivo en|phrase',
+    'do you speak english|habla inglés|phrase',
+    "i don't understand|no entiendo|phrase", "i don't know|no sé|phrase",
+    'more slowly please|más despacio, por favor|phrase',
+    'what time is it|qué hora es|phrase', 'at what time|a qué hora|phrase',
+    'this morning|esta mañana|phrase', 'tonight|esta noche|phrase',
+    'the weekend|el fin de semana|phrase', 'last night|anoche|phrase',
+  ],
+  // ── Band 2 · shops and tills ──────────────────────────────────────────────
+  [
+    'how much is it|cuánto cuesta|phrase', 'how much is that|cuánto es|phrase',
+    'how much does it cost|cuánto cuesta|phrase',
+    'too expensive|demasiado caro|phrase', 'i would like|quisiera|phrase',
+    "i'd like|quisiera|phrase", 'i want|quiero|phrase',
+    'do you have|tiene|phrase', "i'm looking for|estoy buscando|phrase",
+    'a bit of|un poco de|phrase', 'a kilo of|un kilo de|phrase',
+    'half a kilo|medio kilo|phrase', 'a bottle of|una botella de|phrase',
+    'a glass of|un vaso de|phrase', 'a cup of|una taza de|phrase',
+    'anything else|algo más|phrase', "that's all|eso es todo|phrase",
+    'a bag please|una bolsa, por favor|phrase',
+    'can i pay by card|puedo pagar con tarjeta|phrase',
+    'in cash|en efectivo|phrase', 'the receipt|el recibo|phrase',
+    'here you are|aquí tiene|phrase', 'one moment|un momento|phrase',
+  ],
+  // ── Band 3 · eating out, and asking the way ───────────────────────────────
+  [
+    'a table for two|una mesa para dos|phrase',
+    'the menu please|la carta, por favor|phrase',
+    'what do you recommend|qué me recomienda|phrase',
+    'the dish of the day|el plato del día|phrase',
+    'still water|agua sin gas|phrase', 'sparkling water|agua con gas|phrase',
+    'a coffee with milk|un café con leche|phrase',
+    'the bill please|la cuenta, por favor|phrase',
+    'is service included|está incluido el servicio|phrase',
+    'it was delicious|estaba delicioso|phrase',
+    'i am vegetarian|soy vegetariano|phrase', "i'm vegetarian|soy vegetariano|phrase",
+    'i am allergic to|soy alérgico a|phrase',
+    'where is|dónde está|phrase', 'where are|dónde están|phrase',
+    'how do i get to|cómo llego a|phrase', 'on the left|a la izquierda|phrase',
+    'on the right|a la derecha|phrase', 'straight on|todo recto|phrase',
+    'near here|cerca de aquí|phrase', 'far from here|lejos de aquí|phrase',
+    'at the corner|en la esquina|phrase', 'next to|al lado de|phrase',
+    'opposite|enfrente de|phrase', 'i am lost|me he perdido|phrase',
+    'can you help me|puede ayudarme|phrase',
+  ],
+  // ── Band 4 · getting about, and staying somewhere ─────────────────────────
+  [
+    'a ticket to|un billete para|phrase',
+    'a return ticket|un billete de ida y vuelta|phrase',
+    'one way|solo ida|phrase', 'what time does it leave|a qué hora sale|phrase',
+    'what time does it arrive|a qué hora llega|phrase',
+    'which platform|qué andén|phrase', 'the next train|el próximo tren|phrase',
+    'is this seat free|está libre este asiento|phrase',
+    'how long does it take|cuánto se tarda|phrase',
+    'to the airport please|al aeropuerto, por favor|phrase',
+    'i have a reservation|tengo una reserva|phrase',
+    'a double room|una habitación doble|phrase',
+    'for two nights|para dos noches|phrase',
+    'is breakfast included|está incluido el desayuno|phrase',
+    'what time is breakfast|a qué hora es el desayuno|phrase',
+    'the wifi password|la contraseña del wifi|phrase',
+    'could you repeat that|puede repetirlo|phrase',
+    'how do you say|cómo se dice|phrase', 'what does that mean|qué significa|phrase',
+    'next week|la semana que viene|phrase', 'the day after tomorrow|pasado mañana|phrase',
+  ],
+  // ── Band 5 · when something is wrong ──────────────────────────────────────
+  [
+    'i do not feel well|no me encuentro bien|phrase',
+    "i don't feel well|no me encuentro bien|phrase",
+    'it hurts here|me duele aquí|phrase',
+    'i have a headache|me duele la cabeza|phrase',
+    'do you have something for|tiene algo para|phrase',
+    'i need a doctor|necesito un médico|phrase',
+    'call an ambulance|llame a una ambulancia|phrase',
+    'i have lost|he perdido|phrase', 'it does not work|no funciona|phrase',
+    "it doesn't work|no funciona|phrase", 'there is a problem|hay un problema|phrase',
+    'what happened|qué ha pasado|phrase', 'do not worry|no se preocupe|phrase',
+    "don't worry|no te preocupes|phrase", 'it does not matter|no importa|phrase',
+    'i will call you|te llamo|phrase', 'what do you think|qué te parece|phrase',
+    'it depends|depende|phrase', 'more or less|más o menos|phrase',
+    'as soon as possible|lo antes posible|phrase', 'right away|enseguida|phrase',
+  ],
+];
+
+
+// ── src/diglot/lexicon.js ─────────────────────────────────────
 // English -> Spanish lexicon, ordered in difficulty bands.
 //
 // Band 0 is what a total beginner meets first: high-frequency, concrete, and
@@ -673,7 +819,7 @@ const BANDS = WORD_BANDS.map((band, i) => [
 ]);
 
 
-// ── src/diglot/morph.js ────────────────────────────────────────────────────
+// ── src/diglot/morph.js ───────────────────────────────────────
 // Spanish morphology: just enough inflection to make woven words fit their
 // English slot. Pure functions, no data beyond what's passed in.
 
@@ -855,7 +1001,7 @@ function matchCase(word, model) {
 }
 
 
-// ── src/diglot/weave.js ────────────────────────────────────────────────────
+// ── src/diglot/weave.js ───────────────────────────────────────
 // The diglot weaver: turns English text into English-with-Spanish-woven-in.
 //
 // Two stages on purpose:
@@ -1547,7 +1693,851 @@ function toText(nodes, { hints = false } = {}) {
 }
 
 
-// ── src/diglot/ingest.js ───────────────────────────────────────────────────
+// ── src/diglot/speech.js ──────────────────────────────────────
+// Turning a woven page into something you can listen to.
+//
+// Reading and listening want different things. On the page you can hover a
+// word you don't know; in your ears it has gone by. So the narration adds two
+// things the page doesn't need: a spoken gloss the first time each Spanish
+// word appears, and control over the silences — before a Spanish word, after
+// it, between sentences.
+//
+// buildNarration() is the single source of truth for how the text divides into
+// sentences. The reader renders from it too, so what you see highlighted is
+// exactly what is being said.
+
+const NARRATION_DEFAULTS = {
+  echo: 'first',      // 'none' | 'first' | 'always' — speak the English gloss
+  wordGap: 0,         // ms after each Spanish word (raise it to shadow aloud)
+  glossGap: 90,       // ms around a spoken gloss
+  sentenceGap: 240,
+  paragraphGap: 520,
+};
+
+// "Dr. Ramos" is not the end of a sentence.
+const ABBREVIATIONS = new Set([
+  'mr', 'mrs', 'ms', 'dr', 'prof', 'st', 'mt', 'jr', 'sr', 'vs', 'etc', 'no',
+  'fig', 'ave', 'rd', 'inc', 'ltd', 'co', 'approx', 'dept', 'univ', 'est',
+]);
+
+const SENTENCE_BOUNDARY = /([.!?…]+["'”’)\]]*)(\s+|$)/g;
+
+function endsSentence(before) {
+  const trailing = before.match(/(\S+)$/);
+  if (!trailing) return true;
+  const word = trailing[1].replace(/[^\p{L}]/gu, '').toLowerCase();
+  if (ABBREVIATIONS.has(word)) return false;
+  if (word.length === 1 && /\p{Lu}/u.test(trailing[1])) return false; // an initial
+  return true;
+}
+
+/**
+ * Split the rendered nodes into sentences, each with the parts to draw and the
+ * runs to speak.
+ *
+ * A part is what goes on the page: {type:'text'} or {type:'swap'}.
+ * A run is what goes to the voice: {lang, text, kind, part, gapAfter}.
+ */
+function buildNarration(nodes, options = {}) {
+  const opts = { ...NARRATION_DEFAULTS, ...options };
+  const sentences = [];
+  let parts = [];
+  let paragraphStart = true;
+  // The weaver emits one node per word, so a full stop and the word before it
+  // land in different nodes. Keep a short tail of what has already been said
+  // so "Dr." can still be recognised as an abbreviation.
+  let tail = '';
+  let speaker = null;
+  const remember = (text) => { tail = (tail + text).slice(-40); };
+
+  const flush = (endsParagraph = false) => {
+    const meaningful = parts.some((p) => p.type === 'swap' || p.text.trim());
+    if (meaningful) {
+      sentences.push({ index: sentences.length, parts, paragraphStart, endsParagraph, speaker });
+      paragraphStart = false;
+    } else if (parts.length && sentences.length) {
+      // whitespace only: keep it on the previous sentence so nothing is lost
+      sentences[sentences.length - 1].parts.push(...parts);
+    }
+    parts = [];
+    if (endsParagraph) paragraphStart = true;
+  };
+
+  for (const node of nodes) {
+    if (node.kind === 'swap') {
+      parts.push({ type: 'swap', node });
+      remember(node.text);
+      continue;
+    }
+    if (node.speaker) {
+      // "Waiter:" — drawn on the page, never spoken; it changes the voice.
+      flush(true);
+      speaker = node.speaker;
+      parts.push({ type: 'speaker', text: node.text, speaker });
+      tail = '';
+      continue;
+    }
+    const text = node.text;
+    // paragraph breaks first, then sentence ends inside each piece
+    const pieces = text.split(/\n{2,}/);
+    pieces.forEach((piece, pieceIndex) => {
+      if (pieceIndex > 0) flush(true);
+      if (!piece) return;
+      let cursor = 0;
+      SENTENCE_BOUNDARY.lastIndex = 0;
+      let match;
+      while ((match = SENTENCE_BOUNDARY.exec(piece)) !== null) {
+        const end = match.index + match[1].length;
+        if (!endsSentence(tail + piece.slice(cursor, match.index))) continue;
+        const chunk = piece.slice(cursor, end).replace(/\n/g, ' ');
+        parts.push({ type: 'text', text: chunk });
+        remember(chunk);
+        cursor = end;
+        flush(false);
+      }
+      if (cursor < piece.length) {
+        const chunk = piece.slice(cursor).replace(/\n/g, ' ');
+        parts.push({ type: 'text', text: chunk });
+        remember(chunk);
+      }
+    });
+  }
+  flush(true);
+
+  for (const sentence of sentences) sentence.runs = buildRuns(sentence, opts);
+  return {
+    sentences,
+    stats: {
+      sentences: sentences.length,
+      spanish: sentences.reduce((n, s) => n + s.runs.filter((r) => r.kind === 'word').length, 0),
+      glosses: sentences.reduce((n, s) => n + s.runs.filter((r) => r.kind === 'gloss').length, 0),
+    },
+  };
+}
+
+function buildRuns(sentence, opts) {
+  const runs = [];
+  const pushText = (text) => {
+    if (!text) return;
+    const last = runs[runs.length - 1];
+    if (last && last.kind === 'text' && !last.gapAfter) last.text += text;
+    else runs.push({ lang: 'en', kind: 'text', text, gapAfter: 0 });
+  };
+
+  sentence.parts.forEach((part, partIndex) => {
+    if (part.type === 'speaker') return;      // shown, not said
+    if (part.type === 'text') { pushText(part.text); return; }
+    const node = part.node;
+    // A shadowing gap belongs after a word worth repeating, not between an
+    // article and its noun ("la … casa").
+    const gap = node.pos === 'det' ? 0 : opts.wordGap;
+    runs.push({ lang: 'es', kind: 'word', text: node.text, part: partIndex, gapAfter: gap });
+
+    const wantsGloss = opts.echo === 'always' || (opts.echo === 'first' && node.first);
+    const worthGlossing = node.pos !== 'det' && node.en
+      && node.en.toLowerCase() !== node.text.toLowerCase();
+    if (wantsGloss && worthGlossing) {
+      runs[runs.length - 1].gapAfter = Math.max(runs[runs.length - 1].gapAfter, opts.glossGap);
+      runs.push({ lang: 'en', kind: 'gloss', text: node.en, part: partIndex, gapAfter: opts.glossGap });
+    }
+  });
+
+  // trim, and put the between-sentence silence on the last run
+  const trimmed = runs.filter((run) => run.text.trim());
+  for (const run of trimmed) run.speaker = sentence.speaker || null;
+  if (trimmed.length) {
+    const last = trimmed[trimmed.length - 1];
+    last.gapAfter = Math.max(last.gapAfter, sentence.endsParagraph ? opts.paragraphGap : opts.sentenceGap);
+  }
+  return trimmed;
+}
+
+/**
+ * A listen-and-repeat drill from a phrase list: the English, a gap long enough
+ * to try it yourself, then the Spanish. Shaped exactly like narration, so the
+ * player and the audio export take it without knowing the difference.
+ */
+function buildDrill(phrases, { gap = 2600, answerGap = 900, repeat = false } = {}) {
+  return phrases.map((phrase, index) => {
+    const runs = [
+      { lang: 'en', kind: 'prompt', text: phrase.en, gapAfter: gap, part: 0, speaker: null },
+      { lang: 'es', kind: 'answer', text: phrase.es, gapAfter: repeat ? 500 : answerGap, part: 1, speaker: null },
+    ];
+    if (repeat) runs.push({ lang: 'es', kind: 'answer', text: phrase.es, gapAfter: answerGap, part: 1, speaker: null });
+    return {
+      index,
+      paragraphStart: true,
+      endsParagraph: true,
+      speaker: null,
+      parts: [{ type: 'prompt', text: phrase.en }, { type: 'answer', text: phrase.es }],
+      runs,
+    };
+  });
+}
+
+/** The plain text of a sentence, as it will be spoken. */
+function sentenceText(sentence) {
+  const glosses = new Map();
+  for (const run of sentence.runs) if (run.kind === 'gloss') glosses.set(run.part, run.text);
+  return sentence.parts.map((part, i) => {
+    if (part.type === 'speaker') return '';
+    if (part.type === 'text') return part.text;
+    const gloss = glosses.get(i);
+    return part.node.text + (gloss ? ` (${gloss})` : '');
+  }).join('').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Group runs into as few requests as a remote voice service needs: consecutive
+ * runs in the same language become one request, with the pauses carried along
+ * so they can be re-inserted as real silence.
+ */
+function batchRuns(sentences, { maxChars = 900 } = {}) {
+  const batches = [];
+  let current = null;
+  const push = (run, sentenceIndex) => {
+    if (current && current.lang === run.lang && current.text.length + run.text.length < maxChars && !current.closed) {
+      current.parts.push({ ...run, sentenceIndex });
+      current.text += (/\s$/.test(current.text) || /^[\s,.;:!?]/.test(run.text) ? '' : ' ') + run.text;
+      current.pendingGap = run.gapAfter;
+      if (run.gapAfter >= 400) current.closed = true;
+      return;
+    }
+    current = {
+      lang: run.lang, text: run.text, parts: [{ ...run, sentenceIndex }],
+      pendingGap: run.gapAfter, closed: run.gapAfter >= 400,
+    };
+    batches.push(current);
+  };
+  sentences.forEach((sentence) => sentence.runs.forEach((run) => push(run, sentence.index)));
+  return batches.map(({ lang, text, parts }) => ({
+    lang,
+    text: text.replace(/\s+/g, ' ').trim(),
+    gapAfter: parts[parts.length - 1].gapAfter,
+    from: parts[0].sentenceIndex,
+    to: parts[parts.length - 1].sentenceIndex,
+  })).filter((b) => b.text);
+}
+
+
+// ── src/diglot/scenes.js ──────────────────────────────────────
+// Everyday scenes: short dialogues for the situations you actually stand in.
+//
+// The dialogue is English, so the weaver can take it apart and hand it back at
+// whatever difficulty you're on. The key phrases underneath are written out in
+// full Spanish, because when you are at the till you don't want a word-by-word
+// weave — you want the thing people say.
+//
+// A speaker line is "Name: what they said". The reader styles the name, the
+// weaver leaves it alone, and the player gives each speaker their own voice.
+
+const SCENES = [
+  {
+    id: 'greetings',
+    group: 'Everyday',
+    title: 'Saying hello',
+    blurb: 'Hello, goodbye, and the bit in the middle.',
+    turns: [
+      ['You', 'Good morning.'],
+      ['Neighbour', 'Good morning. How are you?'],
+      ['You', 'Very well, thank you. And you?'],
+      ['Neighbour', 'Fine. Are you the new neighbour?'],
+      ['You', 'Yes. My name is Kareem. Nice to meet you.'],
+      ['Neighbour', 'Nice to meet you too. I am Elena. I live on the second floor.'],
+      ['You', 'I am from Ireland. I do not speak much Spanish yet.'],
+      ['Neighbour', 'You speak very well. More than you think.'],
+      ['You', 'Thank you very much. See you tomorrow.'],
+      ['Neighbour', 'See you tomorrow. Have a good day.'],
+    ],
+    phrases: [
+      { en: 'Good morning.', es: 'Buenos días.' },
+      { en: 'How are you?', es: '¿Qué tal?' },
+      { en: 'Very well, thank you. And you?', es: 'Muy bien, gracias. ¿Y tú?' },
+      { en: 'My name is Kareem.', es: 'Me llamo Kareem.' },
+      { en: 'Nice to meet you.', es: 'Encantado.' },
+      { en: 'I am from Ireland.', es: 'Soy de Irlanda.' },
+      { en: 'I do not speak much Spanish.', es: 'No hablo mucho español.' },
+      { en: 'Have a good day.', es: 'Que tengas un buen día.' },
+    ],
+  },
+  {
+    id: 'small-talk',
+    group: 'Everyday',
+    title: 'Small talk on the stairs',
+    blurb: 'Weather, work, and getting away politely.',
+    turns: [
+      ['Elena', 'How is it going?'],
+      ['You', 'Not bad. It is very hot today.'],
+      ['Elena', 'Terrible. In August it is always like this.'],
+      ['You', 'Is it better in September?'],
+      ['Elena', 'A little. What do you do?'],
+      ['You', 'I work in an office near the port. And you?'],
+      ['Elena', 'I am a teacher. I work in the school on the corner.'],
+      ['You', 'How long have you lived here?'],
+      ['Elena', 'Twenty years. My family is from the north but I like this city.'],
+      ['You', 'Sorry, I am late. See you later.'],
+      ['Elena', 'See you later. Take care.'],
+    ],
+    phrases: [
+      { en: 'How is it going?', es: '¿Qué tal?' },
+      { en: 'It is very hot today.', es: 'Hace mucho calor hoy.' },
+      { en: 'What do you do?', es: '¿A qué te dedicas?' },
+      { en: 'I work in an office.', es: 'Trabajo en una oficina.' },
+      { en: 'How long have you lived here?', es: '¿Cuánto tiempo llevas aquí?' },
+      { en: 'Sorry, I am late.', es: 'Perdona, llego tarde.' },
+      { en: 'See you later.', es: 'Hasta luego.' },
+      { en: 'Take care.', es: 'Cuídate.' },
+    ],
+  },
+  {
+    id: 'bakery',
+    group: 'Shops',
+    title: 'At the bakery',
+    blurb: 'Pointing, counting, and paying.',
+    turns: [
+      ['Baker', 'Good morning. What can I get you?'],
+      ['You', 'Good morning. A loaf of bread, please.'],
+      ['Baker', 'Big or small?'],
+      ['You', 'Big, please. And two of those.'],
+      ['Baker', 'The ones with almonds?'],
+      ['You', 'Yes, those. Are they fresh?'],
+      ['Baker', 'From this morning. Anything else?'],
+      ['You', 'That is all, thank you. How much is that?'],
+      ['Baker', 'Four euros twenty.'],
+      ['You', 'Can I pay by card?'],
+      ['Baker', 'Of course. Here you are. Have a good day.'],
+    ],
+    phrases: [
+      { en: 'What can I get you?', es: '¿Qué le pongo?' },
+      { en: 'A loaf of bread, please.', es: 'Una barra de pan, por favor.' },
+      { en: 'Two of those, please.', es: 'Dos de esos, por favor.' },
+      { en: 'Anything else?', es: '¿Algo más?' },
+      { en: 'That is all, thank you.', es: 'Nada más, gracias.' },
+      { en: 'How much is that?', es: '¿Cuánto es?' },
+      { en: 'Can I pay by card?', es: '¿Puedo pagar con tarjeta?' },
+      { en: 'Here you are.', es: 'Aquí tiene.' },
+    ],
+  },
+  {
+    id: 'market',
+    group: 'Shops',
+    title: 'At the market',
+    blurb: 'Weights, ripeness, and one more thing.',
+    turns: [
+      ['Stallholder', 'Who is next?'],
+      ['You', 'Me, I think. A kilo of tomatoes, please.'],
+      ['Stallholder', 'For today or for the week?'],
+      ['You', 'For today. Are they ripe?'],
+      ['Stallholder', 'Very ripe. These are the best.'],
+      ['You', 'Good. And half a kilo of those peppers.'],
+      ['Stallholder', 'Anything else? The oranges are very good today.'],
+      ['You', 'Go on then, four oranges. How much is it all?'],
+      ['Stallholder', 'Six fifty. Do you need a bag?'],
+      ['You', 'No thank you, I have one.'],
+    ],
+    phrases: [
+      { en: 'Who is next?', es: '¿Quién es el último?' },
+      { en: 'A kilo of tomatoes, please.', es: 'Un kilo de tomates, por favor.' },
+      { en: 'Are they ripe?', es: '¿Están maduros?' },
+      { en: 'Half a kilo of those.', es: 'Medio kilo de esos.' },
+      { en: 'How much is it all?', es: '¿Cuánto es todo?' },
+      { en: 'Do you need a bag?', es: '¿Necesita bolsa?' },
+      { en: 'No thank you, I have one.', es: 'No, gracias, ya tengo.' },
+    ],
+  },
+  {
+    id: 'supermarket',
+    group: 'Shops',
+    title: 'At the supermarket till',
+    blurb: 'The four sentences you will hear every single time.',
+    turns: [
+      ['You', 'Excuse me, where is the milk?'],
+      ['Assistant', 'At the back, next to the cheese.'],
+      ['You', 'Thank you.'],
+      ['Cashier', 'Good afternoon. Do you have a loyalty card?'],
+      ['You', 'No, I do not have one.'],
+      ['Cashier', 'Do you need a bag?'],
+      ['You', 'Yes, one please.'],
+      ['Cashier', 'That is twenty three euros. Card or cash?'],
+      ['You', 'Card. Sorry, can you repeat the number?'],
+      ['Cashier', 'Twenty three. Enter your PIN, please.'],
+      ['You', 'Done. Thank you very much.'],
+      ['Cashier', 'To you. Good afternoon.'],
+    ],
+    phrases: [
+      { en: 'Where is the milk?', es: '¿Dónde está la leche?' },
+      { en: 'Do you have a loyalty card?', es: '¿Tiene tarjeta de fidelidad?' },
+      { en: 'Do you need a bag?', es: '¿Necesita bolsa?' },
+      { en: 'Card or cash?', es: '¿Con tarjeta o en efectivo?' },
+      { en: 'Can you repeat that?', es: '¿Puede repetirlo?' },
+      { en: 'Enter your PIN.', es: 'Marque su PIN.' },
+      { en: 'Thank you very much.', es: 'Muchas gracias.' },
+    ],
+  },
+  {
+    id: 'coffee',
+    group: 'Eating out',
+    title: 'Ordering coffee',
+    blurb: 'Here or away, and where the wifi lives.',
+    turns: [
+      ['Waiter', 'Good morning. What would you like?'],
+      ['You', 'A coffee with milk, please.'],
+      ['Waiter', 'To have here or to take away?'],
+      ['You', 'Here, thank you. Do you have anything to eat?'],
+      ['Waiter', 'Toast, or a slice of potato omelette.'],
+      ['You', 'A slice of omelette then.'],
+      ['Waiter', 'Anything else?'],
+      ['You', 'No, that is all. Is there wifi?'],
+      ['Waiter', 'Yes. The password is on the receipt.'],
+      ['You', 'Perfect. Thank you very much.'],
+    ],
+    phrases: [
+      { en: 'A coffee with milk, please.', es: 'Un café con leche, por favor.' },
+      { en: 'To have here or to take away?', es: '¿Para tomar aquí o para llevar?' },
+      { en: 'Do you have anything to eat?', es: '¿Tienen algo para comer?' },
+      { en: 'A slice of omelette.', es: 'Un pincho de tortilla.' },
+      { en: 'Is there wifi?', es: '¿Hay wifi?' },
+      { en: 'The password is on the receipt.', es: 'La contraseña está en el recibo.' },
+    ],
+  },
+  {
+    id: 'restaurant',
+    group: 'Eating out',
+    title: 'Dinner out',
+    blurb: 'A table, a recommendation, an allergy, the bill.',
+    turns: [
+      ['You', 'Good evening. A table for two, please.'],
+      ['Waiter', 'Do you have a reservation?'],
+      ['You', 'No, we do not. Is there room?'],
+      ['Waiter', 'Yes, by the window. Here is the menu.'],
+      ['You', 'Thank you. What do you recommend?'],
+      ['Waiter', 'The fish is very good today. And the dish of the day is lamb.'],
+      ['You', 'The fish for me. I am allergic to nuts, is that a problem?'],
+      ['Waiter', 'No problem. I will tell the kitchen.'],
+      ['You', 'And a bottle of still water, please.'],
+      ['Waiter', 'Of course. Anything else?'],
+      ['You', 'Later, thank you.'],
+      ['You', 'That was delicious. The bill, please.'],
+      ['Waiter', 'Right away. Is service included? Yes, it is included.'],
+    ],
+    phrases: [
+      { en: 'A table for two, please.', es: 'Una mesa para dos, por favor.' },
+      { en: 'Do you have a reservation?', es: '¿Tienen reserva?' },
+      { en: 'What do you recommend?', es: '¿Qué me recomienda?' },
+      { en: 'The dish of the day.', es: 'El plato del día.' },
+      { en: 'I am allergic to nuts.', es: 'Soy alérgico a los frutos secos.' },
+      { en: 'A bottle of still water.', es: 'Una botella de agua sin gas.' },
+      { en: 'That was delicious.', es: 'Estaba delicioso.' },
+      { en: 'The bill, please.', es: 'La cuenta, por favor.' },
+    ],
+  },
+  {
+    id: 'directions',
+    group: 'Out and about',
+    title: 'Asking the way',
+    blurb: 'Left, right, straight on, and how far.',
+    turns: [
+      ['You', 'Excuse me, where is the station?'],
+      ['Passer-by', 'The train station? It is near here.'],
+      ['You', 'How do I get there?'],
+      ['Passer-by', 'Straight on to the square, then left.'],
+      ['You', 'To the left at the square.'],
+      ['Passer-by', 'Yes. Then the second street on the right.'],
+      ['You', 'How long does it take on foot?'],
+      ['Passer-by', 'Ten minutes. Fifteen if you walk slowly.'],
+      ['You', 'Sorry, more slowly please. My Spanish is not very good.'],
+      ['Passer-by', 'Straight on. Then left. Then the second on the right.'],
+      ['You', 'Now I understand. Thank you very much.'],
+    ],
+    phrases: [
+      { en: 'Where is the station?', es: '¿Dónde está la estación?' },
+      { en: 'How do I get there?', es: '¿Cómo llego?' },
+      { en: 'Straight on, then left.', es: 'Todo recto y luego a la izquierda.' },
+      { en: 'The second street on the right.', es: 'La segunda calle a la derecha.' },
+      { en: 'How long does it take on foot?', es: '¿Cuánto se tarda a pie?' },
+      { en: 'More slowly, please.', es: 'Más despacio, por favor.' },
+      { en: 'Now I understand.', es: 'Ahora lo entiendo.' },
+    ],
+  },
+  {
+    id: 'train',
+    group: 'Travel',
+    title: 'Buying a train ticket',
+    blurb: 'Return, platform, and the seat that is not yours.',
+    turns: [
+      ['You', 'Good morning. A return ticket to Seville, please.'],
+      ['Clerk', 'For today?'],
+      ['You', 'Yes, this morning. What time does the next train leave?'],
+      ['Clerk', 'At ten forty. And back?'],
+      ['You', 'In the evening, after seven.'],
+      ['Clerk', 'There is one at seven thirty and one at nine.'],
+      ['You', 'The one at seven thirty. How much is it?'],
+      ['Clerk', 'Fifty two euros. Platform four.'],
+      ['You', 'Thank you. Does it arrive on time?'],
+      ['Clerk', 'Almost always.'],
+      ['You', 'Excuse me, is this seat free?'],
+      ['Passenger', 'No, sorry. My seat is twelve B.'],
+    ],
+    phrases: [
+      { en: 'A return ticket to Seville, please.', es: 'Un billete de ida y vuelta a Sevilla, por favor.' },
+      { en: 'What time does the next train leave?', es: '¿A qué hora sale el próximo tren?' },
+      { en: 'Which platform?', es: '¿Qué andén?' },
+      { en: 'Does it arrive on time?', es: '¿Llega a tiempo?' },
+      { en: 'Is this seat free?', es: '¿Está libre este asiento?' },
+      { en: 'I have missed my train.', es: 'He perdido el tren.' },
+    ],
+  },
+  {
+    id: 'hotel',
+    group: 'Travel',
+    title: 'Checking in',
+    blurb: 'Reservation, breakfast, and what time you have to be out.',
+    turns: [
+      ['You', 'Good afternoon. I have a reservation.'],
+      ['Receptionist', 'In what name?'],
+      ['You', 'Kareem. A double room for two nights.'],
+      ['Receptionist', 'Here it is. Your passport, please.'],
+      ['You', 'Here you are. Is breakfast included?'],
+      ['Receptionist', 'Yes, from seven to ten, on the first floor.'],
+      ['You', 'And what time do we have to leave the room?'],
+      ['Receptionist', 'Before twelve. Room two-o-four, here is the key.'],
+      ['You', 'One more thing. What is the wifi password?'],
+      ['Receptionist', 'It is on the card, under the number.'],
+      ['You', 'Perfect. Thank you very much.'],
+    ],
+    phrases: [
+      { en: 'I have a reservation.', es: 'Tengo una reserva.' },
+      { en: 'In what name?', es: '¿A nombre de quién?' },
+      { en: 'A double room for two nights.', es: 'Una habitación doble para dos noches.' },
+      { en: 'Is breakfast included?', es: '¿Está incluido el desayuno?' },
+      { en: 'What time do we have to leave the room?', es: '¿A qué hora hay que dejar la habitación?' },
+      { en: 'What is the wifi password?', es: '¿Cuál es la contraseña del wifi?' },
+    ],
+  },
+  {
+    id: 'pharmacy',
+    group: 'When things go wrong',
+    title: 'At the pharmacy',
+    blurb: 'Saying what hurts, and understanding the answer.',
+    turns: [
+      ['Pharmacist', 'Good afternoon. How can I help you?'],
+      ['You', 'I do not feel well.'],
+      ['Pharmacist', 'What is wrong?'],
+      ['You', 'I have a headache, and a sore throat.'],
+      ['Pharmacist', 'Since when?'],
+      ['You', 'Since yesterday night.'],
+      ['Pharmacist', 'Do you have a temperature?'],
+      ['You', 'A little, I think. Do you have something for the throat?'],
+      ['Pharmacist', 'Yes. Take one of these every eight hours, with food.'],
+      ['You', 'For how many days?'],
+      ['Pharmacist', 'Three or four. If you are not better, go to a doctor.'],
+      ['You', 'Understood. Thank you very much.'],
+    ],
+    phrases: [
+      { en: 'I do not feel well.', es: 'No me encuentro bien.' },
+      { en: 'What is wrong?', es: '¿Qué le pasa?' },
+      { en: 'I have a headache.', es: 'Me duele la cabeza.' },
+      { en: 'I have a sore throat.', es: 'Me duele la garganta.' },
+      { en: 'Do you have something for the throat?', es: '¿Tiene algo para la garganta?' },
+      { en: 'Every eight hours, with food.', es: 'Cada ocho horas, con comida.' },
+      { en: 'I need a doctor.', es: 'Necesito un médico.' },
+    ],
+  },
+  {
+    id: 'kayak',
+    group: 'Out and about',
+    title: 'Hiring a kayak',
+    blurb: 'Time, gear, and whether the sea is behaving.',
+    turns: [
+      ['You', 'Good morning. I would like to hire a kayak.'],
+      ['Instructor', 'For one person or two?'],
+      ['You', 'One. For how long can I take it?'],
+      ['Instructor', 'One hour, two hours, or the morning.'],
+      ['You', 'Two hours. How much is it?'],
+      ['Instructor', 'Eighteen euros. Do you need a life jacket?'],
+      ['You', 'Yes, please. Is the sea calm today?'],
+      ['Instructor', 'Now yes. In the afternoon the wind comes from the west.'],
+      ['You', 'Where can I go?'],
+      ['Instructor', 'To the island and back. Do not pass the red buoy.'],
+      ['You', 'Understood. And what time do I have to be back?'],
+      ['Instructor', 'Before one. Have a good time.'],
+    ],
+    phrases: [
+      { en: 'I would like to hire a kayak.', es: 'Quisiera alquilar un kayak.' },
+      { en: 'For how long can I take it?', es: '¿Para cuánto tiempo puedo cogerlo?' },
+      { en: 'Do you need a life jacket?', es: '¿Necesita chaleco salvavidas?' },
+      { en: 'Is the sea calm today?', es: '¿Está tranquilo el mar hoy?' },
+      { en: 'The wind comes from the west.', es: 'El viento viene del oeste.' },
+      { en: 'What time do I have to be back?', es: '¿A qué hora tengo que volver?' },
+    ],
+  },
+  {
+    id: 'plans',
+    group: 'Everyday',
+    title: 'Making plans',
+    blurb: 'On the phone, and short.',
+    turns: [
+      ['Elena', 'Hello? Who is it?'],
+      ['You', 'Hello Elena, it is Kareem. Do you have a minute?'],
+      ['Elena', 'Yes, tell me.'],
+      ['You', 'What are you doing this weekend?'],
+      ['Elena', 'On Saturday I am working. On Sunday, nothing.'],
+      ['You', 'Do you fancy a coffee on Sunday?'],
+      ['Elena', 'Yes, good idea. What time suits you?'],
+      ['You', 'At eleven, in the square?'],
+      ['Elena', 'Better at twelve. At eleven I am still asleep.'],
+      ['You', 'At twelve then. See you there.'],
+      ['Elena', 'See you Sunday. If there is a problem I will call you.'],
+    ],
+    phrases: [
+      { en: 'Do you have a minute?', es: '¿Tienes un minuto?' },
+      { en: 'Tell me.', es: 'Dime.' },
+      { en: 'What are you doing this weekend?', es: '¿Qué haces este fin de semana?' },
+      { en: 'Do you fancy a coffee?', es: '¿Te apetece un café?' },
+      { en: 'What time suits you?', es: '¿A qué hora te viene bien?' },
+      { en: 'See you there.', es: 'Nos vemos allí.' },
+      { en: 'I will call you.', es: 'Te llamo.' },
+    ],
+  },
+];
+
+/** The dialogue as text the weaver can chew on. */
+function sceneToText(scene) {
+  return scene.turns.map(([speaker, line]) => `${speaker}: ${line}`).join('\n\n');
+}
+
+/** Scenes grouped for the picker, in the order defined above. */
+function sceneGroups(scenes = SCENES) {
+  const groups = new Map();
+  for (const scene of scenes) {
+    if (!groups.has(scene.group)) groups.set(scene.group, []);
+    groups.get(scene.group).push(scene);
+  }
+  return [...groups].map(([name, items]) => ({ name, scenes: items }));
+}
+
+/** Every phrase in the book, for a drill across the lot. */
+function allPhrases(scenes = SCENES) {
+  const seen = new Set();
+  const out = [];
+  for (const scene of scenes) {
+    for (const phrase of scene.phrases) {
+      const key = phrase.es.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ ...phrase, scene: scene.title });
+    }
+  }
+  return out;
+}
+
+
+// ── src/diglot/tts.js ─────────────────────────────────────────
+// Rendering a woven page to an audio file.
+//
+// The browser's own voices are free and instant but cannot be recorded — the
+// Web Speech API gives you sound, not samples. So for a file you can put on a
+// phone, this calls a cloud voice service with your own key.
+//
+// Each run goes to the voice of its own language, which is the whole point:
+// send the diglot sentence to one voice and it reads "la casa" with an English
+// accent. Same-language runs that sit next to each other are merged into one
+// request to keep the call count (and the bill) down.
+
+
+const PROVIDERS = {
+  google: {
+    id: 'google',
+    label: 'Google Cloud Text-to-Speech',
+    keyLabel: 'API key',
+    keyHint: 'An API key from a Google Cloud project with the Text-to-Speech API enabled. Cheapest of the two, and the only one here that can place exact silences.',
+    exactSilence: true,
+    defaults: { es: 'es-ES-Neural2-B', en: 'en-GB-Neural2-B' },
+  },
+  elevenlabs: {
+    id: 'elevenlabs',
+    label: 'ElevenLabs',
+    keyLabel: 'API key',
+    keyHint: 'Best-sounding of the two, and its multilingual voices handle both languages. Pauses come out as natural phrasing rather than exact silence.',
+    exactSilence: false,
+    defaults: { es: '', en: '' },
+  },
+};
+
+const escapeSsml = (s) => s.replace(/[<>&"']/g, (c) => (
+  { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+
+/**
+ * Turn narration into an ordered list of voice requests. Pure — the tests run
+ * it without touching the network.
+ */
+function planRequests(sentences, { provider = 'google', maxChars = 900 } = {}) {
+  const exact = PROVIDERS[provider]?.exactSilence;
+  return batchRuns(sentences, { maxChars }).map((batch) => {
+    const gap = batch.gapAfter || 0;
+    let text = batch.text;
+    let ssml = null;
+    if (exact && gap >= 60) {
+      ssml = `<speak>${escapeSsml(text)}<break time="${Math.round(gap)}ms"/></speak>`;
+    } else if (gap >= 400) {
+      // No break tag to lean on: ask for the pause with punctuation instead.
+      text = text.replace(/[\s.]*$/, '') + '…';
+    }
+    return { lang: batch.lang, text, ssml, gapAfter: gap, from: batch.from, to: batch.to };
+  });
+}
+
+/** Join audio chunks. MP3 is a stream of self-contained frames, so appending works. */
+function concatBytes(chunks) {
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  const out = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) { out.set(chunk, at); at += chunk.length; }
+  return out;
+}
+
+const base64ToBytes = (b64) => {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
+
+// ── providers ───────────────────────────────────────────────────────────────
+
+async function googleSynthesize(request, { apiKey, voices, rate, signal }) {
+  const voice = voices[request.lang] || PROVIDERS.google.defaults[request.lang];
+  const languageCode = (voice.match(/^[a-z]{2}-[A-Z]{2}/) || [request.lang === 'es' ? 'es-ES' : 'en-GB'])[0];
+  const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(apiKey)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    signal,
+    body: JSON.stringify({
+      input: request.ssml ? { ssml: request.ssml } : { text: request.text },
+      voice: { languageCode, name: voice },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: rate || 1 },
+    }),
+  });
+  if (!res.ok) throw new Error(await describeError(res));
+  const body = await res.json();
+  if (!body.audioContent) throw new Error('Google returned no audio');
+  return base64ToBytes(body.audioContent);
+}
+
+async function googleVoices({ apiKey, signal }) {
+  const res = await fetch(`https://texttospeech.googleapis.com/v1/voices?key=${encodeURIComponent(apiKey)}`, { signal });
+  if (!res.ok) throw new Error(await describeError(res));
+  const body = await res.json();
+  return (body.voices || []).map((v) => ({
+    id: v.name,
+    name: `${v.name} (${v.ssmlGender?.toLowerCase() || '—'})`,
+    lang: (v.languageCodes || [''])[0],
+  }));
+}
+
+async function elevenSynthesize(request, { apiKey, voices, signal }) {
+  const voice = voices[request.lang];
+  if (!voice) throw new Error(`Pick an ElevenLabs voice for ${request.lang === 'es' ? 'Spanish' : 'English'} first`);
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`,
+    {
+      method: 'POST',
+      headers: { 'xi-api-key': apiKey, 'content-type': 'application/json' },
+      signal,
+      body: JSON.stringify({
+        text: request.text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(await describeError(res));
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+async function elevenVoices({ apiKey, signal }) {
+  const res = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': apiKey }, signal });
+  if (!res.ok) throw new Error(await describeError(res));
+  const body = await res.json();
+  return (body.voices || []).map((v) => ({
+    id: v.voice_id,
+    name: v.name + (v.labels?.accent ? ` — ${v.labels.accent}` : ''),
+    lang: '',
+  }));
+}
+
+async function describeError(res) {
+  let detail = `${res.status} ${res.statusText}`;
+  try {
+    const body = await res.json();
+    detail = body?.error?.message || body?.detail?.message || body?.detail || detail;
+  } catch { /* keep the status line */ }
+  return typeof detail === 'string' ? detail : JSON.stringify(detail);
+}
+
+const IMPLEMENTATIONS = {
+  google: { synthesize: googleSynthesize, voices: googleVoices },
+  elevenlabs: { synthesize: elevenSynthesize, voices: elevenVoices },
+};
+
+function listVoices(provider, options) {
+  const impl = IMPLEMENTATIONS[provider];
+  if (!impl) throw new Error(`Unknown voice service: ${provider}`);
+  return impl.voices(options);
+}
+
+/** Run tasks with a small amount of parallelism, keeping results in order. */
+async function mapWithLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * Render narration to a single MP3.
+ * Returns { blob, requests, characters } — characters is what you'll be billed on.
+ */
+async function renderAudio(sentences, {
+  provider = 'google', apiKey, voices = {}, rate = 1, concurrency = 4, onProgress, signal,
+} = {}) {
+  const impl = IMPLEMENTATIONS[provider];
+  if (!impl) throw new Error(`Unknown voice service: ${provider}`);
+  if (!apiKey) throw new Error('Add an API key for the voice service first');
+
+  const requests = planRequests(sentences, { provider });
+  if (!requests.length) throw new Error('Nothing to read');
+
+  let done = 0;
+  const chunks = await mapWithLimit(requests, concurrency, async (request) => {
+    const bytes = await impl.synthesize(request, { apiKey, voices, rate, signal });
+    done += 1;
+    onProgress?.({ done, total: requests.length });
+    return bytes;
+  });
+
+  return {
+    blob: new Blob([concatBytes(chunks)], { type: 'audio/mpeg' }),
+    requests: requests.length,
+    characters: requests.reduce((n, r) => n + r.text.length, 0),
+  };
+}
+
+/** What a render will cost you, before you start it. */
+function estimate(sentences, { provider = 'google' } = {}) {
+  const requests = planRequests(sentences, { provider });
+  const characters = requests.reduce((n, r) => n + r.text.length, 0);
+  return { requests: requests.length, characters, minutes: Math.round((characters / 950) * 10) / 10 };
+}
+
+
+// ── src/diglot/ingest.js ──────────────────────────────────────
 // Getting text in: from a URL, a pasted blob, a .txt file, or an EPUB.
 // Everything runs in the browser — there's no server to send your reading to.
 
@@ -1705,7 +2695,7 @@ function guessTitle(text, fallback = 'Untitled') {
 }
 
 
-// ── src/diglot/epub.js ─────────────────────────────────────────────────────
+// ── src/diglot/epub.js ────────────────────────────────────────
 // EPUB in and out, with no dependencies.
 //
 // Reading uses the browser/Node DecompressionStream for deflated entries;
@@ -2017,7 +3007,7 @@ ${body}
 }
 
 
-// ── src/diglot/llm.js ──────────────────────────────────────────────────────
+// ── src/diglot/llm.js ─────────────────────────────────────────
 // Optional Claude layer. Everything here needs the user's own API key, kept in
 // their browser and sent only to api.anthropic.com.
 //
@@ -2212,7 +3202,7 @@ function entriesToBands(entries) {
 }
 
 
-// ── diglot/app.js ────────────────────────────────────────────
+// ── diglot/app.js ─────────────────────────────────────────────
 // Diglot — the browser side. Nothing here talks to a server except the page
 // fetcher and (only if you supply a key) the Anthropic API.
 

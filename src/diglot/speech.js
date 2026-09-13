@@ -24,7 +24,7 @@ const ABBREVIATIONS = new Set([
   'fig', 'ave', 'rd', 'inc', 'ltd', 'co', 'approx', 'dept', 'univ', 'est',
 ]);
 
-const SENTENCE_END = /([.!?…]+["'”’)\]]*)(\s+|$)/g;
+const SENTENCE_BOUNDARY = /([.!?…]+["'”’)\]]*)(\s+|$)/g;
 
 function endsSentence(before) {
   const trailing = before.match(/(\S+)$/);
@@ -88,9 +88,9 @@ export function buildNarration(nodes, options = {}) {
       if (pieceIndex > 0) flush(true);
       if (!piece) return;
       let cursor = 0;
-      SENTENCE_END.lastIndex = 0;
+      SENTENCE_BOUNDARY.lastIndex = 0;
       let match;
-      while ((match = SENTENCE_END.exec(piece)) !== null) {
+      while ((match = SENTENCE_BOUNDARY.exec(piece)) !== null) {
         const end = match.index + match[1].length;
         if (!endsSentence(tail + piece.slice(cursor, match.index))) continue;
         const chunk = piece.slice(cursor, end).replace(/\n/g, ' ');

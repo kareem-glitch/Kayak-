@@ -12,7 +12,7 @@ export const EVERYDAY_NOUNS = [
   // band 1
   [
     'bread|pan|n|m', 'cheese|queso|n|m', 'meat|carne|n|f', 'chicken|pollo|n|m',
-    'egg|huevo|n|m', 'rice|arroz|n|m', 'potato|patata|n|f', 'tomato|tomate|n|m',
+    'egg|huevo|n|m', 'rice|arroz|n|m', 'fish|pescado|n|m', 'potato|patata|n|f', 'tomato|tomate|n|m',
     'apple|manzana|n|f', 'orange|naranja|n|f', 'lemon|limón|n|m', 'onion|cebolla|n|f',
     'salt|sal|n|f', 'sugar|azúcar|n|m', 'oil|aceite|n|m', 'soup|sopa|n|f',
     'salad|ensalada|n|f', 'cake|tarta|n|f', 'ice cream|helado|n|m',
@@ -49,6 +49,7 @@ export const PHRASE_BANDS = [
     "i'm sorry|lo siento|phrase", 'sorry|perdón|phrase',
     'yes please|sí, por favor|phrase', 'no thank you|no, gracias|phrase',
     'there is|hay|phrase', 'there are|hay|phrase', 'is there|hay|phrase',
+    'is there room|hay sitio|phrase', 'there is room|hay sitio|phrase',
     'are there|hay|phrase', 'there was|había|phrase', 'there were|había|phrase',
   ],
   // ── Band 1 · meeting someone ──────────────────────────────────────────────
