@@ -75,7 +75,8 @@ adds what the page doesn't need:
   or a second and a half — and say the word back into it. Articles don't get one:
   a gap between *la* and *casa* helps nobody.
 
-Transport: play/pause (space), previous and next sentence (`,` and `.`), speed,
+In a dialogue, each speaker gets their own voice. Transport: play/pause (space),
+previous and next sentence (`,` and `.`), speed,
 a scrubber, and a sleep timer. Move the difficulty dial mid-sentence and the
 sentence starts again with the new wording. Stop, come back tomorrow, and Listen
 picks up where you left off. ▶ in any word's popover starts reading from there.
@@ -100,14 +101,47 @@ every word roughly doubles it.
 One honest caveat: **current Kindles will not play a sideloaded MP3.** The audio
 is for your phone, the car, a run. The Kindle path is the EPUB above.
 
+## Everyday scenes
+
+Thirteen short dialogues for the situations you actually stand in — saying
+hello, small talk on the stairs, the bakery, the market, the supermarket till,
+ordering coffee, dinner out, asking the way, a train ticket, checking in,
+the pharmacy, hiring a kayak, making plans on the phone.
+
+Each scene works two ways.
+
+**Read it** at your current setting, like anything else. Dialogue gets its own
+treatment: the speaker labels are never translated, and in the player each
+speaker gets their own voice — a second Spanish voice if you have one installed,
+otherwise the same voice pitched down, so you can tell the two sides apart.
+
+**Drill it.** Every scene carries its key phrases written out in full Spanish,
+because at a till you don't want a word-by-word weave — you want the thing
+people say. The drill reads the English, leaves a gap long enough to try it
+yourself, then says the Spanish. The Spanish is blurred on screen until it's
+spoken (or you tap the row), so you're recalling rather than reading. Gap
+length, say-it-twice, and hide/show are all one click. There's also a drill
+across every phrase in the book.
+
+The phrases are in the lexicon too, so they fire in ordinary text: *how much is
+it* becomes **cuánto cuesta**, not "cómo mucho es eso". Phrases are matched
+before single words, and across a comma — "the bill, please" is
+**la cuenta, por favor**.
+
 ## Getting text in
 
 - **Paste** anything.
 - **Web page** — give it a URL. The page is fetched through a public reader
   service (`r.jina.ai`, falling back to `allorigins`) because a browser cannot
   read another site directly. Paywalled pages generally won't work.
-- **Write me one** — Claude writes an original article on a topic you name, then
-  aligns its vocabulary. Needs an API key.
+- **A list of them** — paste a whole reading list, one per line, mixing links
+  and topics. Links are fetched; anything else is a topic Claude writes about.
+  Each one becomes its own piece in the library, or tick the box to join them
+  into a single document. A line that fails says why and the rest carry on;
+  nothing hangs longer than twenty seconds on a dead link.
+- **Write me one** — Claude writes an original article on a topic you name, or a
+  **dialogue** with its own key phrases in full Spanish, ready to drill. Then it
+  aligns the vocabulary. Needs an API key.
 - **Book / file** — a DRM-free EPUB, `.txt`, `.md` or `.html`. The file is
   parsed in the browser (yes, including unzipping the EPUB) and split into
   reader-sized parts. Project Gutenberg is a good source.
@@ -143,7 +177,10 @@ The key lives in your browser's local storage and is sent only to
 
 ## Layout
 
-- `src/diglot/lexicon.js` — ~960 English→Spanish entries in ten difficulty bands.
+- `src/diglot/lexicon.js` — the word list, in ten difficulty bands.
+- `src/diglot/phrasebook.js` — situational phrases and everyday nouns, in the
+  same bands. Together about 1,150 entries.
+- `src/diglot/scenes.js` — the thirteen dialogues and their key phrases.
 - `src/diglot/morph.js` — Spanish inflection: plurals, agreement, articles, a
   conjugator with the irregulars that matter.
 - `src/diglot/weave.js` — the engine. `analyze()` finds every swappable span
@@ -158,7 +195,7 @@ The key lives in your browser's local storage and is sent only to
 - `src/diglot/llm.js` — the optional Claude calls.
 - `src/diglot/build.js` — bundles everything into `diglot/diglot.html`.
 - `diglot/index.html`, `diglot/app.js` — the app.
-- `test/diglot-*.test.js` — `npm test` (41 tests).
+- `test/diglot-*.test.js` — `npm test` (53 tests).
 
 ## What it is not
 

@@ -202,11 +202,22 @@ export function analyze(text, index = DEFAULT_INDEX) {
   // Sentence starts: a word is sentence-initial if all that precedes it in the
   // gap is terminal punctuation (so capitals there aren't proper nouns).
   let atStart = true;
-  for (const t of tokens) {
-    if (t.kind === 'gap') { if (SENTENCE_END.test(t.raw)) atStart = true; continue; }
+  let atLineStart = true;
+  tokens.forEach((t, i) => {
+    if (t.kind === 'gap') {
+      if (SENTENCE_END.test(t.raw)) atStart = true;
+      if (/\n/.test(t.raw)) atLineStart = true;
+      return;
+    }
     t.sentenceStart = atStart;
+    // "Waiter: ..." — a dialogue label, not something to translate.
+    if (atLineStart) {
+      const after = tokens[i + 1];
+      if (after && after.kind === 'gap' && /^\s*:/.test(after.raw)) t.speakerLabel = true;
+    }
     atStart = false;
-  }
+    atLineStart = false;
+  });
 
   const candidates = [];
   const consumed = new Set();
@@ -214,14 +225,17 @@ export function analyze(text, index = DEFAULT_INDEX) {
     const ti = wordPositions[wi];
     if (consumed.has(ti)) continue;
     const token = tokens[ti];
+    if (token.speakerLabel) continue;
 
     // Phrases first (longest match wins), then the single word.
     let hit = null;
     for (let n = Math.min(index.maxPhrase, wordPositions.length - wi); n >= 2 && !hit; n--) {
       const span = wordPositions.slice(wi, wi + n);
-      // only allow simple whitespace between the words of a phrase
+      // Words of a phrase may be separated by spaces or a comma — "the bill,
+      // please" is the same phrase as "the bill please", and its Spanish
+      // brings its own punctuation.
       const glueOk = span.slice(1).every((p, k) => {
-        for (let j = span[k] + 1; j < p; j++) if (!/^\s+$/.test(tokens[j].raw)) return false;
+        for (let j = span[k] + 1; j < p; j++) if (!/^[\s,]+$/.test(tokens[j].raw)) return false;
         return true;
       });
       if (!glueOk) continue;
@@ -344,14 +358,24 @@ export function applyLevel(analysis, options = {}) {
   const spanishWords = new Set();
   let lastSwapNode = null;
   let lastSwapGap = null;
+  let stripColon = false;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     const out = decided.get(i);
+    if (t.speakerLabel) {
+      nodes.push({ kind: 'plain', text: t.raw + ':', speaker: t.raw });
+      stripColon = true;
+      lastSwapNode = null;
+      lastSwapGap = null;
+      continue;
+    }
     if (!out) {
-      const node = { kind: t.kind === 'gap' ? 'gap' : 'plain', text: t.raw };
+      let text = t.raw;
+      if (stripColon && t.kind === 'gap') { text = text.replace(/^\s*:/, ''); stripColon = false; }
+      const node = { kind: t.kind === 'gap' ? 'gap' : 'plain', text };
       nodes.push(node);
       if (t.kind === 'word') lastSwapNode = null;
-      else if (/^\s+$/.test(t.raw)) lastSwapGap = node;
+      else if (/^\s+$/.test(text)) lastSwapGap = node;
       else { lastSwapNode = null; lastSwapGap = null; }
       continue;
     }

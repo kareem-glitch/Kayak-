@@ -10,7 +10,9 @@
 //        prep, conj, pron, num, det, interj, phrase
 // Multi-word English keys are matched as phrases before single words.
 
-export const BANDS = [
+import { PHRASE_BANDS, EVERYDAY_NOUNS } from './phrasebook.js';
+
+const WORD_BANDS = [
   // ── Band 0 · first contact ────────────────────────────────────────────────
   [
     'yes|sí|interj', 'and|y|conj', 'but|pero|conj', 'or|o|conj',
@@ -346,3 +348,12 @@ export const BANDS = [
     'unless|a menos que|conj', 'whether|si|conj', 'though|aunque|conj',
   ],
 ];
+
+// Situational phrases sit in the same bands as the words. Phrases are matched
+// before single words, so "the bill please" becomes "la cuenta, por favor"
+// rather than three separate swaps.
+export const BANDS = WORD_BANDS.map((band, i) => [
+  ...(PHRASE_BANDS[i] || []),
+  ...(EVERYDAY_NOUNS[i] || []),
+  ...band,
+]);

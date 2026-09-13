@@ -51,12 +51,13 @@ export function buildNarration(nodes, options = {}) {
   // land in different nodes. Keep a short tail of what has already been said
   // so "Dr." can still be recognised as an abbreviation.
   let tail = '';
+  let speaker = null;
   const remember = (text) => { tail = (tail + text).slice(-40); };
 
   const flush = (endsParagraph = false) => {
     const meaningful = parts.some((p) => p.type === 'swap' || p.text.trim());
     if (meaningful) {
-      sentences.push({ index: sentences.length, parts, paragraphStart, endsParagraph });
+      sentences.push({ index: sentences.length, parts, paragraphStart, endsParagraph, speaker });
       paragraphStart = false;
     } else if (parts.length && sentences.length) {
       // whitespace only: keep it on the previous sentence so nothing is lost
@@ -70,6 +71,14 @@ export function buildNarration(nodes, options = {}) {
     if (node.kind === 'swap') {
       parts.push({ type: 'swap', node });
       remember(node.text);
+      continue;
+    }
+    if (node.speaker) {
+      // "Waiter:" — drawn on the page, never spoken; it changes the voice.
+      flush(true);
+      speaker = node.speaker;
+      parts.push({ type: 'speaker', text: node.text, speaker });
+      tail = '';
       continue;
     }
     const text = node.text;
@@ -120,6 +129,7 @@ function buildRuns(sentence, opts) {
   };
 
   sentence.parts.forEach((part, partIndex) => {
+    if (part.type === 'speaker') return;      // shown, not said
     if (part.type === 'text') { pushText(part.text); return; }
     const node = part.node;
     // A shadowing gap belongs after a word worth repeating, not between an
@@ -138,6 +148,7 @@ function buildRuns(sentence, opts) {
 
   // trim, and put the between-sentence silence on the last run
   const trimmed = runs.filter((run) => run.text.trim());
+  for (const run of trimmed) run.speaker = sentence.speaker || null;
   if (trimmed.length) {
     const last = trimmed[trimmed.length - 1];
     last.gapAfter = Math.max(last.gapAfter, sentence.endsParagraph ? opts.paragraphGap : opts.sentenceGap);
@@ -145,11 +156,35 @@ function buildRuns(sentence, opts) {
   return trimmed;
 }
 
+/**
+ * A listen-and-repeat drill from a phrase list: the English, a gap long enough
+ * to try it yourself, then the Spanish. Shaped exactly like narration, so the
+ * player and the audio export take it without knowing the difference.
+ */
+export function buildDrill(phrases, { gap = 2600, answerGap = 900, repeat = false } = {}) {
+  return phrases.map((phrase, index) => {
+    const runs = [
+      { lang: 'en', kind: 'prompt', text: phrase.en, gapAfter: gap, part: 0, speaker: null },
+      { lang: 'es', kind: 'answer', text: phrase.es, gapAfter: repeat ? 500 : answerGap, part: 1, speaker: null },
+    ];
+    if (repeat) runs.push({ lang: 'es', kind: 'answer', text: phrase.es, gapAfter: answerGap, part: 1, speaker: null });
+    return {
+      index,
+      paragraphStart: true,
+      endsParagraph: true,
+      speaker: null,
+      parts: [{ type: 'prompt', text: phrase.en }, { type: 'answer', text: phrase.es }],
+      runs,
+    };
+  });
+}
+
 /** The plain text of a sentence, as it will be spoken. */
 export function sentenceText(sentence) {
   const glosses = new Map();
   for (const run of sentence.runs) if (run.kind === 'gloss') glosses.set(run.part, run.text);
   return sentence.parts.map((part, i) => {
+    if (part.type === 'speaker') return '';
     if (part.type === 'text') return part.text;
     const gloss = glosses.get(i);
     return part.node.text + (gloss ? ` (${gloss})` : '');

@@ -2,12 +2,13 @@
 // fetcher and (only if you supply a key) the Anthropic API.
 
 import { analyze, applyLevel, buildIndex, DEFAULT_INDEX } from '../src/diglot/weave.js';
-import { buildNarration, NARRATION_DEFAULTS } from '../src/diglot/speech.js';
+import { buildNarration, buildDrill, NARRATION_DEFAULTS } from '../src/diglot/speech.js';
+import { SCENES, sceneToText, sceneGroups, allPhrases } from '../src/diglot/scenes.js';
 import { PROVIDERS, listVoices, renderAudio, estimate as estimateAudio } from '../src/diglot/tts.js';
 import { BANDS } from '../src/diglot/lexicon.js';
 import { fetchArticle, cleanText, splitIntoSections, wordCount, guessTitle } from '../src/diglot/ingest.js';
 import { readEpub, buildEpub } from '../src/diglot/epub.js';
-import { alignDocument, writeArticle, testKey, entriesToBands, MODELS } from '../src/diglot/llm.js';
+import { alignDocument, writeArticle, writeScene, testKey, entriesToBands, MODELS } from '../src/diglot/llm.js';
 
 // ── storage ─────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ const defaultPrefs = {
   echo: 'first', wordGap: 0, autoAdvance: true, sleep: 0, listen: null,
   // audio export
   ttsProvider: 'google', ttsKeys: {}, ttsVoices: {},
+  voiceEs2: '', drillGap: 2600, drillRepeat: false, drillCover: true,
 };
 
 const load = (key, fallback) => {
@@ -79,6 +81,8 @@ const state = {
   narration: null,    // sentences and runs — what the reader draws and the voice says
   sentenceEls: [],    // sentence index → element
   partEls: new Map(), // "sentence:part" → the Spanish word's element
+  speakers: [],       // dialogue speakers, in the order they first talk
+  mode: 'read',       // 'read' | 'drill'
 };
 
 const $ = (id) => document.getElementById(id);
@@ -151,6 +155,9 @@ function render() {
   reader.textContent = '';
   state.sentenceEls = [];
   state.partEls = new Map();
+  $('btnDrill').hidden = !(state.doc?.phrases?.length);
+  $('btnDrill').classList.toggle('on', state.mode === 'drill');
+  if (state.mode === 'drill') { renderDrill(reader); return; }
   if (!state.analysis) {
     state.narration = null;
     reader.append(el('p', 'empty', 'Add some text to start reading — an article URL, a paste, a topic, or an EPUB.'));
@@ -179,6 +186,7 @@ function render() {
   // drawn from that same structure — so the highlight always matches the voice.
   const narration = buildNarration(result.nodes, narrationOptions());
   state.narration = narration;
+  state.speakers = [...new Set(narration.sentences.map((x) => x.speaker).filter(Boolean))];
 
   let paragraph = null;
   const closeParagraph = () => {
@@ -192,6 +200,11 @@ function render() {
     sentenceEl.dataset.s = String(sentence.index);
 
     sentence.parts.forEach((part, partIndex) => {
+      if (part.type === 'speaker') {
+        const slot = speakerSlot(part.speaker);
+        sentenceEl.append(el('b', slot ? 'who b' : 'who', part.text.replace(/:$/, '')));
+        return;
+      }
       if (part.type === 'text') {
         sentenceEl.append(document.createTextNode(part.text));
         return;
@@ -227,6 +240,56 @@ function render() {
   onTextRerendered();
 }
 
+/** Which voice a speaker gets: first speaker one way, second the other. */
+function speakerSlot(name) {
+  if (!name) return 0;
+  const at = state.speakers.indexOf(name);
+  return at < 0 ? 0 : at % 2;
+}
+
+/** Listen-and-repeat: the English, a gap, then the Spanish. */
+function renderDrill(reader) {
+  const phrases = state.doc?.phrases || [];
+  state.narration = { sentences: buildDrill(phrases, { gap: prefs.drillGap, repeat: prefs.drillRepeat }) };
+  state.speakers = [];
+
+  reader.append(el('h1', 'title', state.doc.title));
+  reader.append(el('div', 'byline', `${phrases.length} phrases · say each one into the gap, then hear it`));
+
+  const list = el('div', 'drill' + (prefs.drillCover ? ' cover' : ''));
+  phrases.forEach((phrase, i) => {
+    const row = el('div', 'row');
+    row.append(el('span', 'en', phrase.en));
+    row.append(el('span', 'es', phrase.es));
+    row.onclick = () => {
+      row.classList.add('shown');
+      if (!player.active) speakOne(phrase.es);
+      else listenFrom(i);
+    };
+    state.sentenceEls[i] = row;
+    list.append(row);
+  });
+  reader.append(list);
+
+  const options = el('div', 'section-nav');
+  const cover = el('button', 'btn' + (prefs.drillCover ? ' on' : ''), prefs.drillCover ? 'Spanish hidden' : 'Spanish shown');
+  cover.onclick = () => { prefs.drillCover = !prefs.drillCover; savePrefs(); render(); };
+  const repeat = el('button', 'btn' + (prefs.drillRepeat ? ' on' : ''), prefs.drillRepeat ? 'Says it twice' : 'Says it once');
+  repeat.onclick = () => { prefs.drillRepeat = !prefs.drillRepeat; savePrefs(); render(); };
+  const gap = el('select');
+  [['1600', 'Short gap'], ['2600', 'Normal gap'], ['4000', 'Long gap']].forEach(([v, label]) => {
+    const o = el('option', null, label); o.value = v; gap.append(o);
+  });
+  gap.value = String(prefs.drillGap);
+  gap.onchange = () => { prefs.drillGap = Number(gap.value); savePrefs(); render(); };
+  options.append(cover, repeat, gap);
+  reader.append(options);
+
+  $('actualOut').textContent = '100';
+  $('stageOut').textContent = 'phrase drill';
+  onTextRerendered();
+}
+
 function stageName(level) {
   if (level === 0) return 'plain English';
   if (level < 15) return 'easing in';
@@ -246,6 +309,7 @@ function saveVocabThrottled() {
 function renderSectionNav() {
   const nav = $('sectionNav');
   nav.textContent = '';
+  if (state.mode === 'drill') return;
   if (!state.doc || state.doc.sections.length < 2) return;
   const prev = el('button', 'btn', '← Previous');
   const next = el('button', 'btn', 'Next →');
@@ -273,6 +337,7 @@ function gotoSection(i, { keepPlaying = false } = {}) {
 
 async function loadDoc(doc, { persist = true } = {}) {
   stopListening();
+  if (!doc.phrases?.length) state.mode = 'read';
   state.doc = doc;
   state.sectionIndex = Math.min(doc.position || 0, doc.sections.length - 1);
   rebuildIndex();
@@ -344,7 +409,8 @@ function panelAdd(initialTab = 'paste') {
     const pane = el('div');
     const status = el('div', 'status');
     const options = [
-      ['paste', 'Paste'], ['url', 'Web page'], ['topic', 'Write me one'], ['file', 'Book / file'],
+      ['paste', 'Paste'], ['url', 'Web page'], ['queue', 'A list of them'],
+      ['topic', 'Write me one'], ['file', 'Book / file'],
     ];
     let active = initialTab;
     const draw = () => {
@@ -357,7 +423,7 @@ function panelAdd(initialTab = 'paste') {
       pane.textContent = '';
       status.textContent = '';
       status.className = 'status';
-      ({ paste: paneP, url: paneU, topic: paneT, file: paneF })[active](pane, status);
+      ({ paste: paneP, url: paneU, queue: paneQ, topic: paneT, file: paneF })[active](pane, status);
     };
 
     const paneP = (host) => {
@@ -400,14 +466,79 @@ function panelAdd(initialTab = 'paste') {
       );
     };
 
+    const paneQ = (host, status) => {
+      const box = el('textarea');
+      box.placeholder = 'One per line. A link is fetched; anything else is a topic Claude writes about.\n\nhttps://example.com/an-article\nhow sourdough works\nthe history of Wexford harbour';
+      const combined = { value: false };
+      const results = el('div');
+      const go = el('button', 'btn primary', 'Add them all');
+
+      go.onclick = async () => {
+        const lines = box.value.split('\n').map((l) => l.trim()).filter(Boolean);
+        if (!lines.length) { fail(status, 'Nothing in the list yet.'); return; }
+        results.textContent = '';
+        const collected = [];
+        let firstDoc = null;
+        for (const [i, line] of lines.entries()) {
+          busy(status, `${i + 1} of ${lines.length}: ${line.slice(0, 50)}…`);
+          const row = el('div', 'card');
+          const grow = el('div', 'grow');
+          grow.append(el('h3', null, line.length > 60 ? line.slice(0, 57) + '…' : line));
+          const note = el('div', 'sub', 'working…');
+          grow.append(note);
+          row.append(grow);
+          results.append(row);
+          try {
+            const item = isLink(line)
+              ? await fetchArticle(line).then((a) => ({
+                title: a.title, text: a.text, source: new URL(a.url).hostname.replace(/^www\./, ''),
+              }))
+              : await writeFromTopic(line);
+            if (!item.text || item.text.split(/\s+/).length < 40) throw new Error('too little text came back');
+            note.textContent = `${item.title || 'Untitled'} · ${wordCount(item.text)} words`;
+            if (combined.value) collected.push(item);
+            else {
+              const doc = makeDoc(item);
+              await db.put(doc);
+              if (!firstDoc) firstDoc = doc;
+            }
+          } catch (err) {
+            note.textContent = err.message;
+            row.style.opacity = '.7';
+          }
+        }
+
+        if (combined.value && collected.length) {
+          const text = collected.map((item) => `${item.title}\n\n${item.text}`).join('\n\n');
+          firstDoc = makeDoc({ title: `Reading list — ${new Date().toLocaleDateString()}`, text, source: `${collected.length} pieces` });
+          await db.put(firstDoc);
+        }
+        if (firstDoc) {
+          done(status, 'Done. Opening the first one — the rest are in your library.');
+          await loadDoc(firstDoc, { persist: false });
+        } else fail(status, 'None of them worked.');
+      };
+
+      host.append(
+        field('Links and topics', box, 'Links are fetched through the same reader service as a single page. Topics need an Anthropic API key.'),
+        checkbox('Join them into one document', false, (v) => { combined.value = v; },
+          'Otherwise each one becomes its own piece in the library.'),
+        go, results,
+      );
+    };
+
     const paneT = (host) => {
       const input = el('input');
       input.type = 'text';
       input.placeholder = 'e.g. how sourdough works, or the history of Wexford harbour';
+      const form = el('select');
+      [['article', 'An article to read'], ['dialogue', 'A dialogue, with its key phrases']]
+        .forEach(([v, l]) => { const o = el('option', null, l); o.value = v; form.append(o); });
       const length = el('select');
       [['250', 'Short — 250 words'], ['400', 'Medium — 400 words'], ['700', 'Long — 700 words']]
         .forEach(([v, l]) => { const o = el('option', null, l); o.value = v; length.append(o); });
       length.value = '400';
+      form.onchange = () => { length.disabled = form.value === 'dialogue'; };
       const go = el('button', 'btn primary', 'Write it');
       go.onclick = async () => {
         if (!prefs.apiKey) { fail(status, 'This one needs an Anthropic API key — add it in Settings.'); return; }
@@ -415,10 +546,11 @@ function panelAdd(initialTab = 'paste') {
         if (!topic) { fail(status, 'What should it be about?'); return; }
         busy(status, 'Writing…');
         try {
-          const article = await writeArticle(topic, {
-            apiKey: prefs.apiKey, model: prefs.model, words: Number(length.value),
+          const item = await writeFromTopic(topic, {
+            form: form.value, words: Number(length.value),
           });
-          const doc = makeDoc({ title: article.title, text: article.text, source: 'written for you' });
+          const doc = makeDoc(item);
+          if (item.phrases?.length) { doc.kind = 'scene'; doc.phrases = item.phrases; }
           await loadDoc(doc);
           busy(status, 'Aligning the vocabulary…');
           await enrich(doc, status);
@@ -426,8 +558,8 @@ function panelAdd(initialTab = 'paste') {
         } catch (err) { fail(status, err.message); }
       };
       host.append(
-        field('Topic', input, prefs.apiKey ? 'Claude writes an original article, then aligns its vocabulary so the whole thing can go Spanish.' : 'Needs an Anthropic API key (Settings).'),
-        field('Length', length), go, status,
+        field('Topic or situation', input, prefs.apiKey ? 'Claude writes it, then aligns its vocabulary so the whole thing can go Spanish. A dialogue also comes back with its key phrases in full Spanish, ready to drill.' : 'Needs an Anthropic API key (Settings).'),
+        field('What to write', form), field('Length', length), go, status,
       );
     };
 
@@ -466,6 +598,19 @@ function panelAdd(initialTab = 'paste') {
     body.append(tabs, pane, status);
     draw();
   });
+}
+
+const isLink = (line) => /^(https?:\/\/|www\.)/i.test(line) || /^[\w-]+(\.[\w-]+)+\/\S/.test(line);
+
+/** One topic → a written piece. Used by the topic tab and the bulk queue. */
+async function writeFromTopic(topic, { form = 'article', words = 400 } = {}) {
+  if (!prefs.apiKey) throw new Error('needs an Anthropic API key (Settings)');
+  if (form === 'dialogue') {
+    const scene = await writeScene(topic, { apiKey: prefs.apiKey, model: prefs.model });
+    return { title: scene.title, text: scene.text, phrases: scene.phrases, source: 'dialogue written for you' };
+  }
+  const article = await writeArticle(topic, { apiKey: prefs.apiKey, model: prefs.model, words });
+  return { title: article.title, text: article.text, source: 'written for you' };
 }
 
 const busy = (node, message) => {
@@ -566,6 +711,52 @@ function panelLibrary() {
       remove.onclick = async () => { await db.remove(doc.id); card.remove(); };
       card.append(grow, open, remove);
       body.append(card);
+    }
+  });
+}
+
+// ── everyday scenes ─────────────────────────────────────────────────────────
+
+async function loadScene(scene, { drill = false } = {}) {
+  const doc = makeDoc({ title: scene.title, author: scene.blurb, text: sceneToText(scene), source: 'scene' });
+  doc.kind = 'scene';
+  doc.sceneId = scene.id;
+  doc.phrases = scene.phrases;
+  state.mode = drill ? 'drill' : 'read';
+  await loadDoc(doc);
+}
+
+function panelScenes() {
+  openPanel('Everyday scenes', (body) => {
+    body.append(el('div', 'note', 'Short dialogues for the situations you actually stand in. Read one at your current setting, or drill its phrases: the English, a gap to say it into, then the Spanish. The phrases are written out in full — at a till you want the thing people say, not a word-by-word weave.'));
+
+    const everything = el('button', 'btn', `Drill all ${allPhrases().length} phrases`);
+    everything.onclick = async () => {
+      const doc = makeDoc({ title: 'Every phrase', author: 'All the scenes, shuffled together', text: 'Phrase drill.', source: 'drill' });
+      doc.kind = 'scene';
+      doc.phrases = allPhrases();
+      state.mode = 'drill';
+      await loadDoc(doc);
+      closePanel();
+    };
+    body.append(field(null, everything));
+
+    for (const group of sceneGroups()) {
+      const head = el('div', 'field');
+      head.append(el('label', null, group.name));
+      body.append(head);
+      for (const scene of group.scenes) {
+        const card = el('div', 'card');
+        const grow = el('div', 'grow');
+        grow.append(el('h3', null, scene.title));
+        grow.append(el('div', 'sub', `${scene.blurb} · ${scene.turns.length} turns · ${scene.phrases.length} phrases`));
+        const read = el('button', 'btn', 'Read');
+        read.onclick = async () => { await loadScene(scene); closePanel(); };
+        const drill = el('button', 'btn ghost', 'Drill');
+        drill.onclick = async () => { await loadScene(scene, { drill: true }); closePanel(); };
+        card.append(grow, read, drill);
+        body.append(card);
+      }
     }
   });
 }
@@ -991,9 +1182,17 @@ function panelSettings(message) {
       };
       fill(es, 'es', prefs.voiceEs);
       fill(en, 'en', prefs.voiceEn);
+      const es2 = el('select');
+      fill(es2, 'es', prefs.voiceEs2);
+      es2.options[0].textContent = 'Same voice, lower pitch';
       es.onchange = () => { prefs.voiceEs = es.value; savePrefs(); };
       en.onchange = () => { prefs.voiceEn = en.value; savePrefs(); };
-      body.append(field('Spanish voice', es), field('English voice', en));
+      es2.onchange = () => { prefs.voiceEs2 = es2.value; savePrefs(); };
+      body.append(
+        field('Spanish voice', es),
+        field('Second speaker in a dialogue', es2, 'Dialogues give each speaker their own voice. With only one Spanish voice installed, the second speaker drops in pitch instead.'),
+        field('English voice', en),
+      );
     }
 
     const reset = el('button', 'btn ghost', 'Forget my known words');
@@ -1076,15 +1275,20 @@ const posName = (pos) => ({
 
 const player = { active: false, paused: false, sentence: 0, run: 0, timer: null, sleepTimer: null };
 
-function pickVoice(lang) {
+function pickVoice(lang, slot = 0) {
   const voices = speechSynthesis.getVoices();
-  const wanted = lang === 'es' ? prefs.voiceEs : prefs.voiceEn;
-  return voices.find((v) => v.name === wanted)
+  const second = slot === 1 && lang === 'es' && prefs.voiceEs2;
+  const wanted = second || (lang === 'es' ? prefs.voiceEs : prefs.voiceEn);
+  const voice = voices.find((v) => v.name === wanted)
     || voices.find((v) => v.lang.toLowerCase().startsWith(lang === 'es' ? 'es' : 'en'))
     || null;
+  // With only one voice installed, drop the pitch for the second speaker so
+  // the two sides of a dialogue are still tellable apart.
+  const pitch = slot === 1 && !second ? 0.78 : 1;
+  return { voice, pitch };
 }
 
-function hasSpanishVoice() {
+function hasSpanishVoice() {  // eslint-disable-line
   return speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith('es'));
 }
 
@@ -1092,8 +1296,9 @@ function hasSpanishVoice() {
 function speakOne(text) {
   speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.voice = pickVoice('es');
-  utterance.lang = utterance.voice?.lang || 'es-ES';
+  const { voice } = pickVoice('es');
+  utterance.voice = voice;
+  utterance.lang = voice?.lang || 'es-ES';
   utterance.rate = Number(prefs.rate) || 1;
   speechSynthesis.speak(utterance);
 }
@@ -1124,9 +1329,9 @@ function listenFrom(sentenceIndex = 0) {
 /** Where listening should pick up: where you stopped, if it was this page. */
 function resumePoint() {
   const saved = prefs.listen;
-  if (saved && saved.doc === state.doc?.id && saved.section === state.sectionIndex) {
-    return Math.min(saved.sentence || 0, (state.narration?.sentences.length || 1) - 1);
-  }
+  const samePlace = saved && saved.doc === state.doc?.id
+    && saved.section === state.sectionIndex && saved.mode === state.mode;
+  if (samePlace) return Math.min(saved.sentence || 0, (state.narration?.sentences.length || 1) - 1);
   return 0;
 }
 
@@ -1148,9 +1353,12 @@ function speakStep() {
 
   highlightRun(sentence, run);
   const utterance = new SpeechSynthesisUtterance(run.text);
-  utterance.voice = pickVoice(run.lang);
-  utterance.lang = utterance.voice?.lang || (run.lang === 'es' ? 'es-ES' : 'en-GB');
+  const { voice, pitch } = pickVoice(run.lang, speakerSlot(run.speaker));
+  utterance.voice = voice;
+  utterance.lang = voice?.lang || (run.lang === 'es' ? 'es-ES' : 'en-GB');
   utterance.rate = Number(prefs.rate) || 1;
+  utterance.pitch = pitch;
+  if (run.kind === 'prompt') utterance.rate = Math.min(2, utterance.rate * 0.95);
   if (run.kind === 'gloss') {
     // the gloss is an aside, not part of the sentence: quieter and quicker
     utterance.volume = 0.72;
@@ -1176,8 +1384,8 @@ function speakStep() {
 }
 
 function highlightRun(sentence, run) {
-  document.querySelectorAll('.sentence.speaking').forEach((n) => n.classList.remove('speaking'));
-  document.querySelectorAll('.es.saying').forEach((n) => n.classList.remove('saying'));
+  document.querySelectorAll('.speaking').forEach((n) => n.classList.remove('speaking'));
+  document.querySelectorAll('.saying').forEach((n) => n.classList.remove('saying'));
   const sentenceEl = state.sentenceEls[sentence.index];
   if (sentenceEl) {
     sentenceEl.classList.add('speaking');
@@ -1208,7 +1416,7 @@ function pauseListening() {
   clearTimeout(player.timer);
   speechSynthesis.cancel();      // pause() is unreliable across browsers; we re-speak instead
   $('playPause').textContent = '▶';
-  document.querySelectorAll('.es.saying').forEach((n) => n.classList.remove('saying'));
+  document.querySelectorAll('.saying').forEach((n) => n.classList.remove('saying'));
 }
 
 function resumeListening() {
@@ -1219,17 +1427,17 @@ function resumeListening() {
 }
 
 function stopListening() {
+  const wasActive = player.active;
   player.active = false;
   player.paused = false;
   clearTimeout(player.timer);
   clearTimeout(player.sleepTimer);
   speechSynthesis.cancel();
-  document.querySelectorAll('.sentence.speaking, .es.saying')
-    .forEach((n) => n.classList.remove('speaking', 'saying'));
+  document.querySelectorAll('.speaking, .saying').forEach((n) => n.classList.remove('speaking', 'saying'));
   $('playbar').classList.remove('on');
   $('btnListen').classList.remove('on');
   $('btnListen').textContent = '▶ Listen';
-  rememberPosition();
+  if (wasActive) rememberPosition();   // don't overwrite a saved spot we never played
 }
 
 function skipSentence(delta) {
@@ -1245,7 +1453,9 @@ function skipSentence(delta) {
 let positionTimer = null;
 function rememberPosition() {
   if (!state.doc) return;
-  prefs.listen = { doc: state.doc.id, section: state.sectionIndex, sentence: player.sentence };
+  prefs.listen = {
+    doc: state.doc.id, section: state.sectionIndex, sentence: player.sentence, mode: state.mode,
+  };
   clearTimeout(positionTimer);
   positionTimer = setTimeout(savePrefs, 600);
 }
@@ -1293,6 +1503,16 @@ function setLevel(value, { save: persist = true } = {}) {
 $('level').addEventListener('input', (e) => setLevel(Number(e.target.value), { save: false }));
 $('level').addEventListener('change', savePrefs);
 $('btnAdd').onclick = () => panelAdd();
+$('btnScenes').onclick = panelScenes;
+$('btnDrill').onclick = () => {
+  stopListening();
+  state.mode = state.mode === 'drill' ? 'read' : 'drill';
+  player.sentence = 0;
+  player.run = 0;
+  if (state.mode === 'read') reanalyze();
+  render();
+  window.scrollTo({ top: 0 });
+};
 $('btnLibrary').onclick = panelLibrary;
 $('btnStats').onclick = panelStats;
 $('btnExport').onclick = panelExport;

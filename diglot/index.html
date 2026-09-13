@@ -122,6 +122,26 @@
   .es.saying { outline: 2px solid var(--accent); outline-offset: 1px; background: var(--es-bg); }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
   .section-break { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+  .who {
+    display: inline-block; font-family: system-ui, sans-serif; font-size: .62em;
+    font-weight: 650; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--ink-3); margin-right: .55em; vertical-align: .12em;
+  }
+  .who.b { color: var(--accent); }
+  .turn { margin-bottom: .8em; }
+  /* phrase drill */
+  .drill { display: grid; gap: 2px; }
+  .drill .row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 9px 10px;
+    border-radius: 8px; align-items: baseline;
+  }
+  .drill .row:nth-child(odd) { background: var(--surface); }
+  .drill .row.speaking { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .drill .en { color: var(--ink-2); font-size: .82em; font-family: system-ui, sans-serif; }
+  .drill .es { color: var(--es); background: none; text-decoration: none; cursor: default; padding: 0; }
+  .drill.cover .es { filter: blur(5px); transition: filter .12s; }
+  .drill.cover .row:hover .es, .drill.cover .row.speaking .es, .drill.cover .row.shown .es { filter: none; }
+  @media (max-width: 560px) { .drill .row { grid-template-columns: 1fr; gap: 2px; } }
   .section-nav { display: flex; justify-content: space-between; gap: 10px; margin: 30px auto 0; max-width: 36em; }
 
   /* ── word popover ───────────────────────────────────────── */
@@ -236,6 +256,7 @@
     <div class="brand"><span class="dot"></span>Diglot</div>
     <div class="doc-title" id="docTitle">Nothing loaded</div>
     <button class="btn" id="btnAdd">+ Text</button>
+    <button class="btn ghost" id="btnScenes">Scenes</button>
     <button class="btn ghost" id="btnLibrary">Library</button>
     <button class="btn ghost" id="btnStats">Progress</button>
     <button class="btn ghost" id="btnExport">Export</button>
@@ -247,7 +268,8 @@
       <input type="range" id="level" min="0" max="100" value="25" step="1" />
       <div class="readout"><b id="levelOut">25</b>% dial · <span id="actualOut">0</span>% of words</div>
       <div class="stage" id="stageOut">easing in</div>
-      <button class="btn ghost" id="btnPeek" title="Hold to see the English (or press and hold P)">Peek</button>
+      <button class="btn ghost" id="btnDrill" title="Practise this scene's phrases" hidden>Drill</button>
+    <button class="btn ghost" id="btnPeek" title="Hold to see the English (or press and hold P)">Peek</button>
       <button class="btn ghost" id="btnListen" title="Read aloud">▶ Listen</button>
     </div>
   </div>

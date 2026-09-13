@@ -54,7 +54,7 @@ test('determiners agree once articles are on', () => {
 test('verbs are conjugated to fit the sentence', () => {
   assert.match(at('She walks to the city.', 30), /camina/);
   assert.match(at('They walked to the city.', 30), /caminaron/);
-  assert.match(at('I want to learn.', 40), /quiero/);
+  assert.match(at('I want to learn.', 40), /quiero/i);
   assert.match(at('I want to learn.', 40), /aprender/);   // infinitive after "to"
   assert.match(at('He is reading a book.', 40), /leyendo/);
   assert.match(at('The plans of the company changed.', 40), /cambiaron/);

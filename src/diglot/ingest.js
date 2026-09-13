@@ -18,21 +18,49 @@ const FETCHERS = [
   },
 ];
 
+/**
+ * Give up on a slow reader service rather than hanging. A dead link in a list
+ * of twenty should cost you a few seconds, not the whole queue.
+ */
+function withTimeout(signal, ms) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new DOMException('Timeout', 'TimeoutError')), ms);
+  const onAbort = () => controller.abort(signal.reason);
+  if (signal) {
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    done: () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    },
+  };
+}
+
 /** Fetch a URL and pull the article text out of it. */
-export async function fetchArticle(url, { signal } = {}) {
+export async function fetchArticle(url, { signal, timeout = 20000 } = {}) {
   const clean = /^https?:\/\//i.test(url) ? url : 'https://' + url;
   const errors = [];
   for (const fetcher of FETCHERS) {
+    const guard = withTimeout(signal, timeout);
     try {
-      const res = await fetch(fetcher.url(clean), { signal, headers: { Accept: 'text/plain, text/html' } });
+      const res = await fetch(fetcher.url(clean), {
+        signal: guard.signal, headers: { Accept: 'text/plain, text/html' },
+      });
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const body = await res.text();
       const article = fetcher.parse(body);
       if (article.text.split(/\s+/).length > 120) return { ...article, url: clean, via: fetcher.name };
       errors.push(`${fetcher.name}: too little text`);
     } catch (err) {
-      if (err.name === 'AbortError') throw err;
-      errors.push(`${fetcher.name}: ${err.message}`);
+      if (signal?.aborted) throw err;                       // the caller cancelled
+      const why = err.name === 'TimeoutError' || err.name === 'AbortError'
+        ? `no answer in ${Math.round(timeout / 1000)}s` : err.message;
+      errors.push(`${fetcher.name}: ${why}`);
+    } finally {
+      guard.done();
     }
   }
   throw new Error(`Could not read that page (${errors.join('; ')})`);

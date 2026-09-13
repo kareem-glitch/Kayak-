@@ -137,6 +137,44 @@ export async function writeArticle(topic, { apiKey, model = MODELS[0].id, words 
   return { title, text: lines.slice(1).join('\n').trim() || reply.trim() };
 }
 
+const DIALOGUE_SYSTEM = `You write short everyday dialogues for someone learning Spanish.
+
+Write the dialogue in ENGLISH — the reader's app weaves the Spanish in itself.
+
+Format, exactly:
+- A one-line title, then a blank line.
+- Then the dialogue: one turn per line, "Speaker: what they say", with a blank
+  line between turns. Name the speakers by their role ("Waiter", "You",
+  "Pharmacist"). Two speakers, occasionally three.
+- 8 to 14 turns. Real spoken English, short sentences, no narration or stage
+  directions. Include the awkward bits: not understanding, asking someone to
+  repeat, getting the price wrong.
+- Then a blank line, then a line reading exactly: PHRASES
+- Then 6 to 8 lines, each "English sentence = Spanish sentence", taking the most
+  useful things said in the dialogue. Neutral peninsular Spanish, written the
+  way a person actually says it, with correct punctuation (¿ ¡ and accents).
+
+Nothing else — no headings, no markdown, no commentary.`;
+
+/** Generate an everyday dialogue, with its key phrases in real Spanish. */
+export async function writeScene(situation, { apiKey, model = MODELS[0].id, signal } = {}) {
+  const reply = await callClaude({
+    apiKey, model, signal, maxTokens: 3000,
+    system: DIALOGUE_SYSTEM,
+    messages: [{ role: 'user', content: `Write a dialogue for this situation: ${situation}` }],
+  });
+  const [head, phraseBlock = ''] = reply.trim().split(/^\s*PHRASES\s*$/m);
+  const lines = head.trim().split('\n');
+  const title = lines[0].replace(/^#+\s*/, '').trim();
+  const text = lines.slice(1).join('\n').trim();
+  const phrases = phraseBlock.trim().split('\n')
+    .map((line) => line.replace(/^[-*\d.\s]+/, '').split('='))
+    .filter((parts) => parts.length >= 2)
+    .map(([en, ...rest]) => ({ en: en.trim(), es: rest.join('=').trim() }))
+    .filter((p) => p.en && p.es);
+  return { title, text, phrases };
+}
+
 /** Cheap key check: one token, so it costs essentially nothing. */
 export async function testKey({ apiKey, model = MODELS[0].id }) {
   await callClaude({ apiKey, model, maxTokens: 1, system: 'Reply with "ok".', messages: [{ role: 'user', content: 'ok' }] });
