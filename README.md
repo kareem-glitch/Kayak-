@@ -1,3 +1,13 @@
+# Kayak
+
+Two small, dependency-free web tools that live in this repo:
+
+- **[Wexford Kayak Clock](#wexford-kayak-clock-)** — when to paddle, from wind and tide.
+- **[Diglot](diglot/)** — read English with Spanish woven in, at a difficulty you
+  set with a slider, and export it to your Kindle. See [diglot/README.md](diglot/README.md).
+
+---
+
 # Wexford Kayak Clock 🛶
 
 Tells you when it's a good time to paddle in Wexford Harbour. No accounts, no
@@ -42,6 +52,10 @@ npm run forecast
 ```sh
 npm test
 ```
+
+**Diglot** — serve the folder and open `http://localhost:8080/diglot/`, or open
+`diglot/diglot.html` directly. Rebuild that single-file bundle with
+`npm run build:diglot`.
 
 ## Layout
 

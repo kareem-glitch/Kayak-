@@ -1,0 +1,3050 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a6b5c'/%3E%3Ctext x='16' y='23' font-size='20' font-family='Georgia,serif' fill='%23fff' text-anchor='middle'%3ED%3C/text%3E%3C/svg%3E" />
+<title>Diglot — read your way into Spanish</title>
+<meta name="description" content="Reads English text with Spanish woven in, at whatever difficulty you set." />
+<style>
+  :root {
+    --bg: #fbfaf8; --surface: #ffffff; --surface-2: #f4f2ee;
+    --ink: #21201d; --ink-2: #57534e; --ink-3: #8f8a83;
+    --line: #e5e1da; --line-2: #d6d1c8;
+    --es: #0a6b5c; --es-bg: #e4f2ef; --es-known: #7a5cc4; --es-known-bg: #eee9fb;
+    --accent: #b4531f; --accent-ink: #ffffff;
+    --shadow: 0 1px 2px rgba(20,18,15,.06), 0 8px 24px rgba(20,18,15,.08);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16151a; --surface: #1e1d23; --surface-2: #26252c;
+      --ink: #e9e7e3; --ink-2: #aca8a2; --ink-3: #7c7873;
+      --line: #302e36; --line-2: #3d3a44;
+      --es: #4fc4ae; --es-bg: #14322d; --es-known: #b39cf0; --es-known-bg: #241f38;
+      --accent: #e2793c; --accent-ink: #1a1206;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--accent); }
+
+  /* ── chrome ─────────────────────────────────────────────── */
+  header.top {
+    position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+  }
+  .top-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; max-width: 1100px; margin: 0 auto; }
+  .brand { font-weight: 650; letter-spacing: -0.02em; font-size: 17px; display: flex; align-items: center; gap: 7px; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--es); }
+  .doc-title {
+    flex: 1; min-width: 0; color: var(--ink-2); font-size: 13px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .btn {
+    background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px;
+    padding: 6px 11px; font-size: 13px; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--ink-3); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 550; }
+  .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .btn.on { background: var(--es-bg); border-color: var(--es); color: var(--es); }
+
+  /* ── difficulty strip ───────────────────────────────────── */
+  .dial { border-top: 1px solid var(--line); background: var(--surface); }
+  .dial-inner { max-width: 1100px; margin: 0 auto; padding: 9px 16px; display: flex; align-items: center; gap: 14px; }
+  .dial label { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .07em; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; flex: 1; min-width: 120px; height: 22px; background: transparent;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, var(--es) var(--pct, 25%), var(--line-2) var(--pct, 25%));
+  }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line-2); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--es); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; margin-top: -7px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--es); box-shadow: var(--shadow);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--surface); border: 2px solid var(--es);
+  }
+  .readout { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .readout b { color: var(--ink); font-size: 15px; }
+  .stage { font-size: 12px; color: var(--ink-3); }
+
+  /* ── reader ─────────────────────────────────────────────── */
+  main { max-width: 1100px; margin: 0 auto; padding: 0 16px 120px; }
+  .reader {
+    max-width: 36em; margin: 26px auto 0;
+    font-family: Iowan Old Style, Palatino, Georgia, "Times New Roman", serif;
+    font-size: var(--reader-size, 19px); line-height: 1.72;
+  }
+  .reader h1.title { font-size: 1.5em; line-height: 1.25; margin: 0 0 .1em; letter-spacing: -0.01em; }
+  .reader .byline { font-family: system-ui, sans-serif; font-size: 12px; color: var(--ink-3); margin-bottom: 1.4em; }
+  .reader p { margin: 0 0 1.05em; }
+  .es {
+    color: var(--es); background: var(--es-bg); border-radius: 4px; padding: 0 2px; margin: 0 -1px;
+    cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
+    text-decoration-color: color-mix(in srgb, var(--es) 45%, transparent); text-underline-offset: 3px;
+  }
+  .es.known { color: var(--es-known); background: var(--es-known-bg); text-decoration: none; }
+  .es.speaking { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .es .hint { font-size: .68em; color: var(--ink-3); font-family: system-ui, sans-serif; }
+  .peek .es::after {
+    content: " (" attr(data-en) ")"; font-size: .68em; color: var(--ink-3);
+    font-family: system-ui, sans-serif;
+  }
+  .sentence.speaking { background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 4px; }
+  .section-break { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+  .section-nav { display: flex; justify-content: space-between; gap: 10px; margin: 30px auto 0; max-width: 36em; }
+
+  /* ── word popover ───────────────────────────────────────── */
+  #pop {
+    position: absolute; z-index: 60; display: none; min-width: 210px; max-width: 300px;
+    background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 12px 13px;
+  }
+  #pop .word { font-size: 17px; font-weight: 600; color: var(--es); }
+  #pop .en { font-size: 14px; margin-top: 1px; }
+  #pop .meta { font-size: 11px; color: var(--ink-3); margin-top: 5px; text-transform: uppercase; letter-spacing: .05em; }
+  #pop .row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  #pop .row .btn { flex: 1; text-align: center; padding: 5px 8px; font-size: 12px; }
+
+  /* ── panels ─────────────────────────────────────────────── */
+  .scrim { position: fixed; inset: 0; background: rgba(10,9,8,.4); z-index: 40; display: none; }
+  .scrim.open { display: block; }
+  .panel {
+    position: fixed; z-index: 50; top: 0; right: 0; bottom: 0; width: min(520px, 100%);
+    background: var(--bg); border-left: 1px solid var(--line); box-shadow: var(--shadow);
+    transform: translateX(100%); transition: transform .18s ease; overflow-y: auto;
+  }
+  .panel.open { transform: none; }
+  .panel-head {
+    position: sticky; top: 0; background: var(--bg); border-bottom: 1px solid var(--line);
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .panel-head h2 { font-size: 15px; margin: 0; }
+  .panel-body { padding: 16px 18px 40px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { background: transparent; border: 1px solid transparent; border-radius: 999px; padding: 5px 12px; font-size: 13px; color: var(--ink-2); }
+  .tab.on { background: var(--surface); border-color: var(--line-2); color: var(--ink); font-weight: 550; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 5px; font-weight: 550; }
+  .field .help { font-size: 12px; color: var(--ink-3); margin-top: 5px; line-height: 1.45; }
+  input[type=text], input[type=url], input[type=password], textarea, select {
+    width: 100%; background: var(--surface); border: 1px solid var(--line-2);
+    border-radius: 8px; padding: 9px 10px; font-size: 14px;
+  }
+  textarea { min-height: 190px; resize: vertical; line-height: 1.5; font-family: inherit; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--es); outline-offset: -1px; border-color: transparent; }
+  .row2 { display: flex; gap: 10px; align-items: center; }
+  .row2 > * { flex: 1; }
+  .check { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 11px; font-size: 14px; }
+  .check input { margin-top: 3px; flex: none; width: 16px; height: 16px; accent-color: var(--es); }
+  .check span small { display: block; color: var(--ink-3); font-size: 12px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px 13px; margin-bottom: 9px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .card .grow { flex: 1; min-width: 0; }
+  .card h3 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+  .card .sub { font-size: 12px; color: var(--ink-3); }
+  .card .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .card .bar i { display: block; height: 100%; background: var(--es); }
+  .empty { color: var(--ink-3); font-size: 13px; text-align: center; padding: 30px 10px; }
+
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); margin-bottom: 14px; }
+  .stats b { display: block; font-size: 19px; color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .wordlist { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip {
+    font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--surface-2);
+    border: 1px solid var(--line); color: var(--ink-2);
+  }
+  .chip b { color: var(--es); font-weight: 600; }
+  .note {
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-bottom: 14px;
+  }
+  .note code { font-size: 12px; background: var(--surface); padding: 1px 4px; border-radius: 4px; border: 1px solid var(--line); }
+  .status { font-size: 13px; color: var(--ink-2); margin-top: 10px; min-height: 20px; }
+  .status.error { color: #c0392b; }
+  @media (prefers-color-scheme: dark) { .status.error { color: #ff8a7a; } }
+  .spinner {
+    display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-2);
+    border-top-color: var(--es); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── playback bar ───────────────────────────────────────── */
+  .playbar {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 35;
+    display: none; align-items: center; gap: 10px; padding: 8px 10px 8px 14px;
+    background: var(--surface); border: 1px solid var(--line-2); border-radius: 999px; box-shadow: var(--shadow);
+  }
+  .playbar.on { display: flex; }
+  .playbar .label { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .playbar select { width: auto; padding: 4px 6px; font-size: 12px; border-radius: 6px; }
+
+  @media (max-width: 640px) {
+    .top-row { flex-wrap: wrap; }
+    .doc-title { order: 3; flex-basis: 100%; }
+    .reader { font-size: var(--reader-size, 18px); }
+    .dial-inner { gap: 10px; }
+    .stage { display: none; }
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <div class="brand"><span class="dot"></span>Diglot</div>
+    <div class="doc-title" id="docTitle">Nothing loaded</div>
+    <button class="btn" id="btnAdd">+ Text</button>
+    <button class="btn ghost" id="btnLibrary">Library</button>
+    <button class="btn ghost" id="btnStats">Progress</button>
+    <button class="btn ghost" id="btnExport">Export</button>
+    <button class="btn ghost" id="btnSettings" title="Settings">⚙</button>
+  </div>
+  <div class="dial">
+    <div class="dial-inner">
+      <label for="level">Spanish</label>
+      <input type="range" id="level" min="0" max="100" value="25" step="1" />
+      <div class="readout"><b id="levelOut">25</b>% dial · <span id="actualOut">0</span>% of words</div>
+      <div class="stage" id="stageOut">easing in</div>
+      <button class="btn ghost" id="btnPeek" title="Hold to see the English (or press and hold P)">Peek</button>
+      <button class="btn ghost" id="btnListen" title="Read aloud">▶ Listen</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="reader" id="reader"></div>
+  <div class="section-nav" id="sectionNav"></div>
+</main>
+
+<div id="pop"></div>
+
+<div class="playbar" id="playbar">
+  <span class="label" id="playLabel">—</span>
+  <select id="rate" title="Speed">
+    <option value="0.7">0.7×</option><option value="0.85">0.85×</option>
+    <option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.3">1.3×</option>
+  </select>
+  <button class="btn" id="playPause">Pause</button>
+  <button class="btn ghost" id="playStop">Stop</button>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<aside class="panel" id="panel">
+  <div class="panel-head">
+    <h2 id="panelTitle">Panel</h2>
+    <button class="btn ghost" id="panelClose">Close ✕</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</aside>
+
+<script type="module">
+// ── src/diglot/lexicon.js ──────────────────────────────────────────────────
+// English -> Spanish lexicon, ordered in difficulty bands.
+//
+// Band 0 is what a total beginner meets first: high-frequency, concrete, and
+// mostly guessable from context. Later bands are rarer or more abstract. The
+// difficulty slider walks down this list, so a word that turns Spanish at 20%
+// is still Spanish at 60% — the text only ever gains Spanish as you push it up.
+//
+// Entry format: "english|spanish|pos[|extra]"
+//   pos: n (noun, extra = m|f), v (verb, Spanish infinitive), adj, adv,
+//        prep, conj, pron, num, det, interj, phrase
+// Multi-word English keys are matched as phrases before single words.
+
+const BANDS = [
+  // ── Band 0 · first contact ────────────────────────────────────────────────
+  [
+    'yes|sí|interj', 'and|y|conj', 'but|pero|conj', 'or|o|conj',
+    'very|muy|adv', 'also|también|adv', 'more|más|adv', 'less|menos|adv',
+    'because|porque|conj', 'always|siempre|adv', 'never|nunca|adv',
+    'now|ahora|adv', 'here|aquí|adv', 'there|allí|adv', 'today|hoy|adv',
+    'tomorrow|mañana|adv', 'yesterday|ayer|adv', 'well|bien|adv',
+    'good|bueno|adj', 'bad|malo|adj', 'big|grande|adj', 'small|pequeño|adj',
+    'new|nuevo|adj', 'old|viejo|adj', 'happy|feliz|adj', 'beautiful|hermoso|adj',
+    'house|casa|n|f', 'water|agua|n|f', 'food|comida|n|f', 'book|libro|n|m',
+    'man|hombre|n|m', 'woman|mujer|n|f', 'day|día|n|m', 'night|noche|n|f',
+    'city|ciudad|n|f', 'country|país|n|m', 'friend|amigo|n|m', 'family|familia|n|f',
+    'time|tiempo|n|m', 'year|año|n|m', 'month|mes|n|m', 'week|semana|n|f',
+    'hour|hora|n|f', 'minute|minuto|n|m', 'world|mundo|n|m', 'life|vida|n|f',
+    'name|nombre|n|m', 'work|trabajo|n|m', 'money|dinero|n|m', 'love|amor|n|m',
+    'sun|sol|n|m', 'moon|luna|n|f', 'sea|mar|n|m', 'street|calle|n|f',
+    'door|puerta|n|f', 'table|mesa|n|f', 'car|coche|n|m', 'dog|perro|n|m',
+    'cat|gato|n|m', 'hand|mano|n|f', 'eye|ojo|n|m', 'head|cabeza|n|f',
+    'mother|madre|n|f', 'father|padre|n|m', 'son|hijo|n|m', 'daughter|hija|n|f',
+    'brother|hermano|n|m', 'sister|hermana|n|f', 'child|niño|n|m',
+    'boy|chico|n|m', 'girl|chica|n|f', 'coffee|café|n|m', 'milk|leche|n|f',
+    'bread|pan|n|m', 'wine|vino|n|m', 'beer|cerveza|n|f',
+    'thank you|gracias|phrase', 'please|por favor|phrase',
+    'of course|por supuesto|phrase', 'for example|por ejemplo|phrase',
+    'a lot|mucho|phrase', 'good morning|buenos días|phrase',
+    'one|uno|num', 'two|dos|num', 'three|tres|num', 'four|cuatro|num',
+    'five|cinco|num', 'six|seis|num', 'seven|siete|num', 'eight|ocho|num',
+    'nine|nueve|num', 'ten|diez|num', 'hundred|cien|num', 'thousand|mil|num',
+  ],
+  // ── Band 1 · the first verbs ──────────────────────────────────────────────
+  [
+    'speak|hablar|v', 'eat|comer|v', 'drink|beber|v', 'live|vivir|v',
+    'work|trabajar|v', 'read|leer|v', 'write|escribir|v', 'walk|caminar|v',
+    'run|correr|v', 'sleep|dormir|v', 'buy|comprar|v', 'sell|vender|v',
+    'sing|cantar|v', 'dance|bailar|v', 'cook|cocinar|v', 'swim|nadar|v',
+    'open|abrir|v', 'close|cerrar|v', 'wait|esperar|v', 'listen|escuchar|v',
+    'look|mirar|v', 'learn|aprender|v', 'teach|enseñar|v', 'help|ayudar|v',
+    'need|necesitar|v', 'want|querer|v', 'love|amar|v', 'enjoy|disfrutar|v', 'like|gustar|v',
+    'red|rojo|adj', 'blue|azul|adj', 'green|verde|adj', 'yellow|amarillo|adj',
+    'black|negro|adj', 'white|blanco|adj', 'hot|caliente|adj', 'cold|frío|adj',
+    'long|largo|adj', 'short|corto|adj', 'easy|fácil|adj', 'difficult|difícil|adj',
+    'important|importante|adj', 'different|diferente|adj', 'same|mismo|adj',
+    'true|verdadero|adj', 'young|joven|adj', 'strong|fuerte|adj',
+    'morning|mañana|n|f', 'afternoon|tarde|n|f', 'evening|noche|n|f',
+    'school|escuela|n|f', 'teacher|profesor|n|m', 'student|estudiante|n|m',
+    'word|palabra|n|f', 'language|idioma|n|m', 'question|pregunta|n|f',
+    'answer|respuesta|n|f', 'story|historia|n|f', 'music|música|n|f',
+    'film|película|n|f', 'movie|película|n|f', 'game|juego|n|m',
+    'money|dinero|n|m', 'price|precio|n|m', 'shop|tienda|n|f', 'store|tienda|n|f',
+    'market|mercado|n|m', 'restaurant|restaurante|n|m', 'hotel|hotel|n|m',
+    'room|habitación|n|f', 'kitchen|cocina|n|f', 'bed|cama|n|f',
+    'window|ventana|n|f', 'floor|suelo|n|m', 'wall|pared|n|f', 'key|llave|n|f',
+    'phone|teléfono|n|m', 'train|tren|n|m', 'plane|avión|n|m', 'bus|autobús|n|m',
+    'road|carretera|n|f', 'way|camino|n|m', 'place|lugar|n|m', 'home|hogar|n|m',
+    'with|con|prep', 'without|sin|prep', 'between|entre|prep', 'against|contra|prep',
+    'nothing|nada|pron', 'everything|todo|pron', 'someone|alguien|pron',
+    'something|algo|pron', 'nobody|nadie|pron',
+  ],
+  // ── Band 2 · everyday scaffolding ─────────────────────────────────────────
+  [
+    'see|ver|v', 'give|dar|v', 'take|tomar|v', 'put|poner|v', 'find|encontrar|v',
+    'think|pensar|v', 'know|saber|v', 'say|decir|v', 'ask|preguntar|v',
+    'answer|responder|v', 'call|llamar|v', 'play|jugar|v', 'win|ganar|v',
+    'lose|perder|v', 'pay|pagar|v', 'send|enviar|v', 'receive|recibir|v',
+    'carry|llevar|v', 'bring|traer|v', 'arrive|llegar|v', 'leave|salir|v',
+    'return|volver|v', 'enter|entrar|v', 'travel|viajar|v', 'visit|visitar|v',
+    'start|empezar|v', 'begin|empezar|v', 'finish|terminar|v', 'end|terminar|v',
+    'change|cambiar|v', 'use|usar|v', 'try|intentar|v', 'remember|recordar|v',
+    'forget|olvidar|v', 'understand|entender|v', 'believe|creer|v',
+    'feel|sentir|v', 'seem|parecer|v', 'happen|pasar|v', 'stay|quedarse|v',
+    'number|número|n|m', 'part|parte|n|f', 'thing|cosa|n|f', 'person|persona|n|f',
+    'group|grupo|n|m', 'company|empresa|n|f', 'business|negocio|n|m',
+    'government|gobierno|n|m', 'president|presidente|n|m', 'war|guerra|n|f',
+    'peace|paz|n|f', 'law|ley|n|f', 'right|derecho|n|m', 'power|poder|n|m',
+    'history|historia|n|f', 'science|ciencia|n|f', 'art|arte|n|m',
+    'health|salud|n|f', 'doctor|médico|n|m', 'hospital|hospital|n|m',
+    'body|cuerpo|n|m', 'face|cara|n|f', 'mouth|boca|n|f', 'foot|pie|n|m',
+    'leg|pierna|n|f', 'arm|brazo|n|m', 'hair|pelo|n|m', 'blood|sangre|n|f',
+    'earth|tierra|n|f', 'sky|cielo|n|m', 'air|aire|n|m', 'fire|fuego|n|m',
+    'rain|lluvia|n|f', 'wind|viento|n|m', 'snow|nieve|n|f', 'tree|árbol|n|m',
+    'flower|flor|n|f', 'animal|animal|n|m', 'bird|pájaro|n|m', 'fish|pez|n|m',
+    'horse|caballo|n|m', 'mountain|montaña|n|f', 'river|río|n|m',
+    'island|isla|n|f', 'beach|playa|n|f', 'field|campo|n|m', 'garden|jardín|n|m',
+    'far|lejos|adv', 'near|cerca de|prep', 'early|temprano|adv', 'late|tarde|adv',
+    'together|juntos|adv', 'almost|casi|adv', 'still|todavía|adv',
+    'already|ya|adv', 'only|solo|adv', 'perhaps|quizás|adv', 'maybe|quizás|adv',
+    'quickly|rápidamente|adv', 'slowly|despacio|adv',
+  ],
+  // ── Band 3 · opinion, quality, quantity ───────────────────────────────────
+  [
+    'great|estupendo|adj', 'terrible|terrible|adj', 'expensive|caro|adj',
+    'cheap|barato|adj', 'rich|rico|adj', 'poor|pobre|adj', 'clean|limpio|adj',
+    'dirty|sucio|adj', 'full|lleno|adj', 'empty|vacío|adj', 'open|abierto|adj',
+    'closed|cerrado|adj', 'ready|listo|adj', 'tired|cansado|adj',
+    'sick|enfermo|adj', 'safe|seguro|adj', 'dangerous|peligroso|adj',
+    'quiet|tranquilo|adj', 'loud|ruidoso|adj', 'slow|lento|adj', 'fast|rápido|adj',
+    'heavy|pesado|adj', 'light|ligero|adj', 'dark|oscuro|adj', 'bright|brillante|adj',
+    'deep|profundo|adj', 'high|alto|adj', 'low|bajo|adj', 'wide|ancho|adj',
+    'narrow|estrecho|adj', 'thick|grueso|adj', 'thin|delgado|adj',
+    'free|libre|adj', 'busy|ocupado|adj', 'famous|famoso|adj', 'strange|extraño|adj',
+    'funny|divertido|adj', 'serious|serio|adj', 'simple|sencillo|adj',
+    'possible|posible|adj', 'impossible|imposible|adj', 'necessary|necesario|adj',
+    'idea|idea|n|f', 'problem|problema|n|m', 'solution|solución|n|f',
+    'reason|razón|n|f', 'result|resultado|n|m', 'example|ejemplo|n|m',
+    'question|pregunta|n|f', 'change|cambio|n|m', 'point|punto|n|m',
+    'level|nivel|n|m', 'kind|tipo|n|m', 'type|tipo|n|m', 'form|forma|n|f',
+    'side|lado|n|m', 'end|final|n|m', 'beginning|principio|n|m',
+    'middle|medio|n|m', 'top|cima|n|f', 'bottom|fondo|n|m', 'edge|borde|n|m',
+    'size|tamaño|n|f', 'weight|peso|n|m', 'speed|velocidad|n|f',
+    'distance|distancia|n|f', 'space|espacio|n|m', 'line|línea|n|f',
+    'circle|círculo|n|m', 'colour|color|n|m', 'color|color|n|m',
+    'sound|sonido|n|m', 'voice|voz|n|f', 'light|luz|n|f', 'shadow|sombra|n|f',
+    'heat|calor|n|m', 'cold|frío|n|m', 'weather|clima|n|m', 'season|estación|n|f',
+    'spring|primavera|n|f', 'summer|verano|n|m', 'autumn|otoño|n|m',
+    'winter|invierno|n|m', 'holiday|vacaciones|n|f', 'party|fiesta|n|f',
+    'much|mucho|adj', 'many|muchos|adj', 'few|pocos|adj', 'little|poco|adj',
+    'enough|suficiente|adj', 'other|otro|adj', 'another|otro|adj',
+    'each|cada|det', 'every|cada|det', 'both|ambos|det', 'several|varios|det',
+  ],
+  // ── Band 4 · everyday abstract ────────────────────────────────────────────
+  [
+    'become|convertirse|v', 'allow|permitir|v', 'build|construir|v',
+    'create|crear|v', 'choose|elegir|v', 'decide|decidir|v', 'explain|explicar|v',
+    'show|mostrar|v', 'keep|guardar|v', 'grow|crecer|v', 'move|mover|v',
+    'follow|seguir|v', 'stop|parar|v', 'break|romper|v', 'cut|cortar|v',
+    'wash|lavar|v', 'drive|conducir|v', 'fly|volar|v', 'laugh|reír|v',
+    'cry|llorar|v', 'smile|sonreír|v', 'die|morir|v', 'kill|matar|v',
+    'save|salvar|v', 'fight|luchar|v', 'meet|conocer|v', 'know|conocer|v',
+    'accept|aceptar|v', 'refuse|rechazar|v', 'agree|estar de acuerdo|v',
+    'admit|admitir|v', 'add|añadir|v', 'remove|quitar|v', 'fill|llenar|v',
+    'cover|cubrir|v', 'hide|esconder|v', 'search|buscar|v', 'look for|buscar|v',
+    'count|contar|v', 'measure|medir|v', 'draw|dibujar|v', 'paint|pintar|v',
+    'burn|quemar|v', 'grow up|crecer|v', 'raise|levantar|v', 'throw|lanzar|v',
+    'catch|atrapar|v', 'touch|tocar|v', 'push|empujar|v', 'pull|tirar|v',
+    'memory|memoria|n|f', 'dream|sueño|n|m', 'hope|esperanza|n|f',
+    'fear|miedo|n|m', 'anger|ira|n|f', 'joy|alegría|n|f', 'pain|dolor|n|m',
+    'truth|verdad|n|f', 'lie|mentira|n|f', 'secret|secreto|n|m',
+    'mind|mente|n|f', 'soul|alma|n|f', 'god|dios|n|m', 'church|iglesia|n|f',
+    'faith|fe|n|f', 'death|muerte|n|f', 'birth|nacimiento|n|m',
+    'age|edad|n|f', 'youth|juventud|n|f', 'future|futuro|n|m',
+    'past|pasado|n|m', 'present|presente|n|m', 'moment|momento|n|m',
+    'century|siglo|n|m', 'period|período|n|m', 'century|siglo|n|m',
+    'news|noticias|n|f', 'newspaper|periódico|n|m', 'letter|carta|n|f',
+    'message|mensaje|n|m', 'meeting|reunión|n|f', 'project|proyecto|n|m',
+    'plan|plan|n|m', 'job|empleo|n|m', 'office|oficina|n|f', 'team|equipo|n|m',
+    'member|miembro|n|m', 'leader|líder|n|m', 'citizen|ciudadano|n|m',
+    'society|sociedad|n|f', 'culture|cultura|n|f', 'economy|economía|n|f',
+    'market|mercado|n|m', 'price|precio|n|m', 'cost|coste|n|m',
+    'value|valor|n|m', 'growth|crecimiento|n|m', 'research|investigación|n|f',
+    'study|estudio|n|m', 'data|datos|n|m', 'number|número|n|m',
+    'however|sin embargo|adv', 'therefore|por lo tanto|adv',
+    'although|aunque|conj', 'while|mientras|conj', 'until|hasta que|conj',
+    'if|si|conj', 'when|cuando|conj', 'where|donde|conj', 'than|que|conj',
+    'at least|al menos|phrase', 'in fact|de hecho|phrase',
+    'at the same time|al mismo tiempo|phrase', 'little by little|poco a poco|phrase',
+    'on the other hand|por otro lado|phrase', 'as well|también|phrase',
+    'right now|ahora mismo|phrase', 'no longer|ya no|phrase',
+  ],
+// ── Band 5 · confident intermediate ───────────────────────────────────────
+  [
+    'develop|desarrollar|v', 'improve|mejorar|v', 'reduce|reducir|v',
+    'increase|aumentar|v', 'produce|producir|v', 'provide|proporcionar|v',
+    'require|requerir|v', 'include|incluir|v', 'contain|contener|v',
+    'consider|considerar|v', 'suggest|sugerir|v', 'describe|describir|v',
+    'compare|comparar|v', 'discuss|discutir|v', 'argue|discutir|v',
+    'report|informar|v', 'announce|anunciar|v', 'publish|publicar|v',
+    'support|apoyar|v', 'protect|proteger|v', 'attack|atacar|v',
+    'defend|defender|v', 'destroy|destruir|v', 'repair|reparar|v',
+    'organise|organizar|v', 'organize|organizar|v', 'manage|gestionar|v',
+    'control|controlar|v', 'lead|dirigir|v', 'train|entrenar|v',
+    'invest|invertir|v', 'spend|gastar|v', 'earn|ganar|v', 'save|ahorrar|v',
+    'borrow|pedir prestado|v', 'lend|prestar|v', 'own|poseer|v',
+    'share|compartir|v', 'exchange|intercambiar|v', 'replace|reemplazar|v',
+    'avoid|evitar|v', 'prevent|prevenir|v', 'solve|resolver|v',
+    'discover|descubrir|v', 'invent|inventar|v', 'design|diseñar|v',
+    'quality|calidad|n|f', 'quantity|cantidad|n|f', 'amount|cantidad|n|f',
+    'effect|efecto|n|m', 'cause|causa|n|f', 'purpose|propósito|n|m',
+    'method|método|n|m', 'system|sistema|n|m', 'process|proceso|n|m',
+    'condition|condición|n|f', 'situation|situación|n|f', 'position|posición|n|f',
+    'role|papel|n|m', 'task|tarea|n|f', 'effort|esfuerzo|n|m',
+    'success|éxito|n|m', 'failure|fracaso|n|m', 'mistake|error|n|m',
+    'risk|riesgo|n|m', 'chance|oportunidad|n|f', 'opportunity|oportunidad|n|f',
+    'advantage|ventaja|n|f', 'disadvantage|desventaja|n|f', 'benefit|beneficio|n|m',
+    'damage|daño|n|m', 'loss|pérdida|n|f', 'profit|beneficio|n|m',
+    'income|ingresos|n|m', 'tax|impuesto|n|m', 'debt|deuda|n|f',
+    'bank|banco|n|m', 'account|cuenta|n|f', 'contract|contrato|n|m',
+    'agreement|acuerdo|n|m', 'decision|decisión|n|f', 'choice|elección|n|f',
+    'rule|regla|n|f', 'order|orden|n|m', 'freedom|libertad|n|f',
+    'justice|justicia|n|f', 'crime|delito|n|m', 'police|policía|n|f',
+    'court|tribunal|n|m', 'judge|juez|n|m', 'prison|cárcel|n|f',
+    'army|ejército|n|m', 'soldier|soldado|n|m', 'weapon|arma|n|f',
+    'border|frontera|n|f', 'state|estado|n|m', 'nation|nación|n|f',
+    'population|población|n|f', 'village|pueblo|n|m', 'town|pueblo|n|m',
+    'building|edificio|n|m', 'bridge|puente|n|m', 'factory|fábrica|n|f',
+    'machine|máquina|n|f', 'tool|herramienta|n|f', 'engine|motor|n|m',
+    'energy|energía|n|f', 'fuel|combustible|n|m', 'oil|petróleo|n|m',
+    'metal|metal|n|m', 'stone|piedra|n|f', 'wood|madera|n|f',
+    'glass|vidrio|n|m', 'paper|papel|n|m', 'cloth|tela|n|f',
+  ],
+  // ── Band 6 · nuance and register ──────────────────────────────────────────
+  [
+    'clearly|claramente|adv', 'probably|probablemente|adv',
+    'certainly|ciertamente|adv', 'exactly|exactamente|adv',
+    'especially|especialmente|adv', 'generally|generalmente|adv',
+    'usually|normalmente|adv', 'often|a menudo|adv', 'sometimes|a veces|adv',
+    'rarely|rara vez|adv', 'suddenly|de repente|adv', 'finally|finalmente|adv',
+    'recently|recientemente|adv', 'immediately|inmediatamente|adv',
+    'completely|completamente|adv', 'absolutely|absolutamente|adv',
+    'apparently|aparentemente|adv', 'obviously|obviamente|adv',
+    'hardly|apenas|adv', 'barely|apenas|adv', 'instead|en cambio|adv',
+    'anyway|de todos modos|adv', 'besides|además|adv', 'moreover|además|adv',
+    'nevertheless|no obstante|adv', 'meanwhile|mientras tanto|adv',
+    'afterwards|después|adv', 'beforehand|de antemano|adv',
+    'available|disponible|adj', 'common|común|adj', 'rare|raro|adj',
+    'similar|similar|adj', 'equal|igual|adj', 'exact|exacto|adj',
+    'correct|correcto|adj', 'wrong|equivocado|adj', 'clear|claro|adj',
+    'obvious|obvio|adj', 'complex|complejo|adj', 'complicated|complicado|adj',
+    'useful|útil|adj', 'useless|inútil|adj', 'helpful|servicial|adj',
+    'careful|cuidadoso|adj', 'honest|honesto|adj', 'kind|amable|adj',
+    'polite|educado|adj', 'rude|grosero|adj', 'brave|valiente|adj',
+    'proud|orgulloso|adj', 'ashamed|avergonzado|adj', 'jealous|celoso|adj',
+    'lonely|solitario|adj', 'calm|tranquilo|adj', 'nervous|nervioso|adj',
+    'worried|preocupado|adj', 'surprised|sorprendido|adj',
+    'disappointed|decepcionado|adj', 'satisfied|satisfecho|adj',
+    'confident|seguro|adj', 'doubtful|dudoso|adj', 'stupid|tonto|adj',
+    'clever|listo|adj', 'wise|sabio|adj', 'crazy|loco|adj',
+    'behaviour|comportamiento|n|m', 'behavior|comportamiento|n|m',
+    'attitude|actitud|n|f', 'character|carácter|n|m', 'personality|personalidad|n|f',
+    'habit|costumbre|n|f', 'custom|costumbre|n|f', 'tradition|tradición|n|f',
+    'belief|creencia|n|f', 'opinion|opinión|n|f', 'thought|pensamiento|n|m',
+    'feeling|sentimiento|n|m', 'emotion|emoción|n|f', 'mood|humor|n|m',
+    'surprise|sorpresa|n|f', 'shock|choque|n|m', 'relief|alivio|n|m',
+    'comfort|comodidad|n|f', 'pleasure|placer|n|m', 'pride|orgullo|n|m',
+    'shame|vergüenza|n|f', 'guilt|culpa|n|f', 'blame|culpa|n|f',
+    'respect|respeto|n|m', 'trust|confianza|n|f', 'doubt|duda|n|f',
+    'advice|consejo|n|m', 'warning|advertencia|n|f', 'promise|promesa|n|f',
+    'threat|amenaza|n|f', 'attempt|intento|n|m', 'struggle|lucha|n|f',
+    'conflict|conflicto|n|m', 'peace|paz|n|f', 'silence|silencio|n|m',
+    'noise|ruido|n|m', 'smell|olor|n|m', 'taste|sabor|n|m', 'touch|tacto|n|m',
+  ],
+  // ── Band 7 · reading the news ─────────────────────────────────────────────
+  [
+    'according to|según|phrase', 'in order to|para|phrase',
+    'as a result|como resultado|phrase', 'in spite of|a pesar de|phrase',
+    'despite|a pesar de|prep', 'regarding|respecto a|prep',
+    'throughout|a lo largo de|prep', 'towards|hacia|prep', 'toward|hacia|prep',
+    'beyond|más allá de|prep', 'within|dentro de|prep', 'among|entre|prep',
+    'during|durante|prep', 'through|a través de|prep', 'across|a través de|prep',
+    'below|debajo de|prep', 'above|encima de|prep', 'behind|detrás de|prep',
+    'beside|al lado de|prep', 'around|alrededor de|prep',
+    'estimate|estimar|v', 'expect|esperar|v', 'predict|predecir|v',
+    'confirm|confirmar|v', 'deny|negar|v', 'claim|afirmar|v', 'insist|insistir|v',
+    'warn|advertir|v', 'threaten|amenazar|v', 'demand|exigir|v',
+    'request|solicitar|v', 'approve|aprobar|v', 'reject|rechazar|v',
+    'introduce|introducir|v', 'establish|establecer|v', 'maintain|mantener|v',
+    'achieve|lograr|v', 'obtain|obtener|v', 'gain|ganar|v', 'access|acceder|v',
+    'affect|afectar|v', 'influence|influir|v', 'depend|depender|v',
+    'involve|implicar|v', 'represent|representar|v', 'indicate|indicar|v',
+    'reveal|revelar|v', 'expose|exponer|v', 'investigate|investigar|v',
+    'analyse|analizar|v', 'analyze|analizar|v', 'evaluate|evaluar|v',
+    'measure|medir|v', 'calculate|calcular|v', 'record|registrar|v',
+    'evidence|evidencia|n|f', 'proof|prueba|n|f', 'source|fuente|n|f',
+    'report|informe|n|m', 'survey|encuesta|n|f', 'statistic|estadística|n|f',
+    'average|promedio|n|m', 'rate|tasa|n|f', 'percentage|porcentaje|n|m',
+    'increase|aumento|n|m', 'decrease|disminución|n|f', 'trend|tendencia|n|f',
+    'impact|impacto|n|m', 'consequence|consecuencia|n|f', 'issue|asunto|n|m',
+    'matter|asunto|n|m', 'subject|tema|n|m', 'topic|tema|n|m',
+    'debate|debate|n|m', 'argument|argumento|n|m', 'discussion|discusión|n|f',
+    'policy|política|n|f', 'strategy|estrategia|n|f', 'measure|medida|n|f',
+    'reform|reforma|n|f', 'election|elección|n|f', 'vote|voto|n|m',
+    'party|partido|n|m', 'minister|ministro|n|m', 'authority|autoridad|n|f',
+    'official|funcionario|n|m', 'expert|experto|n|m', 'scientist|científico|n|m',
+    'industry|industria|n|f', 'trade|comercio|n|m', 'investment|inversión|n|f',
+    'employment|empleo|n|m', 'worker|trabajador|n|m', 'salary|salario|n|m',
+    'crisis|crisis|n|f', 'emergency|emergencia|n|f', 'disaster|desastre|n|m',
+    'climate|clima|n|m', 'environment|medio ambiente|n|m',
+    'pollution|contaminación|n|f', 'waste|residuo|n|m', 'resource|recurso|n|m',
+    'development|desarrollo|n|m', 'technology|tecnología|n|f',
+    'network|red|n|f', 'device|dispositivo|n|m', 'software|software|n|m',
+  ],
+  // ── Band 8 · literary texture ─────────────────────────────────────────────
+  [
+    'whisper|susurrar|v', 'shout|gritar|v', 'sigh|suspirar|v',
+    'stare|mirar fijamente|v', 'glance|echar un vistazo|v', 'gaze|contemplar|v',
+    'wander|vagar|v', 'rush|apresurarse|v', 'hurry|apresurarse|v',
+    'stumble|tropezar|v', 'lean|apoyarse|v', 'kneel|arrodillarse|v',
+    'shiver|temblar|v', 'tremble|temblar|v', 'blush|sonrojarse|v',
+    'frown|fruncir el ceño|v', 'grin|sonreír|v', 'weep|llorar|v',
+    'mourn|llorar|v', 'long|anhelar|v', 'yearn|anhelar|v', 'dare|atreverse|v',
+    'linger|demorarse|v', 'vanish|desaparecer|v', 'emerge|surgir|v',
+    'gather|reunir|v', 'scatter|dispersar|v', 'drift|derivar|v',
+    'glow|brillar|v', 'shine|brillar|v', 'fade|desvanecerse|v',
+    'twilight|crepúsculo|n|m', 'dawn|amanecer|n|m', 'dusk|anochecer|n|m',
+    'silence|silencio|n|m', 'echo|eco|n|m', 'breeze|brisa|n|f',
+    'storm|tormenta|n|f', 'thunder|trueno|n|m', 'lightning|relámpago|n|m',
+    'mist|niebla|n|f', 'fog|niebla|n|f', 'dust|polvo|n|m', 'mud|barro|n|m',
+    'shore|orilla|n|f', 'wave|ola|n|f', 'tide|marea|n|f', 'cliff|acantilado|n|m',
+    'valley|valle|n|m', 'forest|bosque|n|m', 'meadow|prado|n|m',
+    'branch|rama|n|f', 'leaf|hoja|n|f', 'root|raíz|n|f', 'seed|semilla|n|f',
+    'skin|piel|n|f', 'bone|hueso|n|m', 'breath|aliento|n|m', 'tear|lágrima|n|f',
+    'smile|sonrisa|n|f', 'laughter|risa|n|f', 'gesture|gesto|n|m',
+    'stranger|desconocido|n|m', 'neighbour|vecino|n|m', 'neighbor|vecino|n|m',
+    'crowd|multitud|n|f', 'couple|pareja|n|f', 'widow|viuda|n|f',
+    'ghost|fantasma|n|m', 'grave|tumba|n|f', 'wound|herida|n|f',
+    'gentle|suave|adj', 'fierce|feroz|adj', 'bitter|amargo|adj',
+    'sweet|dulce|adj', 'sour|agrio|adj', 'smooth|liso|adj', 'rough|áspero|adj',
+    'sharp|afilado|adj', 'blunt|romo|adj', 'hollow|hueco|adj',
+    'fragile|frágil|adj', 'steady|firme|adj', 'weary|cansado|adj',
+    'restless|inquieto|adj', 'eager|ansioso|adj', 'reluctant|reacio|adj',
+    'stubborn|terco|adj', 'humble|humilde|adj', 'generous|generoso|adj',
+    'cruel|cruel|adj', 'gentle|amable|adj', 'faithful|fiel|adj',
+    'wicked|malvado|adj', 'sacred|sagrado|adj', 'ancient|antiguo|adj',
+    'hidden|oculto|adj', 'endless|interminable|adj', 'countless|innumerable|adj',
+  ],
+  // ── Band 9 · the long tail ────────────────────────────────────────────────
+  [
+    'is|es|v', 'are|son|v', 'was|era|v', 'were|eran|v', 'be|ser|v',
+    'have|tener|v', 'has|tiene|v', 'had|tenía|v', 'do|hacer|v', 'make|hacer|v',
+    'go|ir|v', 'can|poder|v', 'must|deber|v', 'should|deber|v',
+    'the|el|det', 'a|un|det', 'an|un|det', 'this|este|det', 'that|ese|det',
+    'these|estos|det', 'those|esos|det', 'my|mi|det', 'your|tu|det',
+    'his|su|det', 'her|su|det', 'our|nuestro|det', 'their|su|det',
+    'i|yo|pron', 'you|tú|pron', 'he|él|pron', 'she|ella|pron', 'we|nosotros|pron',
+    'they|ellos|pron', 'it|eso|pron', 'me|me|pron', 'him|él|pron', 'us|nosotros|pron',
+    'who|quien|pron', 'what|qué|pron', 'which|cual|pron', 'whose|cuyo|pron',
+    'how|cómo|adv', 'why|por qué|adv', 'where|dónde|adv', 'when|cuándo|adv',
+    'in|en|prep', 'on|en|prep', 'at|en|prep', 'of|de|prep', 'to|a|prep',
+    'for|para|prep', 'from|de|prep', 'by|por|prep', 'about|sobre|prep',
+    'over|sobre|prep', 'under|bajo|prep', 'after|después de|prep',
+    'before|antes de|prep', 'since|desde|prep', 'until|hasta|prep',
+    'not|no|adv', 'so|así que|conj', 'then|entonces|adv', 'yet|aún|adv',
+    'thus|así|adv', 'hence|por eso|adv', 'whereas|mientras que|conj',
+    'unless|a menos que|conj', 'whether|si|conj', 'though|aunque|conj',
+  ],
+];
+
+
+// ── src/diglot/morph.js ────────────────────────────────────────────────────
+// Spanish morphology: just enough inflection to make woven words fit their
+// English slot. Pure functions, no data beyond what's passed in.
+
+const VOWELS = 'aeiouáéíóú';
+
+/** Strip the accent from the last accented vowel (canción -> cancion). */
+function deaccentLast(word) {
+  const map = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u' };
+  const i = [...word].reduce((best, ch, idx) => (map[ch] ? idx : best), -1);
+  if (i === -1) return word;
+  return word.slice(0, i) + map[word[i]] + word.slice(i + 1);
+}
+
+// Words that gain a written accent in the plural, because the stress stays put
+// while the word grows a syllable.
+const ACCENTED_PLURALS = {
+  joven: 'jóvenes', examen: 'exámenes', imagen: 'imágenes', origen: 'orígenes',
+  orden: 'órdenes', crimen: 'crímenes', resumen: 'resúmenes', margen: 'márgenes',
+  volumen: 'volúmenes', carácter: 'caracteres', régimen: 'regímenes',
+};
+
+/** Pluralise a Spanish noun or adjective. */
+function pluralize(word) {
+  if (!word) return word;
+  const known = ACCENTED_PLURALS[word.toLowerCase()];
+  if (known) return matchCase(known, word);
+  const parts = word.split(' ');
+  if (parts.length > 1) {
+    // Pluralise the head noun of a phrase ("país vasco" -> "países vascos").
+    return parts.map((p, i) => (i <= 1 ? pluralize(p) : p)).join(' ');
+  }
+  const last = word.slice(-1).toLowerCase();
+  if (word.length > 2 && /ión$/i.test(word)) return deaccentLast(word) + 'es';
+  if (last === 'z') return word.slice(0, -1) + 'ces';
+  if (last === 's' || last === 'x') {
+    // Already plural-looking and stressed on the last syllable? Leave it.
+    return /[áéíóú]/.test(word.slice(-3)) ? word.slice(0, -1) + 'es' : word;
+  }
+  if (VOWELS.includes(last)) {
+    if ('áéíóú'.includes(last)) return word + 's';
+    return word + 's';
+  }
+  if (last === 'í' || last === 'ú') return word + 'es';
+  return word + 'es';
+}
+
+/** Make an adjective agree with a noun's gender and number. */
+function agree(adj, gender = 'm', plural = false) {
+  if (!adj) return adj;
+  if (adj.includes(' ')) {
+    const [head, ...rest] = adj.split(' ');
+    return [agree(head, gender, plural), ...rest].join(' ');
+  }
+  let out = adj;
+  const lower = adj.toLowerCase();
+  if (gender === 'f') {
+    if (lower.endsWith('o')) out = adj.slice(0, -1) + 'a';
+    else if (/(dor|tor|ón|án|és)$/.test(lower)) out = deaccentLast(adj) + 'a';
+  }
+  return plural ? pluralize(out) : out;
+}
+
+/**
+ * Apocope: a few adjectives lose their ending before a masculine singular noun
+ * — "un buen día", not "un bueno día".
+ */
+function apocopate(adj, gender, plural) {
+  if (plural) return adj;
+  const table = { bueno: 'buen', malo: 'mal', primero: 'primer', tercero: 'tercer', alguno: 'algún', ninguno: 'ningún' };
+  const lower = adj.toLowerCase();
+  if (gender === 'm' && table[lower]) return matchCase(table[lower], adj);
+  if (lower === 'grande') return matchCase('gran', adj);
+  return adj;
+}
+
+/** Definite / indefinite articles. */
+function article(kind, gender = 'm', plural = false, noun = '') {
+  // "el agua", "un águila": a feminine noun beginning with a stressed a-
+  // borrows the masculine singular article.
+  if (gender === 'f' && !plural && /^(a|á|ha)/i.test(noun) && /^(agua|águila|alma|área|arma|aula|hambre|hacha|ala|ave)$/i.test(noun)) {
+    gender = 'm';
+  }
+  const table = {
+    definite: { m: ['el', 'los'], f: ['la', 'las'] },
+    indefinite: { m: ['un', 'unos'], f: ['una', 'unas'] },
+    demonstrative: { m: ['este', 'estos'], f: ['esta', 'estas'] },
+    that: { m: ['ese', 'esos'], f: ['esa', 'esas'] },
+  };
+  const row = (table[kind] || table.definite)[gender === 'f' ? 'f' : 'm'];
+  return row[plural ? 1 : 0];
+}
+
+/** Possessives inflect for number only (mi/mis), except nuestro. */
+function possessive(word, plural, gender = 'm') {
+  if (!word) return word;
+  if (word === 'nuestro') return agree('nuestro', gender, plural);
+  return plural ? pluralize(word) : word;
+}
+
+const IRREGULAR = {
+  ser: { pres1: 'soy', pres2: 'eres', pres1p: 'somos', pres3: 'es', pres3p: 'son', pret3: 'fue', pret3p: 'fueron', ger: 'siendo', part: 'sido' },
+  estar: { pres1: 'estoy', pres2: 'estás', pres1p: 'estamos', pres3: 'está', pres3p: 'están', pret3: 'estuvo', pret3p: 'estuvieron', ger: 'estando', part: 'estado' },
+  ir: { pres1: 'voy', pres2: 'vas', pres1p: 'vamos', pres3: 'va', pres3p: 'van', pret3: 'fue', pret3p: 'fueron', ger: 'yendo', part: 'ido' },
+  tener: { pres1: 'tengo', pres2: 'tienes', pres1p: 'tenemos', pres3: 'tiene', pres3p: 'tienen', pret3: 'tuvo', pret3p: 'tuvieron', ger: 'teniendo', part: 'tenido' },
+  hacer: { pres1: 'hago', pres2: 'haces', pres1p: 'hacemos', pres3: 'hace', pres3p: 'hacen', pret3: 'hizo', pret3p: 'hicieron', ger: 'haciendo', part: 'hecho' },
+  decir: { pres1: 'digo', pres2: 'dices', pres1p: 'decimos', pres3: 'dice', pres3p: 'dicen', pret3: 'dijo', pret3p: 'dijeron', ger: 'diciendo', part: 'dicho' },
+  poder: { pres1: 'puedo', pres2: 'puedes', pres1p: 'podemos', pres3: 'puede', pres3p: 'pueden', pret3: 'pudo', pret3p: 'pudieron', ger: 'pudiendo', part: 'podido' },
+  querer: { pres1: 'quiero', pres2: 'quieres', pres1p: 'queremos', pres3: 'quiere', pres3p: 'quieren', pret3: 'quiso', pret3p: 'quisieron', ger: 'queriendo', part: 'querido' },
+  ver: { pres1: 'veo', pres2: 'ves', pres1p: 'vemos', pres3: 've', pres3p: 'ven', pret3: 'vio', pret3p: 'vieron', ger: 'viendo', part: 'visto' },
+  dar: { pres1: 'doy', pres2: 'das', pres1p: 'damos', pres3: 'da', pres3p: 'dan', pret3: 'dio', pret3p: 'dieron', ger: 'dando', part: 'dado' },
+  saber: { pres1: 'sé', pres2: 'sabes', pres1p: 'sabemos', pres3: 'sabe', pres3p: 'saben', pret3: 'supo', pret3p: 'supieron', ger: 'sabiendo', part: 'sabido' },
+  venir: { pres1: 'vengo', pres2: 'vienes', pres1p: 'venimos', pres3: 'viene', pres3p: 'vienen', pret3: 'vino', pret3p: 'vinieron', ger: 'viniendo', part: 'venido' },
+  poner: { pres1: 'pongo', pres2: 'pones', pres1p: 'ponemos', pres3: 'pone', pres3p: 'ponen', pret3: 'puso', pret3p: 'pusieron', ger: 'poniendo', part: 'puesto' },
+  salir: { pres1: 'salgo', pres2: 'sales', pres1p: 'salimos', pres3: 'sale', pres3p: 'salen', pret3: 'salió', pret3p: 'salieron', ger: 'saliendo', part: 'salido' },
+  haber: { pres1: 'he', pres2: 'has', pres1p: 'hemos', pres3: 'hay', pres3p: 'hay', pret3: 'hubo', pret3p: 'hubo', ger: 'habiendo', part: 'habido' },
+  volver: { pres1: 'vuelvo', pres2: 'vuelves', pres1p: 'volvemos', pres3: 'vuelve', pres3p: 'vuelven', pret3: 'volvió', pret3p: 'volvieron', ger: 'volviendo', part: 'vuelto' },
+  pensar: { pres1: 'pienso', pres2: 'piensas', pres1p: 'pensamos', pres3: 'piensa', pres3p: 'piensan', pret3: 'pensó', pret3p: 'pensaron', ger: 'pensando', part: 'pensado' },
+  empezar: { pres1: 'empiezo', pres2: 'empiezas', pres1p: 'empezamos', pres3: 'empieza', pres3p: 'empiezan', pret3: 'empezó', pret3p: 'empezaron', ger: 'empezando', part: 'empezado' },
+  entender: { pres1: 'entiendo', pres2: 'entiendes', pres1p: 'entendemos', pres3: 'entiende', pres3p: 'entienden', pret3: 'entendió', pret3p: 'entendieron', ger: 'entendiendo', part: 'entendido' },
+  dormir: { pres1: 'duermo', pres2: 'duermes', pres1p: 'dormimos', pres3: 'duerme', pres3p: 'duermen', pret3: 'durmió', pret3p: 'durmieron', ger: 'durmiendo', part: 'dormido' },
+  pedir: { pres1: 'pido', pres2: 'pides', pres1p: 'pedimos', pres3: 'pide', pres3p: 'piden', pret3: 'pidió', pret3p: 'pidieron', ger: 'pidiendo', part: 'pedido' },
+  seguir: { pres1: 'sigo', pres2: 'sigues', pres1p: 'seguimos', pres3: 'sigue', pres3p: 'siguen', pret3: 'siguió', pret3p: 'siguieron', ger: 'siguiendo', part: 'seguido' },
+  jugar: { pres1: 'juego', pres2: 'juegas', pres1p: 'jugamos', pres3: 'juega', pres3p: 'juegan', pret3: 'jugó', pret3p: 'jugaron', ger: 'jugando', part: 'jugado' },
+  encontrar: { pres1: 'encuentro', pres2: 'encuentras', pres1p: 'encontramos', pres3: 'encuentra', pres3p: 'encuentran', pret3: 'encontró', pret3p: 'encontraron', ger: 'encontrando', part: 'encontrado' },
+  mostrar: { pres1: 'muestro', pres2: 'muestras', pres1p: 'mostramos', pres3: 'muestra', pres3p: 'muestran', pret3: 'mostró', pret3p: 'mostraron', ger: 'mostrando', part: 'mostrado' },
+  contar: { pres1: 'cuento', pres2: 'cuentas', pres1p: 'contamos', pres3: 'cuenta', pres3p: 'cuentan', pret3: 'contó', pret3p: 'contaron', ger: 'contando', part: 'contado' },
+  perder: { pres1: 'pierdo', pres2: 'pierdes', pres1p: 'perdemos', pres3: 'pierde', pres3p: 'pierden', pret3: 'perdió', pret3p: 'perdieron', ger: 'perdiendo', part: 'perdido' },
+  sentir: { pres1: 'siento', pres2: 'sientes', pres1p: 'sentimos', pres3: 'siente', pres3p: 'sienten', pret3: 'sintió', pret3p: 'sintieron', ger: 'sintiendo', part: 'sentido' },
+  morir: { pres1: 'muero', pres2: 'mueres', pres1p: 'morimos', pres3: 'muere', pres3p: 'mueren', pret3: 'murió', pret3p: 'murieron', ger: 'muriendo', part: 'muerto' },
+  leer: { pres1: 'leo', pres2: 'lees', pres1p: 'leemos', pres3: 'lee', pres3p: 'leen', pret3: 'leyó', pret3p: 'leyeron', ger: 'leyendo', part: 'leído' },
+  creer: { pres1: 'creo', pres2: 'crees', pres1p: 'creemos', pres3: 'cree', pres3p: 'creen', pret3: 'creyó', pret3p: 'creyeron', ger: 'creyendo', part: 'creído' },
+  oír: { pres1: 'oigo', pres2: 'oyes', pres1p: 'oímos', pres3: 'oye', pres3p: 'oyen', pret3: 'oyó', pret3p: 'oyeron', ger: 'oyendo', part: 'oído' },
+  traer: { pres1: 'traigo', pres2: 'traes', pres1p: 'traemos', pres3: 'trae', pres3p: 'traen', pret3: 'trajo', pret3p: 'trajeron', ger: 'trayendo', part: 'traído' },
+  conocer: { pres1: 'conozco', pres2: 'conoces', pres1p: 'conocemos', pres3: 'conoce', pres3p: 'conocen', pret3: 'conoció', pret3p: 'conocieron', ger: 'conociendo', part: 'conocido' },
+  construir: { pres1: 'construyo', pres2: 'construyes', pres1p: 'construimos', pres3: 'construye', pres3p: 'construyen', pret3: 'construyó', pret3p: 'construyeron', ger: 'construyendo', part: 'construido' },
+  escribir: { pres1: 'escribo', pres2: 'escribes', pres1p: 'escribimos', pres3: 'escribe', pres3p: 'escriben', pret3: 'escribió', pret3p: 'escribieron', ger: 'escribiendo', part: 'escrito' },
+  reír: { pres1: 'río', pres2: 'ríes', pres3: 'ríe', pres1p: 'reímos', pres3p: 'ríen', pret3: 'rio', pret3p: 'rieron', ger: 'riendo', part: 'reído' },
+  sonreír: { pres1: 'sonrío', pres2: 'sonríes', pres3: 'sonríe', pres1p: 'sonreímos', pres3p: 'sonríen', pret3: 'sonrió', pret3p: 'sonrieron', ger: 'sonriendo', part: 'sonreído' },
+  abrir: { pres1: 'abro', pres2: 'abres', pres1p: 'abrimos', pres3: 'abre', pres3p: 'abren', pret3: 'abrió', pret3p: 'abrieron', ger: 'abriendo', part: 'abierto' },
+};
+
+/**
+ * Conjugate a Spanish infinitive.
+ * form: 'inf' | 'pres3' | 'pres3p' | 'pret3' | 'pret3p' | 'ger' | 'part'
+ */
+function conjugate(inf, form = 'inf') {
+  if (!inf) return inf;
+  if (form === 'inf') return inf;
+  // Reflexives: conjugate the verb, drop the clitic.
+  const reflexive = /se$/.test(inf) && inf.length > 4;
+  const base = reflexive ? inf.slice(0, -2) : inf;
+  const irr = IRREGULAR[base];
+  if (irr && irr[form]) return prefixSe(irr[form], reflexive, form);
+  const stem = base.slice(0, -2);
+  const ending = base.slice(-2).toLowerCase().replace('í', 'i');
+  const table = {
+    ar: { pres1: 'o', pres2: 'as', pres3: 'a', pres1p: 'amos', pres3p: 'an', pret3: 'ó', pret3p: 'aron', ger: 'ando', part: 'ado' },
+    er: { pres1: 'o', pres2: 'es', pres3: 'e', pres1p: 'emos', pres3p: 'en', pret3: 'ió', pret3p: 'ieron', ger: 'iendo', part: 'ido' },
+    ir: { pres1: 'o', pres2: 'es', pres3: 'e', pres1p: 'imos', pres3p: 'en', pret3: 'ió', pret3p: 'ieron', ger: 'iendo', part: 'ido' },
+  }[ending];
+  if (!table) return inf;
+  return prefixSe(stem + table[form], reflexive, form);
+}
+
+function prefixSe(word, reflexive, form) {
+  if (!reflexive) return word;
+  if (form === 'ger') return word + 'se';
+  return 'se ' + word;
+}
+
+/** Copy the capitalisation pattern of `model` onto `word`. */
+function matchCase(word, model) {
+  if (!model || !word) return word;
+  if (model === model.toUpperCase() && model.length > 1 && /[A-Z]/.test(model)) return word.toUpperCase();
+  if (model[0] === model[0].toUpperCase() && model[0] !== model[0].toLowerCase()) {
+    return word[0].toUpperCase() + word.slice(1);
+  }
+  return word;
+}
+
+
+// ── src/diglot/weave.js ────────────────────────────────────────────────────
+// The diglot weaver: turns English text into English-with-Spanish-woven-in.
+//
+// Two stages on purpose:
+//   analyze(text)            → slow-ish, once per document. Finds every word
+//                              that *could* be Spanish and how hard it is.
+//   applyLevel(analysis, o)  → fast, on every slider move. Decides which of
+//                              those actually turn Spanish, and inflects them
+//                              to fit the sentence around them.
+// That split is what makes the slider feel instant on a whole chapter.
+
+
+
+// ── index ───────────────────────────────────────────────────────────────────
+
+/** Build the lookup table. Rank is a 0–100 "difficulty" position in the list. */
+function buildIndex(bands = BANDS) {
+  const byKey = new Map();
+  let maxPhrase = 1;
+  bands.forEach((band, b) => {
+    band.forEach((entry, i) => {
+      const [en, es, pos, extra] = entry.split('|');
+      const key = en.toLowerCase();
+      if (byKey.has(key)) return; // first band wins: earlier = easier
+      const rank = ((b + (i + 0.5) / band.length) / bands.length) * 100;
+      const words = key.split(' ').length;
+      if (words > maxPhrase) maxPhrase = words;
+      byKey.set(key, { key, en, es, pos, gender: extra === 'f' ? 'f' : 'm', rank, band: b, words });
+    });
+  });
+  return { byKey, maxPhrase, size: byKey.size };
+}
+
+const DEFAULT_INDEX = buildIndex();
+
+// ── English morphology (just enough to look words up) ───────────────────────
+
+const IRREGULAR_NOUNS = {
+  children: 'child', men: 'man', women: 'woman', feet: 'foot', teeth: 'tooth',
+  mice: 'mouse', geese: 'goose', lives: 'life', wives: 'wife', knives: 'knife',
+  leaves: 'leaf', shelves: 'shelf', halves: 'half', thieves: 'thief',
+  people: 'person', cities: 'city', countries: 'country',
+};
+
+const IRREGULAR_VERBS = {
+  was: ['be', 'past'], were: ['be', 'past'], been: ['be', 'part'], am: ['be', 'pres1'],
+  went: ['go', 'past'], gone: ['go', 'part'], goes: ['go', 'pres3'],
+  had: ['have', 'past'], has: ['have', 'pres3'],
+  did: ['do', 'past'], done: ['do', 'part'], does: ['do', 'pres3'],
+  said: ['say', 'past'], made: ['make', 'past'], took: ['take', 'past'],
+  taken: ['take', 'part'], came: ['come', 'past'], saw: ['see', 'past'],
+  seen: ['see', 'part'], knew: ['know', 'past'], known: ['know', 'part'],
+  gave: ['give', 'past'], given: ['give', 'part'], found: ['find', 'past'],
+  thought: ['think', 'past'], told: ['tell', 'past'], became: ['become', 'past'],
+  left: ['leave', 'past'], felt: ['feel', 'past'], brought: ['bring', 'past'],
+  began: ['begin', 'past'], begun: ['begin', 'part'], kept: ['keep', 'past'],
+  held: ['hold', 'past'], wrote: ['write', 'past'], written: ['write', 'part'],
+  stood: ['stand', 'past'], heard: ['hear', 'past'], meant: ['mean', 'past'],
+  met: ['meet', 'past'], ran: ['run', 'past'], paid: ['pay', 'past'],
+  sat: ['sit', 'past'], spoke: ['speak', 'past'], spoken: ['speak', 'part'],
+  led: ['lead', 'past'], grew: ['grow', 'past'], grown: ['grow', 'part'],
+  lost: ['lose', 'past'], fell: ['fall', 'past'], sent: ['send', 'past'],
+  built: ['build', 'past'], understood: ['understand', 'past'],
+  drew: ['draw', 'past'], broke: ['break', 'past'], broken: ['break', 'part'],
+  spent: ['spend', 'past'], rose: ['rise', 'past'], bought: ['buy', 'past'],
+  wore: ['wear', 'past'], chose: ['choose', 'past'], chosen: ['choose', 'part'],
+  ate: ['eat', 'past'], eaten: ['eat', 'part'], drank: ['drink', 'past'],
+  slept: ['sleep', 'past'], won: ['win', 'past'], taught: ['teach', 'past'],
+  sang: ['sing', 'past'], swam: ['swim', 'past'], flew: ['fly', 'past'],
+  died: ['die', 'past'], drove: ['drive', 'past'], sold: ['sell', 'past'],
+};
+
+function dedouble(stem) {
+  return /([bcdfgklmnprstvz])\1$/.test(stem) ? stem.slice(0, -1) : stem;
+}
+
+/**
+ * Every plausible (lemma, inflection) reading of an English word, best first.
+ * Inflection: {number: 'pl'|'sg', verbForm: 'inf'|'pres3'|'past'|'ger'|'part'}
+ */
+function readings(word) {
+  const w = word.toLowerCase();
+  const out = [[w, {}]];
+  if (IRREGULAR_NOUNS[w]) out.push([IRREGULAR_NOUNS[w], { number: 'pl' }]);
+  if (IRREGULAR_VERBS[w]) {
+    const [lemma, form] = IRREGULAR_VERBS[w];
+    out.push([lemma, { verbForm: form }]);
+  }
+  const sForm = { number: 'pl', verbForm: 'pres3', ambiguous: true };
+  if (w.length > 4 && w.endsWith('ies')) out.push([w.slice(0, -3) + 'y', sForm]);
+  if (w.length > 4 && /(ch|sh|ss|x|z|o)es$/.test(w)) out.push([w.slice(0, -2), sForm]);
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) out.push([w.slice(0, -1), sForm]);
+  if (w.length > 4 && w.endsWith('ing')) {
+    const stem = w.slice(0, -3);
+    out.push([stem, { verbForm: 'ger' }], [stem + 'e', { verbForm: 'ger' }], [dedouble(stem), { verbForm: 'ger' }]);
+  }
+  if (w.length > 3 && w.endsWith('ed')) {
+    const stem = w.slice(0, -2);
+    out.push([stem, { verbForm: 'past' }], [w.slice(0, -1), { verbForm: 'past' }], [dedouble(stem), { verbForm: 'past' }]);
+    if (stem.endsWith('i')) out.push([stem.slice(0, -1) + 'y', { verbForm: 'past' }]);
+  }
+  if (w.length > 4 && w.endsWith('er')) out.push([w.slice(0, -2), { degree: 'comp' }], [w.slice(0, -1), { degree: 'comp' }]);
+  if (w.length > 5 && w.endsWith('est')) out.push([w.slice(0, -3), { degree: 'sup' }], [w.slice(0, -2), { degree: 'sup' }]);
+  return out;
+}
+
+// ── tokenizer ───────────────────────────────────────────────────────────────
+
+const WORD_RE = /[\p{L}\p{M}][\p{L}\p{M}'’-]*/u;
+
+/** Split into word / non-word tokens, losing nothing. */
+function tokenize(text) {
+  const tokens = [];
+  const re = new RegExp(WORD_RE, 'gu');
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    if (m.index > last) tokens.push({ kind: 'gap', raw: text.slice(last, m.index) });
+    tokens.push({ kind: 'word', raw: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) tokens.push({ kind: 'gap', raw: text.slice(last) });
+  return tokens;
+}
+
+const DETERMINERS = {
+  the: 'definite', a: 'indefinite', an: 'indefinite',
+  this: 'demonstrative', these: 'demonstrative', that: 'that', those: 'that',
+};
+const POSSESSIVES = { my: 'mi', your: 'tu', his: 'su', her: 'su', its: 'su', our: 'nuestro', their: 'su' };
+const SUBJECTS = {
+  i: 'pres1', we: 'pres1p', you: 'pres2', they: 'pres3p',
+  he: 'pres3', she: 'pres3', it: 'pres3',
+};
+const SENTENCE_END = /[.!?][)\]"'”’\s]*$|\n\s*$/;
+const CONTRACTIONS = { de: 'del', a: 'al' };
+const AUXILIARIES = ['will', 'would', 'can', 'could', 'should', 'must', 'may', 'might', 'has', 'have', 'had', 'is', 'are', 'was', 'were', 'do', 'does', 'did'];
+
+/**
+ * A few function words mean different things in different slots. Rather than
+ * a part-of-speech tagger, these hand-written rules cover the handful that
+ * would otherwise produce nonsense. Returning null skips the swap entirely.
+ */
+const CONTEXT = {
+  to: (ctx) => (ctx.nextIsVerb ? null : 'a'),          // infinitive marker: leave it
+  that: (ctx) => (ctx.nextIsVerb ? 'que' : null),      // relative "que" vs demonstrative
+  which: (ctx) => (ctx.nextIsVerb ? 'que' : 'cual'),
+  who: (ctx) => (ctx.nextIsVerb ? 'que' : 'quien'),
+  i: () => 'yo',                                        // never "Yo" mid-sentence
+  as: (ctx) => (ctx.nextIsVerb ? null : 'como'),
+  like: (ctx) => (ctx.prevIsSubject ? null : 'como'),
+};
+const COPULAS = ['is', 'are', 'was', 'were', 'am', 'be', 'been', 'seems', 'seem', 'seemed', 'looks', 'look', 'looked', 'feels', 'feel', 'felt', 'became', 'become', 'stays', 'stay'];
+
+const VERBY_BEFORE = ['who', 'that', 'which', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'to', 'not', "don't", "doesn't"];
+const NOUNY_BEFORE = ['the', 'a', 'an', 'this', 'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'of', 'in', 'on', 'at', 'for', 'with', 'many', 'some', 'few', 'all'];
+
+/** Nudge an ambiguous word ("lives") towards the reading its neighbour implies. */
+function posScore(pos, prevWord) {
+  if (pos === 'v' && (VERBY_BEFORE.includes(prevWord) || AUXILIARIES.includes(prevWord))) return 2;
+  if (pos === 'n' && NOUNY_BEFORE.includes(prevWord)) return 2;
+  if (pos === 'v' && NOUNY_BEFORE.includes(prevWord)) return -2;
+  if (pos === 'n' && VERBY_BEFORE.includes(prevWord)) return -1;
+  return 0;
+}
+
+// ── analysis ────────────────────────────────────────────────────────────────
+
+/**
+ * Find every swappable span in the text. Returns a structure that applyLevel()
+ * can render at any difficulty without re-scanning.
+ */
+function analyze(text, index = DEFAULT_INDEX) {
+  const tokens = tokenize(text);
+  const wordPositions = [];
+  tokens.forEach((t, i) => { if (t.kind === 'word') wordPositions.push(i); });
+
+  // Sentence starts: a word is sentence-initial if all that precedes it in the
+  // gap is terminal punctuation (so capitals there aren't proper nouns).
+  let atStart = true;
+  for (const t of tokens) {
+    if (t.kind === 'gap') { if (SENTENCE_END.test(t.raw)) atStart = true; continue; }
+    t.sentenceStart = atStart;
+    atStart = false;
+  }
+
+  const candidates = [];
+  const consumed = new Set();
+  for (let wi = 0; wi < wordPositions.length; wi++) {
+    const ti = wordPositions[wi];
+    if (consumed.has(ti)) continue;
+    const token = tokens[ti];
+
+    // Phrases first (longest match wins), then the single word.
+    let hit = null;
+    for (let n = Math.min(index.maxPhrase, wordPositions.length - wi); n >= 2 && !hit; n--) {
+      const span = wordPositions.slice(wi, wi + n);
+      // only allow simple whitespace between the words of a phrase
+      const glueOk = span.slice(1).every((p, k) => {
+        for (let j = span[k] + 1; j < p; j++) if (!/^\s+$/.test(tokens[j].raw)) return false;
+        return true;
+      });
+      if (!glueOk) continue;
+      const key = span.map((p) => tokens[p].raw.toLowerCase()).join(' ');
+      const entry = index.byKey.get(key);
+      if (entry) hit = { entry, span, inflection: {} };
+    }
+    if (!hit) {
+      // Proper nouns stay English — a capital mid-sentence is a name.
+      const isCapMidSentence = !token.sentenceStart && /^\p{Lu}/u.test(token.raw)
+        && token.raw.toLowerCase() !== 'i';
+      if (isCapMidSentence) continue;
+      const prevIdx = prevWordIndex(tokens, ti);
+      const prevWord = prevIdx != null ? tokens[prevIdx].raw.toLowerCase() : '';
+      const options = [];
+      readings(token.raw).forEach(([lemma, raw], order) => {
+        const entry = index.byKey.get(lemma);
+        if (!entry || entry.words > 1) return;
+        let inflection = raw;
+        if (raw.ambiguous) {
+          // "books" is a plural noun; "walks" is a verb. The entry knows which.
+          if (entry.pos === 'v') inflection = { verbForm: 'pres3' };
+          else if (entry.pos === 'n') inflection = { number: 'pl' };
+          else return;
+        } else {
+          if (inflection.verbForm && entry.pos !== 'v') return;
+          if (inflection.degree && entry.pos !== 'adj' && entry.pos !== 'adv') return;
+        }
+        options.push({ entry, span: [ti], inflection, score: posScore(entry.pos, prevWord) - order * 0.1 });
+      });
+      if (options.length) {
+        options.sort((a, b) => b.score - a.score);
+        hit = options[0];
+      }
+    }
+    if (!hit) continue;
+    hit.span.forEach((p) => consumed.add(p));
+    wi += hit.span.length - 1;
+    candidates.push({ ...hit, tokenIndex: ti, id: candidates.length });
+    tokens[ti].candidate = candidates[candidates.length - 1];
+  }
+
+  const wordCount = wordPositions.length;
+  return { text, tokens, candidates, wordCount, index };
+}
+
+// ── rendering at a level ────────────────────────────────────────────────────
+
+const DEFAULTS = {
+  level: 25,
+  articles: true,      // "the house" → "la casa" once you're past articleLevel
+  articleLevel: 35,
+  known: null,         // Set of keys always woven, whatever the slider says
+  blocked: null,       // Set of keys never woven
+  firstHint: false,    // gloss the first appearance of each Spanish word
+};
+
+/**
+ * Decide which candidates fire at this level and inflect them in context.
+ * Returns render nodes plus stats.
+ */
+function applyLevel(analysis, options = {}) {
+  const opts = { ...DEFAULTS, ...options };
+  const { tokens, candidates } = analysis;
+  const known = opts.known || new Set();
+  const blocked = opts.blocked || new Set();
+
+  // 1. which candidates fire
+  const firing = new Map(); // tokenIndex -> candidate
+  for (const c of candidates) {
+    const key = c.entry.key;
+    if (blocked.has(key)) continue;
+    if (!known.has(key) && c.entry.rank > opts.level) continue;
+    firing.set(c.tokenIndex, c);
+  }
+
+  // 2. inflect, with a look at the neighbours
+  const decided = new Map();
+  for (const c of firing.values()) {
+    const out = inflect(c, analysis, firing, opts);
+    if (out) decided.set(c.tokenIndex, out);
+    else firing.delete(c.tokenIndex);
+  }
+
+  // 3. determiners: "the casa" reads better as "la casa". This also repairs
+  //    determiners that fired on their own (band 9), which don't know their
+  //    noun's gender until now.
+  const absorbed = new Set();
+  if (opts.articles) {
+    for (const [ti, out] of [...decided]) {
+      if (out.pos !== 'n') continue;
+      const prev = prevWordIndex(tokens, ti, true);
+      if (prev == null || absorbed.has(prev)) continue;
+      const prevWord = tokens[prev].raw.toLowerCase();
+      const detFired = firing.has(prev);
+      // Below articleLevel we only fix determiners that fired by themselves.
+      if (!detFired && opts.level < opts.articleLevel) continue;
+      let esDet = null;
+      if (DETERMINERS[prevWord]) esDet = esArticle(DETERMINERS[prevWord], out.gender, out.plural, out.es);
+      else if (POSSESSIVES[prevWord]) esDet = out.plural ? pluralize(POSSESSIVES[prevWord]) : POSSESSIVES[prevWord];
+      if (!esDet) continue;
+      absorbed.add(prev);
+      const rank = detFired ? firing.get(prev).entry.rank : out.rank;
+      decided.set(prev, {
+        es: matchCase(esDet, tokens[prev].raw), en: tokens[prev].raw, pos: 'det',
+        key: prevWord, rank, gloss: esDet, gender: out.gender, plural: out.plural,
+      });
+      if (detFired) firing.delete(prev);
+    }
+  }
+
+  // 4. build render nodes
+  const nodes = [];
+  const seen = new Set();
+  let swapped = 0;
+  const spanishWords = new Set();
+  let lastSwapNode = null;
+  let lastSwapGap = null;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    const out = decided.get(i);
+    if (!out) {
+      const node = { kind: t.kind === 'gap' ? 'gap' : 'plain', text: t.raw };
+      nodes.push(node);
+      if (t.kind === 'word') lastSwapNode = null;
+      else if (/^\s+$/.test(t.raw)) lastSwapGap = node;
+      else { lastSwapNode = null; lastSwapGap = null; }
+      continue;
+    }
+    const c = firing.get(i);
+    const span = c ? c.span : [i];
+    const enText = span.map((p) => tokens[p].raw).join(' ');
+    const first = !seen.has(out.key);
+    seen.add(out.key);
+    if (out.pos !== 'det') { swapped += span.length; spanishWords.add(out.key); }
+    const node = {
+      kind: 'swap', text: out.es, en: enText, key: out.key, pos: out.pos,
+      rank: Math.round(out.rank), gloss: out.gloss, first,
+      hint: opts.firstHint && first ? enText : null,
+    };
+    // de + el = del, a + el = al
+    const tail = lastSwapNode ? lastSwapNode.text.toLowerCase().split(' ').pop() : '';
+    const contraction = lastSwapNode && lastSwapGap === nodes[nodes.length - 1]
+      && CONTRACTIONS[tail] && node.text.toLowerCase() === 'el';
+    if (contraction) {
+      const head = lastSwapNode.text.split(' ').slice(0, -1);
+      lastSwapNode.text = [...head, matchCase(CONTRACTIONS[tail], lastSwapNode.text.split(' ').pop())].join(' ');
+      lastSwapNode.en += ' ' + enText;
+      nodes.pop(); // the space between them
+    } else {
+      nodes.push(node);
+      lastSwapNode = node;
+    }
+    lastSwapGap = null;
+    i = span[span.length - 1]; // skip the rest of a phrase span
+  }
+
+  return {
+    nodes,
+    stats: {
+      words: analysis.wordCount,
+      swapped,
+      ratio: analysis.wordCount ? swapped / analysis.wordCount : 0,
+      uniqueSpanish: spanishWords.size,
+      candidates: candidates.length,
+      headroom: analysis.wordCount ? candidates.length / analysis.wordCount : 0,
+    },
+  };
+}
+
+function prevWordIndex(tokens, i, skipAdjectives = false) {
+  let j = i - 1;
+  for (; j >= 0; j--) {
+    if (tokens[j].kind === 'word') break;
+    if (!/^[\s"'“‘(]*$/.test(tokens[j].raw)) return null; // punctuation breaks the phrase
+  }
+  if (j < 0) return null;
+  if (skipAdjectives) {
+    // "the big red casa": walk back over modifiers to reach the determiner.
+    let k = j;
+    let hops = 0;
+    while (k >= 0 && hops < 3) {
+      const cand = tokens[k].candidate;
+      const isModifier = cand && (cand.entry.pos === 'adj' || cand.entry.pos === 'adv');
+      if (!isModifier) break;
+      const back = prevWordIndex(tokens, k);
+      if (back == null) break;
+      k = back;
+      hops++;
+    }
+    return k;
+  }
+  return j;
+}
+
+function nextWords(tokens, i, n) {
+  const out = [];
+  for (let j = i + 1; j < tokens.length && out.length < n; j++) {
+    if (tokens[j].kind === 'word') out.push(j);
+    else if (!/^[\s-]*$/.test(tokens[j].raw)) break;
+  }
+  return out;
+}
+
+/** Put a candidate's Spanish into the right shape for its English slot. */
+function inflect(c, analysis, firing, opts) {
+  const { tokens, index } = analysis;
+  const { entry, inflection } = c;
+  const ti = c.tokenIndex;
+  const model = tokens[ti].raw;
+  let es = entry.es;
+  let plural = inflection.number === 'pl';
+  let gender = entry.gender;
+
+  const override = CONTEXT[entry.key];
+  if (override) {
+    const next = nextWords(tokens, c.span[c.span.length - 1], 1)[0];
+    const nextWord = next != null ? tokens[next].raw.toLowerCase() : '';
+    const prev = prevWordIndex(tokens, ti);
+    const ctx = {
+      nextIsVerb: !!nextWord && (AUXILIARIES.includes(nextWord) || isVerbWord(nextWord, index)),
+      prevIsSubject: prev != null && SUBJECTS[tokens[prev].raw.toLowerCase()] !== undefined,
+    };
+    const forced = override(ctx);
+    if (forced == null) return null;
+    es = forced;
+    return { es: tokens[ti].sentenceStart ? matchCase(es, 'X') : es, pos: entry.pos, key: entry.key, rank: entry.rank, gloss: es, gender, plural };
+  }
+
+  if (entry.pos === 'n') {
+    if (plural) es = pluralize(es);
+  } else if (entry.pos === 'adj') {
+    const head = headNoun(tokens, ti, index, firing) || subjectNoun(tokens, ti, index, firing);
+    if (head) { gender = head.gender; plural = head.plural; }
+    else if (inflection.number === 'pl') plural = true;
+    es = agree(es, gender, plural);
+    if (head && head.attributive) es = apocopate(es, gender, plural);
+    if (inflection.degree === 'comp') es = 'más ' + es;
+    if (inflection.degree === 'sup') es = 'el más ' + es;
+  } else if (entry.pos === 'v') {
+    es = conjugate(es, verbForm(tokens, ti, inflection, index));
+  } else if (entry.pos === 'num' && entry.key === 'one') {
+    const head = headNoun(tokens, ti, index, firing);
+    if (head) es = head.plural ? 'unos' : esArticle('indefinite', head.gender, false, '');
+  } else if (entry.pos === 'det' || entry.pos === 'pron') {
+    // leave as listed
+  }
+
+  return {
+    es: matchCase(es, model), pos: entry.pos, key: entry.key, rank: entry.rank,
+    gloss: entry.es, gender, plural,
+  };
+}
+
+/**
+ * The noun an attributive adjective modifies: "the old woman" → woman.
+ * Only looks across other modifiers — a conjunction or preposition ends the
+ * noun phrase, so "happy because the water" never agrees with "water".
+ */
+function headNoun(tokens, ti, index, firing) {
+  for (const j of nextWords(tokens, ti, 3)) {
+    const word = tokens[j].raw.toLowerCase();
+    const fired = firing.get(j);
+    if (fired && fired.entry.pos === 'n') {
+      return { gender: fired.entry.gender, plural: fired.inflection.number === 'pl', attributive: true };
+    }
+    let modifier = false;
+    for (const [lemma, inf] of readings(word)) {
+      const e = index.byKey.get(lemma);
+      if (!e) continue;
+      if (e.pos === 'n') return { gender: e.gender, plural: inf.number === 'pl' || (inf.ambiguous && /s$/.test(word)), attributive: true };
+      if (e.pos === 'adj' || e.pos === 'adv' || e.pos === 'det') { modifier = true; break; }
+      return null; // a verb/preposition/conjunction ends the noun phrase
+    }
+    if (!modifier && !DETERMINERS[word] && !POSSESSIVES[word]) return null; // unknown word: don't guess
+  }
+  return null;
+}
+
+function isVerbWord(word, index) {
+  for (const [lemma] of readings(word)) {
+    const e = index.byKey.get(lemma);
+    if (e && e.pos === 'v') return true;
+  }
+  return false;
+}
+
+/** For a predicate adjective ("the children were happy"), find the subject. */
+function subjectNoun(tokens, ti, index, firing) {
+  let sawCopula = false;
+  let steps = 0;
+  for (let j = ti - 1; j >= 0 && steps < 6; j--) {
+    const t = tokens[j];
+    if (t.kind !== 'word') {
+      if (/[.!?;:]/.test(t.raw)) return null;
+      continue;
+    }
+    steps++;
+    const w = t.raw.toLowerCase();
+    if (COPULAS.includes(w) || (t.candidate && t.candidate.entry.pos === 'v')) { sawCopula = true; continue; }
+    if (!sawCopula) continue;
+    if (w === 'they' || w === 'we') return { gender: 'm', plural: true };
+    if (w === 'she') return { gender: 'f', plural: false };
+    if (w === 'he' || w === 'it') return { gender: 'm', plural: false };
+    for (const [lemma, inf] of readings(w)) {
+      const e = index.byKey.get(lemma);
+      if (e && e.pos === 'n') return { gender: e.gender, plural: inf.number === 'pl' || inf.ambiguous === true && /s$/.test(w) };
+    }
+  }
+  return null;
+}
+
+const PREPOSITIONS = ['of', 'in', 'on', 'at', 'for', 'with', 'from', 'by', 'about', 'after', 'before', 'to', 'into', 'over', 'under', 'between', 'through', 'during', 'without'];
+
+/**
+ * The subject of the verb at `ti`, skipping over prepositional phrases so that
+ * "the plans of the company changed" agrees with plans, not company.
+ */
+function subject(tokens, ti, index) {
+  let steps = 0;
+  for (let j = ti - 1; j >= 0 && steps < 8; j--) {
+    const t = tokens[j];
+    if (t.kind !== 'word') { if (/[.!?;]/.test(t.raw)) return null; continue; }
+    steps++;
+    const w = t.raw.toLowerCase();
+    if (SUBJECTS[w]) return { person: SUBJECTS[w], plural: w === 'we' || w === 'they' };
+    let isNoun = false;
+    let plural = false;
+    for (const [lemma, inf] of readings(w)) {
+      const e = index.byKey.get(lemma);
+      if (!e) continue;
+      if (e.pos === 'n') { isNoun = true; plural = inf.number === 'pl' || (inf.ambiguous && /s$/.test(w)); }
+      break;
+    }
+    // An unknown capitalised word is a name: treat it as a singular subject.
+    if (!isNoun && /^\p{Lu}/u.test(t.raw) && !index.byKey.has(w)) {
+      const pl = compound(tokens, j, ti, index);
+      return { person: pl ? 'pres3p' : 'pres3', plural: pl };
+    }
+    if (!isNoun) continue;
+    // Walk to the head of this noun phrase and see what introduces it.
+    let k = j;
+    for (let m = j - 1; m >= 0; m--) {
+      if (tokens[m].kind !== 'word') { if (!/^[\s,]*$/.test(tokens[m].raw)) break; continue; }
+      const mw = tokens[m].raw.toLowerCase();
+      if (DETERMINERS[mw] || POSSESSIVES[mw] || isAdjectiveWord(mw, index)) { k = m; continue; }
+      break;
+    }
+    const before = prevWordIndex(tokens, k);
+    const beforeWord = before != null ? tokens[before].raw.toLowerCase() : '';
+    if (PREPOSITIONS.includes(beforeWord)) { j = before; continue; } // inside a prepositional phrase
+    if (compound(tokens, j, ti, index)) plural = true;
+    return { person: plural ? 'pres3p' : 'pres3', plural };
+  }
+  return null;
+}
+
+/**
+ * A conjoined subject is plural — but only when the "and" really joins two noun
+ * phrases. "said good morning and never asked" joins two verbs, and that one
+ * stays singular.
+ */
+function compound(tokens, from, to, index) {
+  const nounish = (j) => {
+    if (j == null || j < 0 || tokens[j].kind !== 'word') return false;
+    const w = tokens[j].raw.toLowerCase();
+    if (SUBJECTS[w]) return true;
+    if (/^\p{Lu}/u.test(tokens[j].raw) && !index.byKey.has(w)) return true; // a name
+    for (const [lemma] of readings(w)) {
+      const e = index.byKey.get(lemma);
+      if (e) return e.pos === 'n';
+    }
+    return false;
+  };
+  const joinsNouns = (m) => {
+    const before = prevWordIndex(tokens, m);
+    const after = nextWords(tokens, m, 3).find((j) => {
+      const w = tokens[j].raw.toLowerCase();
+      return !DETERMINERS[w] && !POSSESSIVES[w] && !isAdjectiveWord(w, index);
+    });
+    return nounish(before) && nounish(after);
+  };
+  for (let m = from + 1; m < to; m++) {
+    if (tokens[m].kind === 'word' && tokens[m].raw.toLowerCase() === 'and' && joinsNouns(m)) return true;
+  }
+  let seen = 0;
+  for (let m = from - 1; m >= 0 && seen < 3; m--) {
+    if (tokens[m].kind !== 'word') { if (/[.!?;]/.test(tokens[m].raw)) break; continue; }
+    seen++;
+    if (tokens[m].raw.toLowerCase() === 'and' && joinsNouns(m)) return true;
+  }
+  return false;
+}
+
+function isAdjectiveWord(word, index) {
+  const e = index.byKey.get(word);
+  return !!e && (e.pos === 'adj' || e.pos === 'adv');
+}
+
+/** Which conjugated form fits: look at auxiliaries and the subject. */
+function verbForm(tokens, ti, inflection, index) {
+  if (inflection.verbForm === 'ger') return 'ger';
+  if (inflection.verbForm === 'part') return 'part';
+  const prev = prevWordIndex(tokens, ti);
+  const prevWord = prev != null ? tokens[prev].raw.toLowerCase() : '';
+  if (['have', 'has', 'had', 'been', 'having'].includes(prevWord)) return 'part';
+  if (inflection.verbForm === 'past') {
+    const subj = subject(tokens, ti, index);
+    return subj && subj.plural ? 'pret3p' : 'pret3';
+  }
+  if (['to', 'will', 'would', 'can', 'could', 'should', 'must', 'may', 'might', "don't", 'not'].includes(prevWord)) return 'inf';
+  if (['have', 'has', 'had', 'been'].includes(prevWord)) return 'part';
+  if (['is', 'are', 'was', 'were', 'am'].includes(prevWord)) return 'ger';
+  if (inflection.verbForm === 'pres3') return 'pres3';
+  if (SUBJECTS[prevWord]) return SUBJECTS[prevWord];
+  const subj = subject(tokens, ti, index);
+  if (subj) return subj.person;
+  return 'pres3';
+}
+
+/** Convenience: analyze + apply in one call. */
+function weave(text, options = {}, index = DEFAULT_INDEX) {
+  return applyLevel(analyze(text, index), options);
+}
+
+/** Flatten render nodes back to plain text (for export / TTS). */
+function toText(nodes, { hints = false } = {}) {
+  return nodes.map((n) => {
+    if (n.kind === 'swap') return hints && n.hint ? `${n.text} (${n.hint})` : n.text;
+    return n.text;
+  }).join('');
+}
+
+
+// ── src/diglot/ingest.js ───────────────────────────────────────────────────
+// Getting text in: from a URL, a pasted blob, a .txt file, or an EPUB.
+// Everything runs in the browser — there's no server to send your reading to.
+
+/**
+ * Text-extraction proxies, tried in order. Both are public, CORS-friendly
+ * services; if one is down or rate-limited we fall through to the next.
+ */
+const FETCHERS = [
+  {
+    name: 'jina',
+    url: (u) => 'https://r.jina.ai/' + u,
+    parse: (body) => fromMarkdown(body),
+  },
+  {
+    name: 'allorigins',
+    url: (u) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+    parse: (body) => fromHtml(body),
+  },
+];
+
+/** Fetch a URL and pull the article text out of it. */
+async function fetchArticle(url, { signal } = {}) {
+  const clean = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+  const errors = [];
+  for (const fetcher of FETCHERS) {
+    try {
+      const res = await fetch(fetcher.url(clean), { signal, headers: { Accept: 'text/plain, text/html' } });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const body = await res.text();
+      const article = fetcher.parse(body);
+      if (article.text.split(/\s+/).length > 120) return { ...article, url: clean, via: fetcher.name };
+      errors.push(`${fetcher.name}: too little text`);
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      errors.push(`${fetcher.name}: ${err.message}`);
+    }
+  }
+  throw new Error(`Could not read that page (${errors.join('; ')})`);
+}
+
+/** r.jina.ai hands back markdown with a small header block. */
+function fromMarkdown(body) {
+  let title = '';
+  let text = body;
+  const header = body.match(/^Title:\s*(.+)$/m);
+  if (header) title = header[1].trim();
+  const marker = body.indexOf('Markdown Content:');
+  if (marker !== -1) text = body.slice(marker + 'Markdown Content:'.length);
+
+  text = text
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')            // images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')          // links → their text
+    .replace(/^\s*(={3,}|-{3,}|\*{3,})\s*$/gm, '')    // rules
+    .replace(/^#{1,6}\s*/gm, '')                      // heading marks
+    .replace(/[*_`>]/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { title, text };
+}
+
+/** A crude but effective readability pass: keep the densest block of prose. */
+function fromHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const title = doc.querySelector('meta[property="og:title"]')?.content
+    || doc.querySelector('title')?.textContent?.trim() || '';
+  doc.querySelectorAll('script, style, nav, header, footer, aside, noscript, form, iframe, figure, figcaption').forEach((n) => n.remove());
+
+  const candidates = [...doc.querySelectorAll('article, main, [role="main"], .post, .article-body, .entry-content, #content, body')];
+  let best = null;
+  let bestScore = 0;
+  for (const el of candidates) {
+    const paragraphs = el.querySelectorAll('p');
+    let score = 0;
+    paragraphs.forEach((p) => {
+      const len = (p.textContent || '').trim().length;
+      if (len > 80) score += len;
+    });
+    if (score > bestScore) { bestScore = score; best = el; }
+  }
+  const root = best || doc.body;
+  const text = [...root.querySelectorAll('p, h2, h3, li, blockquote')]
+    .map((p) => (p.textContent || '').replace(/\s+/g, ' ').trim())
+    .filter((t) => t.length > 40)
+    .join('\n\n');
+  return { title, text: text || (root.textContent || '').replace(/\n{3,}/g, '\n\n').trim() };
+}
+
+/** Tidy pasted text: unwrap hard-wrapped lines, normalise blank lines. */
+function cleanText(raw) {
+  const text = raw.replace(/\r\n?/g, '\n').replace(/ /g, ' ');
+  const hardWrapped = /\n(?!\n)/.test(text)
+    && text.split('\n').filter((l) => l.trim()).slice(0, 40).filter((l) => l.length < 90).length > 20;
+  const unwrapped = hardWrapped
+    ? text.replace(/([^\n.!?"'”’:])\n(?=[a-z(“"'])/g, '$1 ')
+    : text;
+  return unwrapped.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/** Break a long text into reader-sized sections at paragraph boundaries. */
+function splitIntoSections(text, targetWords = 900) {
+  const paragraphs = text.split(/\n{2,}/);
+  const sections = [];
+  let buffer = [];
+  let count = 0;
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean).length;
+    if (count && count + words > targetWords) {
+      sections.push(buffer.join('\n\n'));
+      buffer = [];
+      count = 0;
+    }
+    buffer.push(paragraph);
+    count += words;
+  }
+  if (buffer.length) sections.push(buffer.join('\n\n'));
+  return sections.length ? sections : [text];
+}
+
+const wordCount = (text) => (text.match(/[\p{L}\p{M}'’-]+/gu) || []).length;
+
+/** Guess a title from the first line if we weren't given one. */
+function guessTitle(text, fallback = 'Untitled') {
+  const first = text.split('\n').map((l) => l.trim()).find(Boolean);
+  if (!first) return fallback;
+  const clipped = first.length > 70 ? first.slice(0, 67).replace(/\s+\S*$/, '') + '…' : first;
+  return clipped.replace(/^#+\s*/, '') || fallback;
+}
+
+
+// ── src/diglot/epub.js ─────────────────────────────────────────────────────
+// EPUB in and out, with no dependencies.
+//
+// Reading uses the browser/Node DecompressionStream for deflated entries;
+// writing stores everything uncompressed, which is a perfectly legal ZIP and
+// keeps the writer to a CRC table and a few headers. Good enough for books of
+// the size a person actually reads.
+
+// ── CRC32 ───────────────────────────────────────────────────────────────────
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    table[i] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+// ── reading ─────────────────────────────────────────────────────────────────
+
+/** Read a ZIP into a Map of path → Uint8Array. */
+async function unzip(buffer) {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  // Find the end-of-central-directory record (it has a variable-length comment).
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= 0 && i > bytes.length - 65558; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('Not a ZIP file (no end-of-central-directory record)');
+
+  const count = view.getUint16(eocd + 10, true);
+  let offset = view.getUint32(eocd + 16, true);
+  const files = new Map();
+
+  for (let n = 0; n < count; n++) {
+    if (view.getUint32(offset, true) !== 0x02014b50) break;
+    const method = view.getUint16(offset + 10, true);
+    const compressedSize = view.getUint32(offset + 20, true);
+    const nameLen = view.getUint16(offset + 28, true);
+    const extraLen = view.getUint16(offset + 30, true);
+    const commentLen = view.getUint16(offset + 32, true);
+    const localOffset = view.getUint32(offset + 42, true);
+    const name = new TextDecoder().decode(bytes.subarray(offset + 46, offset + 46 + nameLen));
+    offset += 46 + nameLen + extraLen + commentLen;
+
+    // The local header repeats the name and has its own extra field length.
+    const lNameLen = view.getUint16(localOffset + 26, true);
+    const lExtraLen = view.getUint16(localOffset + 28, true);
+    const dataStart = localOffset + 30 + lNameLen + lExtraLen;
+    const raw = bytes.subarray(dataStart, dataStart + compressedSize);
+    if (name.endsWith('/')) continue;
+    files.set(name, method === 0 ? raw : await inflate(raw));
+  }
+  return files;
+}
+
+async function inflate(raw) {
+  if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot unzip compressed EPUBs');
+  const stream = new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+const decode = (bytes) => new TextDecoder('utf-8').decode(bytes);
+
+/**
+ * Pull a readable book out of an EPUB: title, author, and chapters of text.
+ * Falls back to document order if the spine can't be read.
+ */
+async function readEpub(buffer) {
+  const files = await unzip(buffer);
+  const parser = new DOMParser();
+
+  const containerFile = files.get('META-INF/container.xml');
+  let opfPath = null;
+  if (containerFile) {
+    const container = parser.parseFromString(decode(containerFile), 'application/xml');
+    opfPath = container.querySelector('rootfile')?.getAttribute('full-path') || null;
+  }
+  if (!opfPath) opfPath = [...files.keys()].find((k) => k.endsWith('.opf'));
+  if (!opfPath) throw new Error('No OPF package file — is this really an EPUB?');
+
+  const base = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '';
+  const opf = parser.parseFromString(decode(files.get(opfPath)), 'application/xml');
+  const title = opf.querySelector('metadata > *|title, title')?.textContent?.trim() || 'Untitled';
+  const author = opf.querySelector('metadata > *|creator, creator')?.textContent?.trim() || '';
+
+  const manifest = new Map();
+  opf.querySelectorAll('manifest > item').forEach((item) => {
+    manifest.set(item.getAttribute('id'), {
+      href: item.getAttribute('href'),
+      type: item.getAttribute('media-type'),
+    });
+  });
+  const spine = [...opf.querySelectorAll('spine > itemref')]
+    .map((ref) => manifest.get(ref.getAttribute('idref')))
+    .filter((item) => item && /xhtml|html/.test(item.type || ''));
+  const docs = spine.length ? spine.map((s) => resolve(base, s.href))
+    : [...files.keys()].filter((k) => /\.x?html?$/i.test(k)).sort();
+
+  const chapters = [];
+  for (const path of docs) {
+    const file = files.get(path) || files.get(decodeURIComponent(path));
+    if (!file) continue;
+    const doc = parser.parseFromString(decode(file), 'text/html');
+    const heading = doc.querySelector('h1, h2, h3, title')?.textContent?.trim() || '';
+    const text = htmlToText(doc.body || doc.documentElement);
+    if (text.split(/\s+/).length < 20) continue; // covers, blank pages
+    chapters.push({ title: heading || `Part ${chapters.length + 1}`, text });
+  }
+  if (!chapters.length) throw new Error('No readable chapters found in this EPUB');
+  return { title, author, chapters };
+}
+
+function resolve(base, href) {
+  const path = base + href;
+  const parts = [];
+  for (const part of path.split('/')) {
+    if (part === '.' || part === '') continue;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  }
+  return parts.join('/');
+}
+
+/** Flatten a DOM subtree to text with blank lines between blocks. */
+function htmlToText(root) {
+  if (!root) return '';
+  const clone = root.cloneNode(true);
+  clone.querySelectorAll('script, style, nav, header, footer, aside, noscript, svg, form, iframe').forEach((n) => n.remove());
+  const BLOCK = 'p, div, section, article, h1, h2, h3, h4, h5, h6, li, blockquote, tr, pre, br';
+  clone.querySelectorAll(BLOCK).forEach((el) => {
+    el.append(document.createTextNode('\n\n'));
+  });
+  return (clone.textContent || '')
+    .replace(/ /g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ ?\n ?/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+// ── writing ─────────────────────────────────────────────────────────────────
+
+const utf8 = (s) => new TextEncoder().encode(s);
+
+/** Build a ZIP (all entries stored) from [{ name, data }]. */
+function zip(entries) {
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+
+  for (const entry of entries) {
+    const nameBytes = utf8(entry.name);
+    const data = typeof entry.data === 'string' ? utf8(entry.data) : entry.data;
+    const crc = crc32(data);
+
+    const local = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);       // version needed
+    lv.setUint16(6, 0x0800, true);   // UTF-8 names
+    lv.setUint16(8, 0, true);        // stored
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, data.length, true);
+    lv.setUint32(22, data.length, true);
+    lv.setUint16(26, nameBytes.length, true);
+    local.set(nameBytes, 30);
+    chunks.push(local, data);
+
+    const dir = new Uint8Array(46 + nameBytes.length);
+    const dv = new DataView(dir.buffer);
+    dv.setUint32(0, 0x02014b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 20, true);
+    dv.setUint16(8, 0x0800, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint32(16, crc, true);
+    dv.setUint32(20, data.length, true);
+    dv.setUint32(24, data.length, true);
+    dv.setUint16(28, nameBytes.length, true);
+    dv.setUint32(42, offset, true);
+    dir.set(nameBytes, 46);
+    central.push(dir);
+
+    offset += local.length + data.length;
+  }
+
+  const centralSize = central.reduce((n, c) => n + c.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, offset, true);
+
+  const total = offset + centralSize + 22;
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of [...chunks, ...central, end]) { out.set(c, p); p += c.length; }
+  return out;
+}
+
+const escapeXml = (s = '') => s.replace(/[<>&"']/g, (c) => (
+  { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
+
+const EPUB_CSS = `
+body { font-family: Georgia, serif; line-height: 1.6; margin: 1em; }
+h1, h2 { font-family: Helvetica, Arial, sans-serif; line-height: 1.25; }
+p { margin: 0 0 0.9em; text-indent: 0; }
+.es { font-weight: 600; }
+.gloss { font-size: 0.75em; color: #666; font-weight: normal; }
+.vocab { font-size: 0.95em; }
+.vocab dt { font-weight: 600; margin-top: 0.6em; }
+.vocab dd { margin: 0 0 0 1.2em; color: #555; }
+.note { color: #555; font-style: italic; }
+`;
+
+/**
+ * Build a Send-to-Kindle-ready EPUB.
+ * chapters: [{ title, html }]  vocab: [{ es, en }]
+ */
+function buildEpub({ title, author = 'Diglot', chapters, vocab = [], level = 0, language = 'es' }) {
+  const id = 'diglot-' + Date.now();
+  const now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  const files = [];
+
+  const page = (heading, body) => `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta charset="utf-8"/><title>${escapeXml(heading)}</title>
+<link rel="stylesheet" type="text/css" href="style.css"/></head>
+<body><h1>${escapeXml(heading)}</h1>
+${body}
+</body></html>`;
+
+  chapters.forEach((ch, i) => {
+    files.push({ name: `OEBPS/ch${i + 1}.xhtml`, data: page(ch.title || `Chapter ${i + 1}`, ch.html) });
+  });
+
+  if (vocab.length) {
+    const list = vocab.map((v) => `<dt>${escapeXml(v.es)}</dt><dd>${escapeXml(v.en)}</dd>`).join('\n');
+    files.push({
+      name: 'OEBPS/vocab.xhtml',
+      data: page('Vocabulary', `<p class="note">Every Spanish word woven into this text, in the order you met it.</p>\n<dl class="vocab">${list}</dl>`),
+    });
+  }
+
+  const chapterItems = chapters.map((_, i) => `ch${i + 1}`).concat(vocab.length ? ['vocab'] : []);
+  const manifest = chapterItems
+    .map((cid) => `<item id="${cid}" href="${cid}.xhtml" media-type="application/xhtml+xml"/>`).join('\n    ');
+  const spine = chapterItems.map((cid) => `<itemref idref="${cid}"/>`).join('\n    ');
+  const navItems = chapters.map((ch, i) => `<li><a href="ch${i + 1}.xhtml">${escapeXml(ch.title || `Chapter ${i + 1}`)}</a></li>`)
+    .concat(vocab.length ? ['<li><a href="vocab.xhtml">Vocabulary</a></li>'] : []).join('\n      ');
+
+  files.push({
+    name: 'OEBPS/nav.xhtml',
+    data: `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
+<head><meta charset="utf-8"/><title>Contents</title></head>
+<body><nav epub:type="toc" id="toc"><h1>Contents</h1><ol>
+      ${navItems}
+</ol></nav></body></html>`,
+  });
+
+  files.push({
+    name: 'OEBPS/content.opf',
+    data: `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="bookid">${id}</dc:identifier>
+    <dc:title>${escapeXml(title)}</dc:title>
+    <dc:creator>${escapeXml(author)}</dc:creator>
+    <dc:language>en</dc:language>
+    <dc:description>Diglot weave at ${level}% ${escapeXml(language)}.</dc:description>
+    <meta property="dcterms:modified">${now}</meta>
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="css" href="style.css" media-type="text/css"/>
+    ${manifest}
+  </manifest>
+  <spine>
+    ${spine}
+  </spine>
+</package>`,
+  });
+
+  files.push({ name: 'OEBPS/style.css', data: EPUB_CSS });
+  files.push({
+    name: 'META-INF/container.xml',
+    data: `<?xml version="1.0" encoding="utf-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+</container>`,
+  });
+
+  // The mimetype entry must come first and be stored uncompressed.
+  return zip([{ name: 'mimetype', data: 'application/epub+zip' }, ...files]);
+}
+
+
+// ── src/diglot/llm.js ──────────────────────────────────────────────────────
+// Optional Claude layer. Everything here needs the user's own API key, kept in
+// their browser and sent only to api.anthropic.com.
+//
+// The key idea: Claude does NOT write the woven text. It returns an alignment —
+// the Spanish for each notable word *in this context*, with a difficulty tier.
+// We merge that into the lexicon, so the slider stays instant and local, and
+// re-reading at a different level costs nothing.
+
+const API = 'https://api.anthropic.com/v1/messages';
+
+const MODELS = [
+  { id: 'claude-sonnet-5', label: 'Sonnet 5 — balanced (recommended)' },
+  { id: 'claude-opus-5', label: 'Opus 5 — best quality, slower' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 — fastest, cheapest' },
+];
+
+async function callClaude({ apiKey, model, system, messages, maxTokens = 8000, signal }) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
+    signal,
+  });
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.error?.message) detail = body.error.message;
+    } catch { /* keep the status line */ }
+    throw new Error(detail);
+  }
+  const body = await res.json();
+  return (body.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('');
+}
+
+function extractJson(text) {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const candidate = fenced ? fenced[1] : text;
+  const start = candidate.search(/[[{]/);
+  if (start === -1) throw new Error('No JSON in the model reply');
+  const end = Math.max(candidate.lastIndexOf(']'), candidate.lastIndexOf('}'));
+  return JSON.parse(candidate.slice(start, end + 1));
+}
+
+const ALIGN_SYSTEM = `You build vocabulary tables for a diglot-weave Spanish reader.
+
+Given an English passage, list the words and short phrases worth teaching, with
+the Spanish that fits THIS context. Rules:
+
+- Give the dictionary form of the English word (singular noun, bare infinitive
+  verb, positive adjective) and the matching Spanish dictionary form. The reader
+  inflects them itself.
+- pos is one of: n, v, adj, adv, prep, conj, pron, num, phrase.
+- For nouns give grammatical gender "m" or "f". Otherwise omit gender.
+- tier is 1–10: how hard the Spanish word is for an English speaker learning
+  Spanish. 1 = a beginner's first hundred words or an obvious cognate,
+  10 = advanced or literary.
+- Prefer neutral peninsular Spanish. No regionalisms unless the text demands it.
+- Skip proper nouns, numerals written as digits, and words whose Spanish would
+  be identical to the English.
+- Include multi-word phrases where a word-for-word swap would be wrong
+  (idioms, phrasal verbs, fixed expressions).
+- Cover the passage thoroughly: aim for every content word.
+
+Reply with JSON only: [{"en":"...","es":"...","pos":"n","gender":"f","tier":3}]`;
+
+/**
+ * Ask Claude for a context-accurate vocabulary alignment of a passage.
+ * Returns lexicon entries ready to merge, in this app's "en|es|pos|extra" shape.
+ */
+async function alignPassage(text, { apiKey, model = MODELS[0].id, signal } = {}) {
+  const reply = await callClaude({
+    apiKey, model, signal,
+    system: ALIGN_SYSTEM,
+    messages: [{ role: 'user', content: `Passage:\n\n${text}` }],
+  });
+  const rows = extractJson(reply);
+  const entries = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row || typeof row.en !== 'string' || typeof row.es !== 'string') continue;
+    const en = row.en.trim().toLowerCase();
+    const es = row.es.trim();
+    if (!en || !es || en === es.toLowerCase()) continue;
+    const pos = /^(n|v|adj|adv|prep|conj|pron|num|phrase)$/.test(row.pos) ? row.pos : 'n';
+    const tier = Math.min(10, Math.max(1, Math.round(Number(row.tier) || 5)));
+    entries.push({ en, es, pos, gender: row.gender === 'f' ? 'f' : 'm', tier });
+  }
+  return entries;
+}
+
+/** Align a long document a chunk at a time, reporting progress as it goes. */
+async function alignDocument(text, { apiKey, model, chunkWords = 700, onProgress, signal } = {}) {
+  const paragraphs = text.split(/\n{2,}/);
+  const chunks = [];
+  let buffer = [];
+  let count = 0;
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean).length;
+    if (count && count + words > chunkWords) { chunks.push(buffer.join('\n\n')); buffer = []; count = 0; }
+    buffer.push(paragraph);
+    count += words;
+  }
+  if (buffer.length) chunks.push(buffer.join('\n\n'));
+
+  const merged = new Map();
+  for (const [i, chunk] of chunks.entries()) {
+    onProgress?.({ done: i, total: chunks.length });
+    const entries = await alignPassage(chunk, { apiKey, model, signal });
+    for (const entry of entries) if (!merged.has(entry.en)) merged.set(entry.en, entry);
+  }
+  onProgress?.({ done: chunks.length, total: chunks.length });
+  return [...merged.values()];
+}
+
+const WRITE_SYSTEM = `You write original short articles for language learners to read.
+
+- Write in clear, natural English — the reader will see it woven with Spanish.
+- Concrete and specific: real detail, no filler, no throat-clearing intro.
+- Short paragraphs. No headings, no bullet lists, no markdown.
+- Never reproduce copyrighted text; write something original.
+- Start with a one-line title on its own, then a blank line, then the article.`;
+
+/** Generate an original article on a topic, to weave. */
+async function writeArticle(topic, { apiKey, model = MODELS[0].id, words = 400, signal } = {}) {
+  const reply = await callClaude({
+    apiKey, model, signal, maxTokens: 4000,
+    system: WRITE_SYSTEM,
+    messages: [{ role: 'user', content: `Write an article of about ${words} words about: ${topic}` }],
+  });
+  const lines = reply.trim().split('\n');
+  const title = lines[0].replace(/^#+\s*/, '').trim();
+  return { title, text: lines.slice(1).join('\n').trim() || reply.trim() };
+}
+
+/** Cheap key check: one token, so it costs essentially nothing. */
+async function testKey({ apiKey, model = MODELS[0].id }) {
+  await callClaude({ apiKey, model, maxTokens: 1, system: 'Reply with "ok".', messages: [{ role: 'user', content: 'ok' }] });
+  return true;
+}
+
+/** Turn Claude's entries into extra bands the weaver can index. */
+function entriesToBands(entries) {
+  const bands = Array.from({ length: 10 }, () => []);
+  for (const e of entries) {
+    const extra = e.pos === 'n' ? `|${e.gender}` : '';
+    bands[e.tier - 1].push(`${e.en}|${e.es}|${e.pos}${extra}`);
+  }
+  return bands;
+}
+
+
+// ── diglot/app.js ────────────────────────────────────────────
+// Diglot — the browser side. Nothing here talks to a server except the page
+// fetcher and (only if you supply a key) the Anthropic API.
+
+
+
+
+
+
+// ── storage ─────────────────────────────────────────────────────────────────
+
+const PREF_KEY = 'diglot.prefs.v1';
+const VOCAB_KEY = 'diglot.vocab.v1';
+
+const defaultPrefs = {
+  level: 25, articles: true, firstHint: false, readerSize: 19,
+  apiKey: '', model: MODELS[0].id, voiceEs: '', voiceEn: '', rate: 1, lastDoc: null,
+};
+
+const load = (key, fallback) => {
+  try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || '{}') }; }
+  catch { return { ...fallback }; }
+};
+const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode */ } };
+
+const prefs = load(PREF_KEY, defaultPrefs);
+const vocabRaw = load(VOCAB_KEY, { known: [], blocked: [], met: {} });
+const vocab = {
+  known: new Set(vocabRaw.known),
+  blocked: new Set(vocabRaw.blocked),
+  met: vocabRaw.met || {},
+};
+const savePrefs = () => save(PREF_KEY, prefs);
+const saveVocab = () => save(VOCAB_KEY, {
+  known: [...vocab.known], blocked: [...vocab.blocked], met: vocab.met,
+});
+
+// Documents can be whole books, so they live in IndexedDB rather than localStorage.
+const db = {
+  open() {
+    if (this._p) return this._p;
+    this._p = new Promise((resolve, reject) => {
+      const req = indexedDB.open('diglot', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('docs', { keyPath: 'id' });
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return this._p;
+  },
+  async tx(mode, fn) {
+    const database = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction('docs', mode);
+      const request = fn(transaction.objectStore('docs'));
+      transaction.oncomplete = () => resolve(request?.result);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  },
+  put(doc) { return this.tx('readwrite', (store) => store.put(doc)); },
+  get(id) { return this.tx('readonly', (store) => store.get(id)); },
+  all() { return this.tx('readonly', (store) => store.getAll()); },
+  remove(id) { return this.tx('readwrite', (store) => store.delete(id)); },
+};
+
+// ── state ───────────────────────────────────────────────────────────────────
+
+const state = {
+  doc: null,          // { id, title, author, source, sections: [text], extra: [] }
+  sectionIndex: 0,
+  analysis: null,     // cached analysis of the current section
+  index: DEFAULT_INDEX,
+  rendered: null,     // last applyLevel result
+  sentences: [],      // for read-aloud
+  speaking: false,
+};
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, className, text) => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+};
+
+// ── sample text (original, written for this app) ────────────────────────────
+
+const SAMPLE = {
+  title: 'The woman who counted the boats',
+  author: 'A sample, to show you the idea',
+  text: `Every morning the old woman walked to the harbour with a small green notebook.
+She counted the boats. Nine on a good day, three when the wind came from the north,
+and once, in a bad winter, none at all.
+
+Her neighbours thought this was a strange habit for a woman of eighty years. The
+young men who worked on the water laughed a little, but they always waved. She
+wrote the numbers in the same careful hand she had used as a teacher, forty years
+before, in a school two streets away.
+
+Nobody asked her why she did it, and so nobody learned that her husband had been a
+fisherman, and that he had gone out one September night with four other men and a
+new engine, and that only three of them came home. After that she needed to know,
+every day, how many boats were on the water, and how many came back.
+
+The notebook was almost full. When it finished she would buy another one, from the
+shop near the church, where the woman behind the counter always said good morning
+and never asked about the counting.`,
+};
+
+// ── weaving ─────────────────────────────────────────────────────────────────
+
+function rebuildIndex() {
+  const extra = state.doc?.extra?.length ? entriesToBands(state.doc.extra) : null;
+  if (!extra) { state.index = DEFAULT_INDEX; return; }
+  // Merge Claude's entries into the standard bands, tier by tier, so a word it
+  // rates "tier 3" appears at the same point on the dial as a band-2 staple.
+  const merged = BANDS.map((band, i) => [...band, ...(extra[i] || [])]);
+  for (let i = BANDS.length; i < extra.length; i++) merged.push(extra[i]);
+  state.index = buildIndex(merged);
+}
+
+function currentText() {
+  if (!state.doc) return '';
+  return state.doc.sections[state.sectionIndex] || '';
+}
+
+function reanalyze() {
+  const text = currentText();
+  state.analysis = text ? analyze(text, state.index) : null;
+}
+
+let renderQueued = false;
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; render(); });
+}
+
+function render() {
+  const reader = $('reader');
+  reader.textContent = '';
+  state.sentences = [];
+  if (!state.analysis) {
+    reader.append(el('p', 'empty', 'Add some text to start reading — an article URL, a paste, a topic, or an EPUB.'));
+    $('actualOut').textContent = '0';
+    renderSectionNav();
+    return;
+  }
+
+  const result = applyLevel(state.analysis, {
+    level: prefs.level,
+    articles: prefs.articles,
+    firstHint: prefs.firstHint,
+    known: vocab.known,
+    blocked: vocab.blocked,
+  });
+  state.rendered = result;
+
+  if (state.sectionIndex === 0) {
+    reader.append(el('h1', 'title', state.doc.title));
+    if (state.doc.author || state.doc.source) {
+      reader.append(el('div', 'byline', [state.doc.author, state.doc.source].filter(Boolean).join(' · ')));
+    }
+  }
+
+  // Build paragraphs, and inside them sentence spans (so read-aloud can follow).
+  let paragraph = el('p');
+  let sentence = el('span', 'sentence');
+  let sentenceRuns = [];
+
+  const closeSentence = () => {
+    if (!sentence.hasChildNodes()) return;
+    const idx = state.sentences.length;
+    sentence.dataset.s = String(idx);
+    state.sentences.push({ el: sentence, runs: compactRuns(sentenceRuns) });
+    paragraph.append(sentence);
+    sentence = el('span', 'sentence');
+    sentenceRuns = [];
+  };
+  const closeParagraph = () => {
+    closeSentence();
+    if (paragraph.hasChildNodes()) reader.append(paragraph);
+    paragraph = el('p');
+  };
+
+  for (const node of result.nodes) {
+    if (node.kind === 'swap') {
+      const span = el('span', vocab.known.has(node.key) ? 'es known' : 'es', node.text);
+      span.dataset.en = node.en;
+      span.dataset.key = node.key;
+      span.dataset.rank = node.rank;
+      span.dataset.pos = node.pos;
+      if (node.hint) {
+        span.append(el('span', 'hint', ` (${node.hint})`));
+      }
+      sentence.append(span);
+      sentenceRuns.push({ lang: 'es', text: node.text });
+      continue;
+    }
+    // plain text or whitespace: split on blank lines into paragraphs
+    const pieces = node.text.split(/\n{2,}/);
+    pieces.forEach((piece, i) => {
+      if (i > 0) closeParagraph();
+      if (!piece) return;
+      const chunks = piece.split(/(?<=[.!?…])(\s+)/); // keep sentences apart
+      chunks.forEach((chunk) => {
+        if (!chunk) return;
+        sentence.append(document.createTextNode(chunk.replace(/\n/g, ' ')));
+        sentenceRuns.push({ lang: 'en', text: chunk.replace(/\n/g, ' ') });
+        if (/[.!?…]\s*$/.test(chunk) || /^\s+$/.test(chunk) && /[.!?…]\s*$/.test(sentence.textContent)) {
+          if (/[.!?…]["'”’)]?\s*$/.test(sentence.textContent)) closeSentence();
+        }
+      });
+    });
+  }
+  closeParagraph();
+
+  // record what the reader has now met
+  for (const node of result.nodes) {
+    if (node.kind === 'swap' && node.first && node.pos !== 'det') {
+      vocab.met[node.key] = (vocab.met[node.key] || 0) + 1;
+    }
+  }
+  saveVocabThrottled();
+
+  $('actualOut').textContent = Math.round(result.stats.ratio * 100);
+  $('stageOut').textContent = stageName(prefs.level);
+  renderSectionNav();
+}
+
+function compactRuns(runs) {
+  const out = [];
+  for (const run of runs) {
+    if (!run.text.trim()) { if (out.length) out[out.length - 1].text += run.text; continue; }
+    const last = out[out.length - 1];
+    if (last && last.lang === run.lang) last.text += run.text;
+    else out.push({ ...run });
+  }
+  return out;
+}
+
+function stageName(level) {
+  if (level === 0) return 'plain English';
+  if (level < 15) return 'easing in';
+  if (level < 35) return 'first hundred words';
+  if (level < 55) return 'everyday vocabulary';
+  if (level < 75) return 'reading properly';
+  if (level < 95) return 'mostly Spanish';
+  return 'English glue only';
+}
+
+let vocabTimer = null;
+function saveVocabThrottled() {
+  clearTimeout(vocabTimer);
+  vocabTimer = setTimeout(saveVocab, 800);
+}
+
+function renderSectionNav() {
+  const nav = $('sectionNav');
+  nav.textContent = '';
+  if (!state.doc || state.doc.sections.length < 2) return;
+  const prev = el('button', 'btn', '← Previous');
+  const next = el('button', 'btn', 'Next →');
+  const label = el('div', 'readout', `Part ${state.sectionIndex + 1} of ${state.doc.sections.length}`);
+  prev.disabled = state.sectionIndex === 0;
+  next.disabled = state.sectionIndex >= state.doc.sections.length - 1;
+  prev.onclick = () => gotoSection(state.sectionIndex - 1);
+  next.onclick = () => gotoSection(state.sectionIndex + 1);
+  nav.append(prev, label, next);
+}
+
+function gotoSection(i) {
+  stopSpeaking();
+  state.sectionIndex = Math.max(0, Math.min(i, state.doc.sections.length - 1));
+  state.doc.position = state.sectionIndex;
+  db.put(state.doc).catch(() => {});
+  reanalyze();
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── loading documents ───────────────────────────────────────────────────────
+
+async function loadDoc(doc, { persist = true } = {}) {
+  stopSpeaking();
+  state.doc = doc;
+  state.sectionIndex = Math.min(doc.position || 0, doc.sections.length - 1);
+  rebuildIndex();
+  reanalyze();
+  $('docTitle').textContent = `${doc.title}${doc.sections.length > 1 ? ` · ${doc.sections.length} parts` : ''}`;
+  prefs.lastDoc = doc.id;
+  savePrefs();
+  if (persist) await db.put(doc).catch(() => {});
+  render();
+  updateEnrichButton();
+  window.scrollTo({ top: 0 });
+}
+
+function makeDoc({ title, author = '', source = '', text }) {
+  const clean = cleanText(text);
+  return {
+    id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    title: title || guessTitle(clean),
+    author, source,
+    sections: splitIntoSections(clean, 900),
+    words: wordCount(clean),
+    added: Date.now(),
+    position: 0,
+    extra: [],
+  };
+}
+
+// ── panels ──────────────────────────────────────────────────────────────────
+
+function openPanel(title, build) {
+  $('panelTitle').textContent = title;
+  const body = $('panelBody');
+  body.textContent = '';
+  build(body);
+  $('panel').classList.add('open');
+  $('scrim').classList.add('open');
+}
+function closePanel() {
+  $('panel').classList.remove('open');
+  $('scrim').classList.remove('open');
+}
+
+function field(label, control, help) {
+  const wrap = el('div', 'field');
+  if (label) wrap.append(el('label', null, label));
+  wrap.append(control);
+  if (help) wrap.append(el('div', 'help', help));
+  return wrap;
+}
+
+function checkbox(label, checked, onChange, help) {
+  const wrap = el('label', 'check');
+  const input = el('input');
+  input.type = 'checkbox';
+  input.checked = checked;
+  input.onchange = () => onChange(input.checked);
+  const text = el('span', null, label);
+  if (help) text.append(el('small', null, help));
+  wrap.append(input, text);
+  return wrap;
+}
+
+// ── add text ────────────────────────────────────────────────────────────────
+
+function panelAdd(initialTab = 'paste') {
+  openPanel('Add something to read', (body) => {
+    const tabs = el('div', 'tabs');
+    const pane = el('div');
+    const status = el('div', 'status');
+    const options = [
+      ['paste', 'Paste'], ['url', 'Web page'], ['topic', 'Write me one'], ['file', 'Book / file'],
+    ];
+    let active = initialTab;
+    const draw = () => {
+      tabs.textContent = '';
+      options.forEach(([id, label]) => {
+        const tab = el('button', 'tab' + (id === active ? ' on' : ''), label);
+        tab.onclick = () => { active = id; draw(); };
+        tabs.append(tab);
+      });
+      pane.textContent = '';
+      status.textContent = '';
+      status.className = 'status';
+      ({ paste: paneP, url: paneU, topic: paneT, file: paneF })[active](pane, status);
+    };
+
+    const paneP = (host) => {
+      const box = el('textarea');
+      box.placeholder = 'Paste an article, an email, your own writing — anything in English.';
+      const title = el('input');
+      title.type = 'text';
+      title.placeholder = 'Title (optional)';
+      const go = el('button', 'btn primary', 'Read it');
+      go.onclick = async () => {
+        if (!box.value.trim()) { fail(status, 'Nothing pasted yet.'); return; }
+        await loadDoc(makeDoc({ title: title.value.trim(), text: box.value }));
+        closePanel();
+      };
+      host.append(field(null, box), field(null, title), go);
+    };
+
+    const paneU = (host) => {
+      const input = el('input');
+      input.type = 'url';
+      input.placeholder = 'https://example.com/an-article';
+      const go = el('button', 'btn primary', 'Fetch and weave');
+      go.onclick = async () => {
+        const url = input.value.trim();
+        if (!url) { fail(status, 'Paste a link first.'); return; }
+        busy(status, 'Fetching the page…');
+        try {
+          const article = await fetchArticle(url);
+          const doc = makeDoc({
+            title: article.title, text: article.text,
+            source: new URL(article.url).hostname.replace(/^www\./, ''),
+          });
+          await loadDoc(doc);
+          closePanel();
+        } catch (err) { fail(status, err.message); }
+      };
+      host.append(
+        field('Article URL', input, 'The page is fetched through a public reader service (r.jina.ai, then allorigins) because a browser cannot read another site directly. Paywalled pages usually will not work — paste the text instead.'),
+        go, status,
+      );
+    };
+
+    const paneT = (host) => {
+      const input = el('input');
+      input.type = 'text';
+      input.placeholder = 'e.g. how sourdough works, or the history of Wexford harbour';
+      const length = el('select');
+      [['250', 'Short — 250 words'], ['400', 'Medium — 400 words'], ['700', 'Long — 700 words']]
+        .forEach(([v, l]) => { const o = el('option', null, l); o.value = v; length.append(o); });
+      length.value = '400';
+      const go = el('button', 'btn primary', 'Write it');
+      go.onclick = async () => {
+        if (!prefs.apiKey) { fail(status, 'This one needs an Anthropic API key — add it in Settings.'); return; }
+        const topic = input.value.trim();
+        if (!topic) { fail(status, 'What should it be about?'); return; }
+        busy(status, 'Writing…');
+        try {
+          const article = await writeArticle(topic, {
+            apiKey: prefs.apiKey, model: prefs.model, words: Number(length.value),
+          });
+          const doc = makeDoc({ title: article.title, text: article.text, source: 'written for you' });
+          await loadDoc(doc);
+          busy(status, 'Aligning the vocabulary…');
+          await enrich(doc, status);
+          closePanel();
+        } catch (err) { fail(status, err.message); }
+      };
+      host.append(
+        field('Topic', input, prefs.apiKey ? 'Claude writes an original article, then aligns its vocabulary so the whole thing can go Spanish.' : 'Needs an Anthropic API key (Settings).'),
+        field('Length', length), go, status,
+      );
+    };
+
+    const paneF = (host) => {
+      const input = el('input');
+      input.type = 'file';
+      input.accept = '.epub,.txt,.md,.html';
+      const go = el('button', 'btn primary', 'Load');
+      go.onclick = async () => {
+        const file = input.files?.[0];
+        if (!file) { fail(status, 'Choose a file first.'); return; }
+        busy(status, `Reading ${file.name}…`);
+        try {
+          if (/\.epub$/i.test(file.name)) {
+            const book = await readEpub(await file.arrayBuffer());
+            const doc = makeDoc({ title: book.title, author: book.author, text: book.chapters[0].text, source: 'EPUB' });
+            doc.sections = book.chapters.flatMap((ch) => splitIntoSections(cleanText(ch.text), 900));
+            doc.words = doc.sections.reduce((n, s) => n + wordCount(s), 0);
+            await loadDoc(doc);
+          } else {
+            const text = await file.text();
+            const body = /\.html?$/i.test(file.name)
+              ? new DOMParser().parseFromString(text, 'text/html').body.textContent
+              : text;
+            await loadDoc(makeDoc({ title: file.name.replace(/\.[^.]+$/, ''), text: body, source: 'file' }));
+          }
+          closePanel();
+        } catch (err) { fail(status, err.message); }
+      };
+      host.append(
+        field('EPUB, .txt, .md or .html', input, 'The file never leaves your browser. DRM-free EPUBs only — a Kindle .azw will not open. Project Gutenberg is a good source of free books.'),
+        go, status,
+      );
+    };
+
+    body.append(tabs, pane, status);
+    draw();
+  });
+}
+
+const busy = (node, message) => {
+  node.className = 'status';
+  node.textContent = '';
+  node.append(el('span', 'spinner'), document.createTextNode(message));
+};
+const fail = (node, message) => { node.className = 'status error'; node.textContent = message; };
+const done = (node, message) => { node.className = 'status'; node.textContent = message; };
+
+// ── Claude enrichment ───────────────────────────────────────────────────────
+
+async function enrich(doc, status) {
+  if (!prefs.apiKey) throw new Error('Add an Anthropic API key in Settings first.');
+  const text = doc.sections.join('\n\n');
+  const entries = await alignDocument(text, {
+    apiKey: prefs.apiKey,
+    model: prefs.model,
+    onProgress: ({ done: d, total }) => status && busy(status, `Aligning vocabulary… part ${Math.min(d + 1, total)} of ${total}`),
+  });
+  doc.extra = entries;
+  await db.put(doc).catch(() => {});
+  if (state.doc?.id === doc.id) {
+    rebuildIndex();
+    reanalyze();
+    render();
+  }
+  updateEnrichButton();
+  status && done(status, `Added ${entries.length} words from this text.`);
+  return entries.length;
+}
+
+function updateEnrichButton() {
+  let button = $('btnEnrich');
+  if (!state.doc) { button?.remove(); return; }
+  if (!button) {
+    button = el('button', 'btn ghost', '');
+    button.id = 'btnEnrich';
+    button.onclick = onEnrichClick;
+    $('btnStats').before(button);
+  }
+  const count = state.doc.extra?.length || 0;
+  button.textContent = count ? `✦ ${count} words` : '✦ Enrich';
+  button.title = count
+    ? `Claude aligned ${count} extra words for this text. Click to redo.`
+    : 'Use Claude to translate this text’s own vocabulary, so the dial can go all the way up.';
+  button.classList.toggle('on', count > 0);
+}
+
+async function onEnrichClick() {
+  if (!prefs.apiKey) { panelSettings('You need an Anthropic API key for this.'); return; }
+  openPanel('Enrich with Claude', (body) => {
+    const status = el('div', 'status');
+    body.append(el('div', 'note', 'Claude reads this text and returns the Spanish for its own vocabulary, in context, each rated for difficulty. Those words join the dial — so a piece about sailing gets its sailing words, not just the standard list. Your key is sent only to api.anthropic.com.'));
+    body.append(status);
+    busy(status, 'Starting…');
+    enrich(state.doc, status).catch((err) => fail(status, err.message));
+  });
+}
+
+// ── library ─────────────────────────────────────────────────────────────────
+
+function panelLibrary() {
+  openPanel('Library', async (body) => {
+    body.append(el('div', 'empty', 'Loading…'));
+    const docs = (await db.all()) || [];
+    body.textContent = '';
+    const sample = el('button', 'btn', 'Load the sample passage');
+    sample.onclick = async () => {
+      await loadDoc(makeDoc({ title: SAMPLE.title, author: SAMPLE.author, text: SAMPLE.text }));
+      closePanel();
+    };
+    body.append(field(null, sample));
+    if (!docs.length) { body.append(el('div', 'empty', 'Nothing saved yet.')); return; }
+    docs.sort((a, b) => b.added - a.added);
+    for (const doc of docs) {
+      const card = el('div', 'card');
+      const grow = el('div', 'grow');
+      grow.append(el('h3', null, doc.title));
+      const bits = [
+        `${doc.words || 0} words`,
+        doc.sections.length > 1 ? `${doc.sections.length} parts` : null,
+        doc.source || null,
+        doc.extra?.length ? `✦ ${doc.extra.length}` : null,
+      ].filter(Boolean);
+      grow.append(el('div', 'sub', bits.join(' · ')));
+      if (doc.sections.length > 1) {
+        const bar = el('div', 'bar');
+        const fill = el('i');
+        fill.style.width = `${Math.round(((doc.position || 0) / (doc.sections.length - 1)) * 100)}%`;
+        bar.append(fill);
+        grow.append(bar);
+      }
+      const open = el('button', 'btn', 'Read');
+      open.onclick = async () => { await loadDoc(doc, { persist: false }); closePanel(); };
+      const remove = el('button', 'btn ghost', '✕');
+      remove.title = 'Delete';
+      remove.onclick = async () => { await db.remove(doc.id); card.remove(); };
+      card.append(grow, open, remove);
+      body.append(card);
+    }
+  });
+}
+
+// ── progress ────────────────────────────────────────────────────────────────
+
+function panelStats() {
+  openPanel('Progress', (body) => {
+    const met = Object.keys(vocab.met).length;
+    const stats = el('div', 'stats');
+    [[met, 'words met'], [vocab.known.size, 'marked known'], [vocab.blocked.size, 'set aside'],
+     [state.rendered ? Math.round(state.rendered.stats.ratio * 100) + '%' : '—', 'this page']]
+      .forEach(([n, label]) => {
+        const box = el('div');
+        box.append(el('b', null, String(n)), document.createTextNode(label));
+        stats.append(box);
+      });
+    body.append(stats);
+
+    body.append(el('div', 'note', 'Words you mark as known stay Spanish even when you drag the dial back down — the text keeps what you have learned and only softens what you have not. Words you set aside never turn Spanish.'));
+
+    const section = (title, keys, onClear) => {
+      if (!keys.length) return;
+      const head = el('div', 'field');
+      head.append(el('label', null, `${title} (${keys.length})`));
+      const list = el('div', 'wordlist');
+      keys.slice(0, 400).forEach((key) => {
+        const chip = el('span', 'chip');
+        chip.append(el('b', null, key));
+        chip.style.cursor = 'pointer';
+        chip.title = 'Remove';
+        chip.onclick = () => { onClear(key); chip.remove(); scheduleRender(); };
+        list.append(chip);
+      });
+      head.append(list);
+      body.append(head);
+    };
+    section('Known', [...vocab.known], (k) => { vocab.known.delete(k); saveVocab(); });
+    section('Set aside', [...vocab.blocked], (k) => { vocab.blocked.delete(k); saveVocab(); });
+
+    const metList = Object.entries(vocab.met).sort((a, b) => b[1] - a[1]).slice(0, 200);
+    if (metList.length) {
+      const head = el('div', 'field');
+      head.append(el('label', null, 'Seen most often'));
+      const list = el('div', 'wordlist');
+      metList.forEach(([key, count]) => {
+        const chip = el('span', 'chip');
+        chip.append(el('b', null, key), document.createTextNode(` ×${count}`));
+        list.append(chip);
+      });
+      head.append(list);
+      body.append(head);
+    }
+  });
+}
+
+// ── export ──────────────────────────────────────────────────────────────────
+
+function panelExport() {
+  openPanel('Export', (body) => {
+    if (!state.doc) { body.append(el('div', 'empty', 'Load something first.')); return; }
+    const options = { gloss: true, vocab: true, whole: true };
+    const status = el('div', 'status');
+
+    body.append(el('div', 'note', 'The EPUB is woven at the dial’s current setting — it is a snapshot, not a slider, so pick the level you want before exporting. Send it to your Kindle by emailing it to your @kindle.com address, or with the Send to Kindle app.'));
+    body.append(checkbox('Gloss each Spanish word the first time it appears', options.gloss, (v) => { options.gloss = v; }, 'Adds the English in small type, once.'));
+    body.append(checkbox('Add a vocabulary list at the end', options.vocab, (v) => { options.vocab = v; }));
+    body.append(checkbox('Whole document, not just this part', options.whole, (v) => { options.whole = v; }));
+
+    const epub = el('button', 'btn primary', '↓ EPUB for Kindle');
+    epub.onclick = () => {
+      try {
+        const bytes = exportEpub(options);
+        download(bytes, `${safeName(state.doc.title)}-${prefs.level}pc.epub`, 'application/epub+zip');
+        done(status, 'Saved. Email it to your Kindle address to read it there.');
+      } catch (err) { fail(status, err.message); }
+    };
+    const txt = el('button', 'btn', '↓ Plain text');
+    txt.onclick = () => {
+      const text = sectionsToExport(options.whole).map((s) => weaveText(s)).join('\n\n* * *\n\n');
+      download(text, `${safeName(state.doc.title)}-${prefs.level}pc.txt`, 'text/plain');
+      done(status, 'Saved.');
+    };
+    const csv = el('button', 'btn', '↓ Vocabulary CSV');
+    csv.onclick = () => {
+      const rows = collectVocab(options.whole);
+      const body2 = 'spanish,english\n' + rows.map((r) => `"${r.es}","${r.en}"`).join('\n');
+      download(body2, `${safeName(state.doc.title)}-vocab.csv`, 'text/csv');
+      done(status, `${rows.length} words — ready for Anki or a spreadsheet.`);
+    };
+    const row = el('div', 'row2');
+    row.append(epub, txt, csv);
+    body.append(row, status);
+
+    body.append(el('div', 'note', 'Kindle tip: in your Amazon account under “Preferences → Personal Document Settings” you will find your Send-to-Kindle email address, and the list of addresses allowed to send to it. Add your own email there first, or Amazon will drop the file.'));
+  });
+}
+
+const safeName = (s) => (s || 'diglot').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+
+function sectionsToExport(whole) {
+  return whole ? state.doc.sections : [currentText()];
+}
+
+function weaveOne(text) {
+  return applyLevel(analyze(text, state.index), {
+    level: prefs.level, articles: prefs.articles, firstHint: false,
+    known: vocab.known, blocked: vocab.blocked,
+  });
+}
+
+function weaveText(text) {
+  return weaveOne(text).nodes.map((n) => n.text).join('');
+}
+
+function collectVocab(whole) {
+  const seen = new Map();
+  for (const section of sectionsToExport(whole)) {
+    for (const node of weaveOne(section).nodes) {
+      if (node.kind === 'swap' && node.pos !== 'det' && !seen.has(node.text.toLowerCase())) {
+        seen.set(node.text.toLowerCase(), { es: node.text, en: node.en });
+      }
+    }
+  }
+  return [...seen.values()];
+}
+
+const escapeHtml = (s) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+
+function exportEpub({ gloss, vocab: withVocab, whole }) {
+  const seen = new Set();
+  const chapters = sectionsToExport(whole).map((section, i) => {
+    const nodes = weaveOne(section).nodes;
+    let html = '<p>';
+    for (const node of nodes) {
+      if (node.kind === 'swap') {
+        const first = !seen.has(node.key);
+        seen.add(node.key);
+        html += `<span class="es">${escapeHtml(node.text)}</span>`;
+        if (gloss && first && node.pos !== 'det') html += ` <span class="gloss">(${escapeHtml(node.en)})</span>`;
+      } else {
+        html += escapeHtml(node.text).replace(/\n{2,}/g, '</p>\n<p>').replace(/\n/g, ' ');
+      }
+    }
+    html += '</p>';
+    return {
+      title: whole && state.doc.sections.length > 1 ? `${state.doc.title} — part ${i + 1}` : state.doc.title,
+      html: html.replace(/<p>\s*<\/p>/g, ''),
+    };
+  });
+  return buildEpub({
+    title: `${state.doc.title} (${prefs.level}% Spanish)`,
+    author: state.doc.author || 'Diglot',
+    chapters,
+    vocab: withVocab ? collectVocab(whole) : [],
+    level: prefs.level,
+  });
+}
+
+function download(data, filename, type) {
+  const blob = new Blob([data], { type });
+  const url = URL.createObjectURL(blob);
+  const link = el('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+// ── settings ────────────────────────────────────────────────────────────────
+
+function panelSettings(message) {
+  openPanel('Settings', (body) => {
+    if (message) body.append(el('div', 'note', message));
+
+    const size = el('input');
+    size.type = 'range';
+    size.min = '15'; size.max = '26'; size.value = String(prefs.readerSize);
+    size.oninput = () => {
+      prefs.readerSize = Number(size.value);
+      document.documentElement.style.setProperty('--reader-size', prefs.readerSize + 'px');
+      savePrefs();
+    };
+    body.append(field('Text size', size));
+
+    body.append(checkbox('Spanish articles and possessives', prefs.articles, (v) => {
+      prefs.articles = v; savePrefs(); reanalyze(); render();
+    }, 'Turns "the casa" into "la casa" once the dial passes about a third.'));
+
+    body.append(checkbox('Gloss new words in the margin of the text', prefs.firstHint, (v) => {
+      prefs.firstHint = v; savePrefs(); render();
+    }, 'Shows the English in small type the first time each word appears.'));
+
+    const key = el('input');
+    key.type = 'password';
+    key.placeholder = 'sk-ant-…';
+    key.value = prefs.apiKey;
+    key.autocomplete = 'off';
+    key.oninput = () => { prefs.apiKey = key.value.trim(); savePrefs(); updateEnrichButton(); };
+
+    const model = el('select');
+    MODELS.forEach((m) => { const o = el('option', null, m.label); o.value = m.id; model.append(o); });
+    model.value = prefs.model;
+    model.onchange = () => { prefs.model = model.value; savePrefs(); };
+
+    const status = el('div', 'status');
+    const check = el('button', 'btn', 'Test the key');
+    check.onclick = async () => {
+      busy(status, 'Checking…');
+      try { await testKey({ apiKey: prefs.apiKey, model: prefs.model }); done(status, 'Works.'); }
+      catch (err) { fail(status, err.message); }
+    };
+
+    body.append(
+      el('div', 'note', 'Everything above works with no account and no key. A key adds three things: articles written to order, context-accurate translation of a text’s own vocabulary, and idioms the built-in list cannot cover. It is stored in this browser only and sent only to api.anthropic.com.'),
+      field('Anthropic API key', key, 'From console.anthropic.com. Kept in this browser’s local storage.'),
+      field('Model', model),
+      check, status,
+    );
+
+    const voices = speechSynthesis.getVoices();
+    if (voices.length) {
+      const es = el('select');
+      const en = el('select');
+      const fill = (select, langPrefix, current) => {
+        const auto = el('option', null, 'Automatic');
+        auto.value = '';
+        select.append(auto);
+        voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix)).forEach((v) => {
+          const o = el('option', null, `${v.name} (${v.lang})`);
+          o.value = v.name;
+          select.append(o);
+        });
+        select.value = current || '';
+      };
+      fill(es, 'es', prefs.voiceEs);
+      fill(en, 'en', prefs.voiceEn);
+      es.onchange = () => { prefs.voiceEs = es.value; savePrefs(); };
+      en.onchange = () => { prefs.voiceEn = en.value; savePrefs(); };
+      body.append(field('Spanish voice', es), field('English voice', en));
+    }
+
+    const reset = el('button', 'btn ghost', 'Forget my known words');
+    reset.onclick = () => {
+      if (!confirm('Clear every known and set-aside word? Your saved texts stay.')) return;
+      vocab.known.clear();
+      vocab.blocked.clear();
+      vocab.met = {};
+      saveVocab();
+      render();
+      done(status, 'Cleared.');
+    };
+    body.append(el('hr', 'section-break'), reset);
+  });
+}
+
+// ── word popover ────────────────────────────────────────────────────────────
+
+const pop = $('pop');
+let popTarget = null;
+
+function showPop(span) {
+  popTarget = span;
+  pop.textContent = '';
+  const key = span.dataset.key;
+  const isKnown = vocab.known.has(key);
+
+  pop.append(el('div', 'word', span.firstChild?.textContent || span.textContent));
+  pop.append(el('div', 'en', span.dataset.en));
+  pop.append(el('div', 'meta', `${posName(span.dataset.pos)} · difficulty ${span.dataset.rank}/100${isKnown ? ' · known' : ''}`));
+
+  const row = el('div', 'row');
+  const say = el('button', 'btn', '🔊');
+  say.title = 'Say it';
+  say.onclick = () => speakOne(span.firstChild?.textContent || span.textContent);
+  const know = el('button', 'btn' + (isKnown ? ' on' : ''), isKnown ? 'Known ✓' : 'I know this');
+  know.onclick = () => {
+    if (isKnown) vocab.known.delete(key); else { vocab.known.add(key); vocab.blocked.delete(key); }
+    saveVocab();
+    hidePop();
+    render();
+  };
+  const block = el('button', 'btn ghost', 'Too soon');
+  block.title = 'Keep this word in English for now';
+  block.onclick = () => {
+    vocab.blocked.add(key);
+    vocab.known.delete(key);
+    saveVocab();
+    hidePop();
+    render();
+  };
+  row.append(say, know, block);
+  pop.append(row);
+
+  const rect = span.getBoundingClientRect();
+  pop.style.display = 'block';
+  const width = pop.offsetWidth;
+  const left = Math.min(Math.max(8, rect.left + window.scrollX - width / 2 + rect.width / 2), window.innerWidth - width - 8);
+  const above = rect.top > 200;
+  pop.style.left = left + 'px';
+  pop.style.top = (above ? rect.top + window.scrollY - pop.offsetHeight - 8 : rect.bottom + window.scrollY + 8) + 'px';
+}
+
+function hidePop() { pop.style.display = 'none'; popTarget = null; }
+
+const posName = (pos) => ({
+  n: 'noun', v: 'verb', adj: 'adjective', adv: 'adverb', prep: 'preposition',
+  conj: 'conjunction', pron: 'pronoun', num: 'number', det: 'article', phrase: 'phrase',
+}[pos] || pos);
+
+// ── speech ──────────────────────────────────────────────────────────────────
+
+let speechQueue = [];
+let speechAt = 0;
+
+function pickVoice(lang) {
+  const voices = speechSynthesis.getVoices();
+  const wanted = lang === 'es' ? prefs.voiceEs : prefs.voiceEn;
+  return voices.find((v) => v.name === wanted)
+    || voices.find((v) => v.lang.toLowerCase().startsWith(lang === 'es' ? 'es' : 'en'))
+    || null;
+}
+
+function speakOne(text) {
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.voice = pickVoice('es');
+  utterance.lang = utterance.voice?.lang || 'es-ES';
+  utterance.rate = Number(prefs.rate) || 1;
+  speechSynthesis.speak(utterance);
+}
+
+function startSpeaking(from = 0) {
+  if (!state.sentences.length) return;
+  speechQueue = state.sentences;
+  speechAt = from;
+  state.speaking = true;
+  $('playbar').classList.add('on');
+  $('btnListen').classList.add('on');
+  speakNext();
+}
+
+function speakNext() {
+  document.querySelectorAll('.sentence.speaking').forEach((n) => n.classList.remove('speaking'));
+  if (!state.speaking || speechAt >= speechQueue.length) { stopSpeaking(); return; }
+  const sentence = speechQueue[speechAt];
+  sentence.el.classList.add('speaking');
+  const box = sentence.el.getBoundingClientRect();
+  if (box.top < 60 || box.bottom > window.innerHeight - 100) {
+    sentence.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  $('playLabel').textContent = `${speechAt + 1} / ${speechQueue.length}`;
+
+  const runs = sentence.runs.filter((r) => r.text.trim());
+  if (!runs.length) { speechAt++; speakNext(); return; }
+  let runAt = 0;
+  const sayRun = () => {
+    if (!state.speaking) return;
+    if (runAt >= runs.length) { speechAt++; speakNext(); return; }
+    const run = runs[runAt++];
+    const utterance = new SpeechSynthesisUtterance(run.text);
+    utterance.voice = pickVoice(run.lang);
+    utterance.lang = utterance.voice?.lang || (run.lang === 'es' ? 'es-ES' : 'en-GB');
+    utterance.rate = Number(prefs.rate) || 1;
+    utterance.onend = sayRun;
+    utterance.onerror = sayRun;
+    speechSynthesis.speak(utterance);
+  };
+  sayRun();
+}
+
+function stopSpeaking() {
+  state.speaking = false;
+  speechSynthesis.cancel();
+  document.querySelectorAll('.sentence.speaking').forEach((n) => n.classList.remove('speaking'));
+  $('playbar').classList.remove('on');
+  $('btnListen').classList.remove('on');
+}
+
+// ── wiring ──────────────────────────────────────────────────────────────────
+
+function setLevel(value, { save: persist = true } = {}) {
+  prefs.level = Math.max(0, Math.min(100, Math.round(value)));
+  $('level').value = String(prefs.level);
+  $('level').style.setProperty('--pct', prefs.level + '%');
+  $('levelOut').textContent = prefs.level;
+  $('stageOut').textContent = stageName(prefs.level);
+  if (persist) savePrefs();
+  scheduleRender();
+}
+
+$('level').addEventListener('input', (e) => setLevel(Number(e.target.value), { save: false }));
+$('level').addEventListener('change', savePrefs);
+$('btnAdd').onclick = () => panelAdd();
+$('btnLibrary').onclick = panelLibrary;
+$('btnStats').onclick = panelStats;
+$('btnExport').onclick = panelExport;
+$('btnSettings').onclick = () => panelSettings();
+$('panelClose').onclick = closePanel;
+$('scrim').onclick = closePanel;
+$('btnListen').onclick = () => (state.speaking ? stopSpeaking() : startSpeaking(0));
+$('playStop').onclick = stopSpeaking;
+$('playPause').onclick = () => {
+  if (speechSynthesis.paused) { speechSynthesis.resume(); $('playPause').textContent = 'Pause'; }
+  else { speechSynthesis.pause(); $('playPause').textContent = 'Resume'; }
+};
+$('rate').onchange = (e) => { prefs.rate = Number(e.target.value); savePrefs(); };
+
+const peek = (on) => document.body.classList.toggle('peek', on);
+$('btnPeek').addEventListener('pointerdown', () => peek(true));
+['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => $('btnPeek').addEventListener(ev, () => peek(false)));
+
+document.addEventListener('click', (e) => {
+  const span = e.target.closest?.('.es');
+  if (span) { showPop(span); e.stopPropagation(); return; }
+  if (!e.target.closest?.('#pop')) hidePop();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.key === 'Escape') { hidePop(); closePanel(); stopSpeaking(); }
+  if (e.key === 'ArrowRight' && !e.metaKey) { setLevel(prefs.level + (e.shiftKey ? 10 : 1)); e.preventDefault(); }
+  if (e.key === 'ArrowLeft' && !e.metaKey) { setLevel(prefs.level - (e.shiftKey ? 10 : 1)); e.preventDefault(); }
+  if (e.key === 'p' && !e.repeat) peek(true);
+});
+document.addEventListener('keyup', (e) => { if (e.key === 'p') peek(false); });
+window.addEventListener('scroll', () => { if (popTarget) hidePop(); }, { passive: true });
+speechSynthesis.addEventListener?.('voiceschanged', () => {});
+
+// ── boot ────────────────────────────────────────────────────────────────────
+
+(async function boot() {
+  document.documentElement.style.setProperty('--reader-size', prefs.readerSize + 'px');
+  $('rate').value = String(prefs.rate);
+  setLevel(prefs.level, { save: false });
+
+  let doc = null;
+  if (prefs.lastDoc) doc = await db.get(prefs.lastDoc).catch(() => null);
+  if (!doc) doc = makeDoc({ title: SAMPLE.title, author: SAMPLE.author, text: SAMPLE.text });
+  await loadDoc(doc);
+})();
+
+</script>
+</body>
+</html>

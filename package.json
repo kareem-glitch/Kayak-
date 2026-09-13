@@ -1,12 +1,13 @@
 {
   "name": "wexford-kayak-clock",
   "version": "0.1.0",
-  "description": "Tells you when it's a good time to paddle in Wexford Harbour, based on wind and tides.",
+  "description": "Two small tools: a Wexford paddle forecast, and Diglot, a Spanish diglot-weave reader.",
   "type": "module",
   "scripts": {
     "forecast": "node src/forecast.js",
     "test": "node --test test/*.test.js",
-    "serve": "python3 -m http.server 8080"
+    "serve": "python3 -m http.server 8080",
+    "build:diglot": "node src/diglot/build.js"
   },
   "engines": {
     "node": ">=18"
