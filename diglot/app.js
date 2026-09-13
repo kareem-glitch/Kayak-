@@ -643,26 +643,33 @@ function panelExport() {
     body.append(checkbox('Add a vocabulary list at the end', options.vocab, (v) => { options.vocab = v; }));
     body.append(checkbox('Whole document, not just this part', options.whole, (v) => { options.whole = v; }));
 
-    const epub = el('button', 'btn primary', '↓ EPUB for Kindle');
-    epub.onclick = () => {
+    const saveAs = async (build, filename, type, message) => {
+      busy(status, 'Building…');
       try {
-        const bytes = exportEpub(options);
-        download(bytes, `${safeName(state.doc.title)}-${prefs.level}pc.epub`, 'application/epub+zip');
-        done(status, 'Saved. Email it to your Kindle address to read it there.');
+        await download(build(), filename, type);
+        done(status, message);
       } catch (err) { fail(status, err.message); }
     };
+
+    const epub = el('button', 'btn primary', '↓ EPUB for Kindle');
+    epub.onclick = () => saveAs(
+      () => exportEpub(options),
+      `${safeName(state.doc.title)}-${prefs.level}pc.epub`, 'application/epub+zip',
+      'Saved. Email it to your Kindle address to read it there.',
+    );
     const txt = el('button', 'btn', '↓ Plain text');
-    txt.onclick = () => {
-      const text = sectionsToExport(options.whole).map((s) => weaveText(s)).join('\n\n* * *\n\n');
-      download(text, `${safeName(state.doc.title)}-${prefs.level}pc.txt`, 'text/plain');
-      done(status, 'Saved.');
-    };
+    txt.onclick = () => saveAs(
+      () => sectionsToExport(options.whole).map((s) => weaveText(s)).join('\n\n* * *\n\n'),
+      `${safeName(state.doc.title)}-${prefs.level}pc.txt`, 'text/plain', 'Saved.',
+    );
     const csv = el('button', 'btn', '↓ Vocabulary CSV');
     csv.onclick = () => {
       const rows = collectVocab(options.whole);
-      const body2 = 'spanish,english\n' + rows.map((r) => `"${r.es}","${r.en}"`).join('\n');
-      download(body2, `${safeName(state.doc.title)}-vocab.csv`, 'text/csv');
-      done(status, `${rows.length} words — ready for Anki or a spreadsheet.`);
+      return saveAs(
+        () => 'spanish,english\n' + rows.map((r) => `"${r.es}","${r.en}"`).join('\n'),
+        `${safeName(state.doc.title)}-vocab.csv`, 'text/csv',
+        `${rows.length} words — ready for Anki or a spreadsheet.`,
+      );
     };
     const row = el('div', 'row2');
     row.append(epub, txt, csv);
@@ -733,8 +740,27 @@ function exportEpub({ gloss, vocab: withVocab, whole }) {
   });
 }
 
-function download(data, filename, type) {
+// Saving a file. A plain link works everywhere the app is served normally;
+// inside a sandboxed host (a published Claude artifact) links are inert, so
+// hand the file to the host's own save prompt when it offers one.
+let saver;
+async function download(data, filename, type) {
   const blob = new Blob([data], { type });
+  if (saver === undefined) {
+    saver = typeof window.claude?.use === 'function'
+      ? await window.claude.use('downloads').catch(() => null)
+      : null;
+  }
+  if (saver) {
+    try {
+      await saver.save({ filename, data: blob });
+      return;
+    } catch (err) {
+      if (err?.code === 'declined') throw new Error('Save cancelled.');
+      if (err?.code) throw new Error(`Could not save here (${err.code}).`);
+      throw err;
+    }
+  }
   const url = URL.createObjectURL(blob);
   const link = el('a');
   link.href = url;

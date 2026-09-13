@@ -16,15 +16,27 @@
     --shadow: 0 1px 2px rgba(20,18,15,.06), 0 8px 24px rgba(20,18,15,.08);
     --radius: 10px;
   }
+  /* Dark theme, three ways: the viewer's OS preference when they have made
+     no explicit choice, and either explicit stamp from the host. */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
       --bg: #16151a; --surface: #1e1d23; --surface-2: #26252c;
       --ink: #e9e7e3; --ink-2: #aca8a2; --ink-3: #7c7873;
       --line: #302e36; --line-2: #3d3a44;
       --es: #4fc4ae; --es-bg: #14322d; --es-known: #b39cf0; --es-known-bg: #241f38;
       --accent: #e2793c; --accent-ink: #1a1206;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    
     }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16151a; --surface: #1e1d23; --surface-2: #26252c;
+    --ink: #e9e7e3; --ink-2: #aca8a2; --ink-3: #7c7873;
+    --line: #302e36; --line-2: #3d3a44;
+    --es: #4fc4ae; --es-bg: #14322d; --es-known: #b39cf0; --es-known-bg: #241f38;
+    --accent: #e2793c; --accent-ink: #1a1206;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -181,7 +193,8 @@
   .note code { font-size: 12px; background: var(--surface); padding: 1px 4px; border-radius: 4px; border: 1px solid var(--line); }
   .status { font-size: 13px; color: var(--ink-2); margin-top: 10px; min-height: 20px; }
   .status.error { color: #c0392b; }
-  @media (prefers-color-scheme: dark) { .status.error { color: #ff8a7a; } }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .status.error { color: #ff8a7a; } }
+  :root[data-theme="dark"] .status.error { color: #ff8a7a; }
   .spinner {
     display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-2);
     border-top-color: var(--es); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 6px;
