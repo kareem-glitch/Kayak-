@@ -2,6 +2,8 @@
 // fetcher and (only if you supply a key) the Anthropic API.
 
 import { analyze, applyLevel, buildIndex, DEFAULT_INDEX } from '../src/diglot/weave.js';
+import { buildNarration, NARRATION_DEFAULTS } from '../src/diglot/speech.js';
+import { PROVIDERS, listVoices, renderAudio, estimate as estimateAudio } from '../src/diglot/tts.js';
 import { BANDS } from '../src/diglot/lexicon.js';
 import { fetchArticle, cleanText, splitIntoSections, wordCount, guessTitle } from '../src/diglot/ingest.js';
 import { readEpub, buildEpub } from '../src/diglot/epub.js';
@@ -15,6 +17,10 @@ const VOCAB_KEY = 'diglot.vocab.v1';
 const defaultPrefs = {
   level: 25, articles: true, firstHint: false, readerSize: 19,
   apiKey: '', model: MODELS[0].id, voiceEs: '', voiceEn: '', rate: 1, lastDoc: null,
+  // listening
+  echo: 'first', wordGap: 0, autoAdvance: true, sleep: 0, listen: null,
+  // audio export
+  ttsProvider: 'google', ttsKeys: {}, ttsVoices: {},
 };
 
 const load = (key, fallback) => {
@@ -70,8 +76,9 @@ const state = {
   analysis: null,     // cached analysis of the current section
   index: DEFAULT_INDEX,
   rendered: null,     // last applyLevel result
-  sentences: [],      // for read-aloud
-  speaking: false,
+  narration: null,    // sentences and runs — what the reader draws and the voice says
+  sentenceEls: [],    // sentence index → element
+  partEls: new Map(), // "sentence:part" → the Spanish word's element
 };
 
 const $ = (id) => document.getElementById(id);
@@ -135,11 +142,17 @@ function scheduleRender() {
   requestAnimationFrame(() => { renderQueued = false; render(); });
 }
 
+function narrationOptions() {
+  return { ...NARRATION_DEFAULTS, echo: prefs.echo, wordGap: Number(prefs.wordGap) || 0 };
+}
+
 function render() {
   const reader = $('reader');
   reader.textContent = '';
-  state.sentences = [];
+  state.sentenceEls = [];
+  state.partEls = new Map();
   if (!state.analysis) {
+    state.narration = null;
     reader.append(el('p', 'empty', 'Add some text to start reading — an article URL, a paste, a topic, or an EPUB.'));
     $('actualOut').textContent = '0';
     renderSectionNav();
@@ -162,59 +175,45 @@ function render() {
     }
   }
 
-  // Build paragraphs, and inside them sentence spans (so read-aloud can follow).
-  let paragraph = el('p');
-  let sentence = el('span', 'sentence');
-  let sentenceRuns = [];
+  // The narration decides where sentences and paragraphs begin, and the page is
+  // drawn from that same structure — so the highlight always matches the voice.
+  const narration = buildNarration(result.nodes, narrationOptions());
+  state.narration = narration;
 
-  const closeSentence = () => {
-    if (!sentence.hasChildNodes()) return;
-    const idx = state.sentences.length;
-    sentence.dataset.s = String(idx);
-    state.sentences.push({ el: sentence, runs: compactRuns(sentenceRuns) });
-    paragraph.append(sentence);
-    sentence = el('span', 'sentence');
-    sentenceRuns = [];
-  };
+  let paragraph = null;
   const closeParagraph = () => {
-    closeSentence();
-    if (paragraph.hasChildNodes()) reader.append(paragraph);
-    paragraph = el('p');
+    if (paragraph && paragraph.hasChildNodes()) reader.append(paragraph);
+    paragraph = null;
   };
 
-  for (const node of result.nodes) {
-    if (node.kind === 'swap') {
+  for (const sentence of narration.sentences) {
+    if (sentence.paragraphStart || !paragraph) { closeParagraph(); paragraph = el('p'); }
+    const sentenceEl = el('span', 'sentence');
+    sentenceEl.dataset.s = String(sentence.index);
+
+    sentence.parts.forEach((part, partIndex) => {
+      if (part.type === 'text') {
+        sentenceEl.append(document.createTextNode(part.text));
+        return;
+      }
+      const node = part.node;
       const span = el('span', vocab.known.has(node.key) ? 'es known' : 'es', node.text);
       span.dataset.en = node.en;
       span.dataset.key = node.key;
       span.dataset.rank = node.rank;
       span.dataset.pos = node.pos;
-      if (node.hint) {
-        span.append(el('span', 'hint', ` (${node.hint})`));
-      }
-      sentence.append(span);
-      sentenceRuns.push({ lang: 'es', text: node.text });
-      continue;
-    }
-    // plain text or whitespace: split on blank lines into paragraphs
-    const pieces = node.text.split(/\n{2,}/);
-    pieces.forEach((piece, i) => {
-      if (i > 0) closeParagraph();
-      if (!piece) return;
-      const chunks = piece.split(/(?<=[.!?…])(\s+)/); // keep sentences apart
-      chunks.forEach((chunk) => {
-        if (!chunk) return;
-        sentence.append(document.createTextNode(chunk.replace(/\n/g, ' ')));
-        sentenceRuns.push({ lang: 'en', text: chunk.replace(/\n/g, ' ') });
-        if (/[.!?…]\s*$/.test(chunk) || /^\s+$/.test(chunk) && /[.!?…]\s*$/.test(sentence.textContent)) {
-          if (/[.!?…]["'”’)]?\s*$/.test(sentence.textContent)) closeSentence();
-        }
-      });
+      span.dataset.s = String(sentence.index);
+      if (node.hint) span.append(el('span', 'hint', ` (${node.hint})`));
+      state.partEls.set(`${sentence.index}:${partIndex}`, span);
+      sentenceEl.append(span);
     });
+
+    state.sentenceEls[sentence.index] = sentenceEl;
+    paragraph.append(sentenceEl);
+    if (sentence.endsParagraph) closeParagraph();
   }
   closeParagraph();
 
-  // record what the reader has now met
   for (const node of result.nodes) {
     if (node.kind === 'swap' && node.first && node.pos !== 'det') {
       vocab.met[node.key] = (vocab.met[node.key] || 0) + 1;
@@ -225,17 +224,7 @@ function render() {
   $('actualOut').textContent = Math.round(result.stats.ratio * 100);
   $('stageOut').textContent = stageName(prefs.level);
   renderSectionNav();
-}
-
-function compactRuns(runs) {
-  const out = [];
-  for (const run of runs) {
-    if (!run.text.trim()) { if (out.length) out[out.length - 1].text += run.text; continue; }
-    const last = out[out.length - 1];
-    if (last && last.lang === run.lang) last.text += run.text;
-    else out.push({ ...run });
-  }
-  return out;
+  onTextRerendered();
 }
 
 function stageName(level) {
@@ -268,12 +257,14 @@ function renderSectionNav() {
   nav.append(prev, label, next);
 }
 
-function gotoSection(i) {
-  stopSpeaking();
+function gotoSection(i, { keepPlaying = false } = {}) {
+  const wasPlaying = keepPlaying && player.active;
+  if (!keepPlaying) stopListening();
   state.sectionIndex = Math.max(0, Math.min(i, state.doc.sections.length - 1));
   state.doc.position = state.sectionIndex;
   db.put(state.doc).catch(() => {});
   reanalyze();
+  if (wasPlaying) { player.sentence = 0; player.run = 0; }
   render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -281,7 +272,7 @@ function gotoSection(i) {
 // ── loading documents ───────────────────────────────────────────────────────
 
 async function loadDoc(doc, { persist = true } = {}) {
-  stopSpeaking();
+  stopListening();
   state.doc = doc;
   state.sectionIndex = Math.min(doc.position || 0, doc.sections.length - 1);
   rebuildIndex();
@@ -322,6 +313,7 @@ function openPanel(title, build) {
 function closePanel() {
   $('panel').classList.remove('open');
   $('scrim').classList.remove('open');
+  refreshAudioEstimate = null;
 }
 
 function field(label, control, help) {
@@ -641,7 +633,10 @@ function panelExport() {
     body.append(el('div', 'note', 'The EPUB is woven at the dial’s current setting — it is a snapshot, not a slider, so pick the level you want before exporting. Send it to your Kindle by emailing it to your @kindle.com address, or with the Send to Kindle app.'));
     body.append(checkbox('Gloss each Spanish word the first time it appears', options.gloss, (v) => { options.gloss = v; }, 'Adds the English in small type, once.'));
     body.append(checkbox('Add a vocabulary list at the end', options.vocab, (v) => { options.vocab = v; }));
-    body.append(checkbox('Whole document, not just this part', options.whole, (v) => { options.whole = v; }));
+    body.append(checkbox('Whole document, not just this part', options.whole, (v) => {
+      options.whole = v;
+      refreshAudioEstimate?.();
+    }));
 
     const saveAs = async (build, filename, type, message) => {
       busy(status, 'Building…');
@@ -676,7 +671,132 @@ function panelExport() {
     body.append(row, status);
 
     body.append(el('div', 'note', 'Kindle tip: in your Amazon account under “Preferences → Personal Document Settings” you will find your Send-to-Kindle email address, and the list of addresses allowed to send to it. Add your own email there first, or Amazon will drop the file.'));
+
+    body.append(el('hr', 'section-break'));
+    buildAudioSection(body, options);
   });
+}
+
+// ── audio export ────────────────────────────────────────────────────────────
+
+// Set while the export panel is open, so the scope checkbox can re-price.
+let refreshAudioEstimate = null;
+
+function buildAudioSection(body, options) {
+  const heading = el('div', 'field');
+  heading.append(el('label', null, 'Audiobook (MP3)'));
+  body.append(heading);
+  body.append(el('div', 'note', 'The Listen button uses your device\u2019s own voices, which are free but cannot be recorded. For a file — for your phone, the car, a run — this calls a cloud voice service with your key: each Spanish word to a Spanish voice, each gloss to an English one, joined into one MP3. Current Kindles will not play a sideloaded MP3; this is for a phone.'));
+
+  const provider = el('select');
+  Object.values(PROVIDERS).forEach((p) => { const o = el('option', null, p.label); o.value = p.id; provider.append(o); });
+  provider.value = prefs.ttsProvider;
+
+  const key = el('input');
+  key.type = 'password';
+  key.autocomplete = 'off';
+
+  const esVoice = el('select');
+  const enVoice = el('select');
+  const loadVoices = el('button', 'btn', 'Load voices');
+  const status = el('div', 'status');
+  const cost = el('div', 'help');
+
+  const keyFor = () => prefs.ttsKeys[provider.value] || '';
+  const voicesFor = () => prefs.ttsVoices[provider.value] || {};
+
+  const fillVoiceSelect = (select, list, lang, current) => {
+    select.textContent = '';
+    const auto = el('option', null, list.length ? 'Choose a voice' : 'Load voices first');
+    auto.value = '';
+    select.append(auto);
+    const filtered = lang && list.some((v) => v.lang)
+      ? list.filter((v) => v.lang.toLowerCase().startsWith(lang))
+      : list;
+    filtered.forEach((v) => { const o = el('option', null, v.name); o.value = v.id; select.append(o); });
+    select.value = current && filtered.some((v) => v.id === current) ? current : '';
+  };
+
+  const showCost = () => {
+    if (!state.doc) return;
+    const sentences = narrationFor(options.whole);
+    const guess = estimateAudio(sentences, { provider: provider.value });
+    cost.textContent = `${guess.characters.toLocaleString()} characters over ${guess.requests} requests — roughly ${guess.minutes} minutes of audio. Glossing fewer words (Settings) makes both smaller.`;
+  };
+
+  const syncProvider = () => {
+    key.value = keyFor();
+    key.placeholder = PROVIDERS[provider.value].keyLabel;
+    const stored = voicesFor();
+    fillVoiceSelect(esVoice, [], 'es', stored.es);
+    fillVoiceSelect(enVoice, [], 'en', stored.en);
+    if (stored.esName) { const o = el('option', null, stored.esName); o.value = stored.es; esVoice.append(o); esVoice.value = stored.es; }
+    if (stored.enName) { const o = el('option', null, stored.enName); o.value = stored.en; enVoice.append(o); enVoice.value = stored.en; }
+    showCost();
+  };
+
+  provider.onchange = () => { prefs.ttsProvider = provider.value; savePrefs(); syncProvider(); };
+  key.oninput = () => { prefs.ttsKeys[provider.value] = key.value.trim(); savePrefs(); };
+  const rememberVoice = (lang, select) => {
+    const store = prefs.ttsVoices[provider.value] || (prefs.ttsVoices[provider.value] = {});
+    store[lang] = select.value;
+    store[lang + 'Name'] = select.selectedOptions[0]?.textContent || '';
+    savePrefs();
+  };
+  esVoice.onchange = () => rememberVoice('es', esVoice);
+  enVoice.onchange = () => rememberVoice('en', enVoice);
+
+  loadVoices.onclick = async () => {
+    if (!keyFor()) { fail(status, 'Add the key first.'); return; }
+    busy(status, 'Fetching the voice list…');
+    try {
+      const list = await listVoices(provider.value, { apiKey: keyFor() });
+      const stored = voicesFor();
+      fillVoiceSelect(esVoice, list, 'es', stored.es);
+      fillVoiceSelect(enVoice, list, 'en', stored.en);
+      done(status, `${list.length} voices. Pick one for each language.`);
+    } catch (err) { fail(status, err.message); }
+  };
+
+  const render = el('button', 'btn primary', '↓ Render MP3');
+  let cancel = null;
+  render.onclick = async () => {
+    if (cancel) { cancel.abort(); cancel = null; render.textContent = '↓ Render MP3'; return; }
+    if (!keyFor()) { fail(status, 'Add an API key for the voice service.'); return; }
+    cancel = new AbortController();
+    render.textContent = 'Stop';
+    busy(status, 'Starting…');
+    try {
+      const sentences = narrationFor(options.whole);
+      const result = await renderAudio(sentences, {
+        provider: provider.value,
+        apiKey: keyFor(),
+        voices: { es: esVoice.value, en: enVoice.value },
+        rate: Number(prefs.rate) || 1,
+        signal: cancel.signal,
+        onProgress: ({ done: d, total }) => busy(status, `Voicing ${d} of ${total} passages…`),
+      });
+      busy(status, 'Saving…');
+      await download(result.blob, `${safeName(state.doc.title)}-${prefs.level}pc.mp3`, 'audio/mpeg');
+      done(status, `Done — ${result.requests} passages, ${result.characters.toLocaleString()} characters.`);
+    } catch (err) {
+      if (err.name === 'AbortError') done(status, 'Stopped.');
+      else fail(status, err.message);
+    } finally {
+      cancel = null;
+      render.textContent = '↓ Render MP3';
+    }
+  };
+
+  body.append(
+    field('Voice service', provider, PROVIDERS[prefs.ttsProvider].keyHint),
+    field('Key', key, 'Kept in this browser only, and sent only to the service you picked.'),
+  );
+  const voiceRow = el('div', 'row2');
+  voiceRow.append(esVoice, enVoice);
+  body.append(field('Spanish and English voices', voiceRow), loadVoices, field(null, render, ''), cost, status);
+  refreshAudioEstimate = showCost;
+  syncProvider();
 }
 
 const safeName = (s) => (s || 'diglot').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
@@ -694,6 +814,17 @@ function weaveOne(text) {
 
 function weaveText(text) {
   return weaveOne(text).nodes.map((n) => n.text).join('');
+}
+
+/** Narration for a stretch of the document — used by the audio export. */
+function narrationFor(whole) {
+  const sentences = [];
+  for (const section of sectionsToExport(whole)) {
+    for (const sentence of buildNarration(weaveOne(section).nodes, narrationOptions()).sentences) {
+      sentences.push({ ...sentence, index: sentences.length });
+    }
+  }
+  return sentences;
 }
 
 function collectVocab(whole) {
@@ -822,6 +953,27 @@ function panelSettings(message) {
       check, status,
     );
 
+    body.append(el('hr', 'section-break'));
+    body.append(el('div', 'note', 'Listening is harder than reading — there is no hovering a word you missed. The spoken gloss covers that: the first time each Spanish word appears, an English voice says what it meant, quietly, and the sentence carries on.'));
+
+    const echo = el('select');
+    [['first', 'The first time each word appears'], ['always', 'Every time'], ['none', 'Never — Spanish only']]
+      .forEach(([v, label]) => { const o = el('option', null, label); o.value = v; echo.append(o); });
+    echo.value = prefs.echo;
+    echo.onchange = () => { prefs.echo = echo.value; savePrefs(); render(); };
+    body.append(field('Speak the English gloss', echo));
+
+    const gap = el('select');
+    [['0', 'No gap — read straight through'], ['500', 'Half a second'], ['900', 'Just under a second'], ['1400', 'A second and a half']]
+      .forEach(([v, label]) => { const o = el('option', null, label); o.value = v; gap.append(o); });
+    gap.value = String(prefs.wordGap);
+    gap.onchange = () => { prefs.wordGap = Number(gap.value); savePrefs(); render(); };
+    body.append(field('Pause after each Spanish word', gap, 'A gap long enough to say the word back is the whole of shadowing practice.'));
+
+    body.append(checkbox('Roll on to the next part automatically', prefs.autoAdvance, (v) => {
+      prefs.autoAdvance = v; savePrefs();
+    }, 'A book plays chapter after chapter instead of stopping at each one.'));
+
     const voices = speechSynthesis.getVoices();
     if (voices.length) {
       const es = el('select');
@@ -877,6 +1029,9 @@ function showPop(span) {
   const say = el('button', 'btn', '🔊');
   say.title = 'Say it';
   say.onclick = () => speakOne(span.firstChild?.textContent || span.textContent);
+  const here = el('button', 'btn', '▶');
+  here.title = 'Read aloud from here';
+  here.onclick = () => { hidePop(); listenFrom(Number(span.dataset.s) || 0); };
   const know = el('button', 'btn' + (isKnown ? ' on' : ''), isKnown ? 'Known ✓' : 'I know this');
   know.onclick = () => {
     if (isKnown) vocab.known.delete(key); else { vocab.known.add(key); vocab.blocked.delete(key); }
@@ -893,7 +1048,7 @@ function showPop(span) {
     hidePop();
     render();
   };
-  row.append(say, know, block);
+  row.append(say, here, know, block);
   pop.append(row);
 
   const rect = span.getBoundingClientRect();
@@ -912,10 +1067,14 @@ const posName = (pos) => ({
   conj: 'conjunction', pron: 'pronoun', num: 'number', det: 'article', phrase: 'phrase',
 }[pos] || pos);
 
-// ── speech ──────────────────────────────────────────────────────────────────
+// ── the audiobook player ────────────────────────────────────────────────────
+//
+// Speaks run by run, so each Spanish word gets a Spanish voice and its English
+// gloss an English one, with real silence in between. Everything is short
+// utterances rather than one long one: long utterances get truncated by some
+// browsers, and short ones let the highlight keep up.
 
-let speechQueue = [];
-let speechAt = 0;
+const player = { active: false, paused: false, sentence: 0, run: 0, timer: null, sleepTimer: null };
 
 function pickVoice(lang) {
   const voices = speechSynthesis.getVoices();
@@ -925,6 +1084,11 @@ function pickVoice(lang) {
     || null;
 }
 
+function hasSpanishVoice() {
+  return speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith('es'));
+}
+
+/** Say a single word — the speaker button in the word popover. */
 function speakOne(text) {
   speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
@@ -934,51 +1098,184 @@ function speakOne(text) {
   speechSynthesis.speak(utterance);
 }
 
-function startSpeaking(from = 0) {
-  if (!state.sentences.length) return;
-  speechQueue = state.sentences;
-  speechAt = from;
-  state.speaking = true;
+function listenFrom(sentenceIndex = 0) {
+  if (!state.narration?.sentences.length) return;
+  speechSynthesis.cancel();
+  clearTimeout(player.timer);
+  player.active = true;
+  player.paused = false;
+  player.sentence = Math.max(0, Math.min(sentenceIndex, state.narration.sentences.length - 1));
+  player.run = 0;
   $('playbar').classList.add('on');
   $('btnListen').classList.add('on');
-  speakNext();
-}
-
-function speakNext() {
-  document.querySelectorAll('.sentence.speaking').forEach((n) => n.classList.remove('speaking'));
-  if (!state.speaking || speechAt >= speechQueue.length) { stopSpeaking(); return; }
-  const sentence = speechQueue[speechAt];
-  sentence.el.classList.add('speaking');
-  const box = sentence.el.getBoundingClientRect();
-  if (box.top < 60 || box.bottom > window.innerHeight - 100) {
-    sentence.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  $('btnListen').textContent = '■ Stop';
+  $('playPause').textContent = '❙❙';
+  $('playSeek').max = String(state.narration.sentences.length - 1);
+  const warn = $('playWarn');
+  if (hasSpanishVoice()) warn.hidden = true;
+  else {
+    warn.hidden = false;
+    warn.textContent = 'No Spanish voice installed — the Spanish will be read with an English accent. Add one in your system\u2019s language settings.';
   }
-  $('playLabel').textContent = `${speechAt + 1} / ${speechQueue.length}`;
-
-  const runs = sentence.runs.filter((r) => r.text.trim());
-  if (!runs.length) { speechAt++; speakNext(); return; }
-  let runAt = 0;
-  const sayRun = () => {
-    if (!state.speaking) return;
-    if (runAt >= runs.length) { speechAt++; speakNext(); return; }
-    const run = runs[runAt++];
-    const utterance = new SpeechSynthesisUtterance(run.text);
-    utterance.voice = pickVoice(run.lang);
-    utterance.lang = utterance.voice?.lang || (run.lang === 'es' ? 'es-ES' : 'en-GB');
-    utterance.rate = Number(prefs.rate) || 1;
-    utterance.onend = sayRun;
-    utterance.onerror = sayRun;
-    speechSynthesis.speak(utterance);
-  };
-  sayRun();
+  startSleepTimer();
+  speakStep();
 }
 
-function stopSpeaking() {
-  state.speaking = false;
-  speechSynthesis.cancel();
+/** Where listening should pick up: where you stopped, if it was this page. */
+function resumePoint() {
+  const saved = prefs.listen;
+  if (saved && saved.doc === state.doc?.id && saved.section === state.sectionIndex) {
+    return Math.min(saved.sentence || 0, (state.narration?.sentences.length || 1) - 1);
+  }
+  return 0;
+}
+
+function speakStep() {
+  clearTimeout(player.timer);
+  if (!player.active || player.paused) return;
+  const sentences = state.narration?.sentences || [];
+  if (player.sentence >= sentences.length) { finishSection(); return; }
+
+  const sentence = sentences[player.sentence];
+  const run = sentence.runs[player.run];
+  if (!run) {
+    player.sentence += 1;
+    player.run = 0;
+    rememberPosition();
+    speakStep();
+    return;
+  }
+
+  highlightRun(sentence, run);
+  const utterance = new SpeechSynthesisUtterance(run.text);
+  utterance.voice = pickVoice(run.lang);
+  utterance.lang = utterance.voice?.lang || (run.lang === 'es' ? 'es-ES' : 'en-GB');
+  utterance.rate = Number(prefs.rate) || 1;
+  if (run.kind === 'gloss') {
+    // the gloss is an aside, not part of the sentence: quieter and quicker
+    utterance.volume = 0.72;
+    utterance.rate = Math.min(2, utterance.rate * 1.12);
+  }
+  let moved = false;
+  const go = () => {
+    if (moved || !player.active) return;
+    moved = true;
+    clearTimeout(watchdog);
+    player.run += 1;
+    const gap = Math.round((run.gapAfter || 0) / (Number(prefs.rate) || 1));
+    player.timer = setTimeout(speakStep, gap);
+  };
+  utterance.onend = go;
+  utterance.onerror = go;
+  // Browsers drop onend more often than you would like — a phone locking, a
+  // voice that isn't installed, Chrome's own long-utterance bug. Move on
+  // anyway once the run has had more than enough time to be said.
+  const seconds = run.text.length / (11 * (Number(prefs.rate) || 1));
+  const watchdog = setTimeout(go, Math.max(1200, seconds * 2200));
+  speechSynthesis.speak(utterance);
+}
+
+function highlightRun(sentence, run) {
   document.querySelectorAll('.sentence.speaking').forEach((n) => n.classList.remove('speaking'));
+  document.querySelectorAll('.es.saying').forEach((n) => n.classList.remove('saying'));
+  const sentenceEl = state.sentenceEls[sentence.index];
+  if (sentenceEl) {
+    sentenceEl.classList.add('speaking');
+    const box = sentenceEl.getBoundingClientRect();
+    if (box.top < 70 || box.bottom > window.innerHeight - 110) {
+      sentenceEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+  if (run.part != null) {
+    state.partEls.get(`${sentence.index}:${run.part}`)?.classList.add('saying');
+  }
+  $('playLabel').textContent = `${sentence.index + 1} / ${state.narration.sentences.length}`;
+  $('playSeek').value = String(sentence.index);
+}
+
+function finishSection() {
+  const more = state.doc && state.sectionIndex < state.doc.sections.length - 1;
+  if (prefs.autoAdvance && more) {
+    gotoSection(state.sectionIndex + 1, { keepPlaying: true });
+    return;
+  }
+  stopListening();
+  $('playLabel').textContent = more ? 'End of this part' : 'Finished';
+}
+
+function pauseListening() {
+  player.paused = true;
+  clearTimeout(player.timer);
+  speechSynthesis.cancel();      // pause() is unreliable across browsers; we re-speak instead
+  $('playPause').textContent = '▶';
+  document.querySelectorAll('.es.saying').forEach((n) => n.classList.remove('saying'));
+}
+
+function resumeListening() {
+  if (!player.active) { listenFrom(resumePoint()); return; }
+  player.paused = false;
+  $('playPause').textContent = '❙❙';
+  speakStep();
+}
+
+function stopListening() {
+  player.active = false;
+  player.paused = false;
+  clearTimeout(player.timer);
+  clearTimeout(player.sleepTimer);
+  speechSynthesis.cancel();
+  document.querySelectorAll('.sentence.speaking, .es.saying')
+    .forEach((n) => n.classList.remove('speaking', 'saying'));
   $('playbar').classList.remove('on');
   $('btnListen').classList.remove('on');
+  $('btnListen').textContent = '▶ Listen';
+  rememberPosition();
+}
+
+function skipSentence(delta) {
+  if (!player.active) return;
+  player.sentence = Math.max(0, Math.min(player.sentence + delta, state.narration.sentences.length - 1));
+  player.run = 0;
+  clearTimeout(player.timer);
+  speechSynthesis.cancel();
+  if (!player.paused) speakStep();
+  else highlightRun(state.narration.sentences[player.sentence], { part: null });
+}
+
+let positionTimer = null;
+function rememberPosition() {
+  if (!state.doc) return;
+  prefs.listen = { doc: state.doc.id, section: state.sectionIndex, sentence: player.sentence };
+  clearTimeout(positionTimer);
+  positionTimer = setTimeout(savePrefs, 600);
+}
+
+function startSleepTimer() {
+  clearTimeout(player.sleepTimer);
+  const minutes = Number(prefs.sleep) || 0;
+  if (!minutes) return;
+  player.sleepTimer = setTimeout(() => {
+    stopListening();
+    $('playLabel').textContent = 'Sleep timer';
+  }, minutes * 60000);
+}
+
+/**
+ * Called after every re-render. If the text changed while the voice was
+ * talking — you moved the dial, or marked a word known — pick the sentence up
+ * again from its start with the new wording.
+ */
+function onTextRerendered() {
+  if (!player.active) return;
+  const sentences = state.narration?.sentences || [];
+  if (!sentences.length) { stopListening(); return; }
+  $('playSeek').max = String(sentences.length - 1);
+  player.sentence = Math.min(player.sentence, sentences.length - 1);
+  player.run = 0;
+  if (player.paused) { highlightRun(sentences[player.sentence], { part: null }); return; }
+  clearTimeout(player.timer);
+  speechSynthesis.cancel();
+  player.timer = setTimeout(speakStep, 60);
 }
 
 // ── wiring ──────────────────────────────────────────────────────────────────
@@ -1002,13 +1299,23 @@ $('btnExport').onclick = panelExport;
 $('btnSettings').onclick = () => panelSettings();
 $('panelClose').onclick = closePanel;
 $('scrim').onclick = closePanel;
-$('btnListen').onclick = () => (state.speaking ? stopSpeaking() : startSpeaking(0));
-$('playStop').onclick = stopSpeaking;
-$('playPause').onclick = () => {
-  if (speechSynthesis.paused) { speechSynthesis.resume(); $('playPause').textContent = 'Pause'; }
-  else { speechSynthesis.pause(); $('playPause').textContent = 'Resume'; }
+$('btnListen').onclick = () => (player.active ? stopListening() : listenFrom(resumePoint()));
+$('playStop').onclick = stopListening;
+$('playPause').onclick = () => (player.paused ? resumeListening() : pauseListening());
+$('playPrev').onclick = () => skipSentence(-1);
+$('playNext').onclick = () => skipSentence(1);
+$('playSeek').oninput = (e) => {
+  const target = Number(e.target.value);
+  player.sentence = target;
+  player.run = 0;
+  clearTimeout(player.timer);
+  speechSynthesis.cancel();
+  const sentence = state.narration?.sentences[target];
+  if (sentence) highlightRun(sentence, { part: null });
 };
+$('playSeek').onchange = () => { if (player.active && !player.paused) speakStep(); };
 $('rate').onchange = (e) => { prefs.rate = Number(e.target.value); savePrefs(); };
+$('sleep').onchange = (e) => { prefs.sleep = Number(e.target.value); savePrefs(); if (player.active) startSleepTimer(); };
 
 const peek = (on) => document.body.classList.toggle('peek', on);
 $('btnPeek').addEventListener('pointerdown', () => peek(true));
@@ -1022,7 +1329,10 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.target.matches('input, textarea, select')) return;
-  if (e.key === 'Escape') { hidePop(); closePanel(); stopSpeaking(); }
+  if (e.key === 'Escape') { hidePop(); closePanel(); stopListening(); }
+  if (e.key === ' ' && player.active) { (player.paused ? resumeListening : pauseListening)(); e.preventDefault(); }
+  if (e.key === ',' && player.active) skipSentence(-1);
+  if (e.key === '.' && player.active) skipSentence(1);
   if (e.key === 'ArrowRight' && !e.metaKey) { setLevel(prefs.level + (e.shiftKey ? 10 : 1)); e.preventDefault(); }
   if (e.key === 'ArrowLeft' && !e.metaKey) { setLevel(prefs.level - (e.shiftKey ? 10 : 1)); e.preventDefault(); }
   if (e.key === 'p' && !e.repeat) peek(true);

@@ -65,6 +65,22 @@ test('ambiguous words resolve from context', () => {
   assert.match(at('Their lives changed.', 40), /vidas/);     // noun
 });
 
+test('a word that is both noun and verb reads from its subject', () => {
+  assert.match(at('Her neighbours thought this was strange.', 80), /pensaron/);  // verb
+  assert.match(at('She had a thought.', 80), /pensamiento/);                     // noun
+});
+
+test('an inflected verb is not mistaken for the noun it is built from', () => {
+  // "worked" must not read as the noun "work", or the subject search stops there
+  assert.match(at('The men who worked on the water laughed.', 80), /rieron/);
+  assert.match(at('The man who lives here left London.', 80), /salió/);
+});
+
+test('a predicate adjective agrees only across a copula', () => {
+  assert.match(at('The children were happy.', 60), /felices/);            // across "were"
+  assert.match(at('The men laughed a little.', 80), /poco\b/);            // not across "laughed"
+});
+
 test('proper nouns are left alone', () => {
   const out = at('Maria and Carlos left London for Madrid.', 100);
   for (const name of ['Maria', 'Carlos', 'London', 'Madrid']) assert.match(out, new RegExp(name));

@@ -84,7 +84,7 @@ function readings(word) {
   if (IRREGULAR_NOUNS[w]) out.push([IRREGULAR_NOUNS[w], { number: 'pl' }]);
   if (IRREGULAR_VERBS[w]) {
     const [lemma, form] = IRREGULAR_VERBS[w];
-    out.push([lemma, { verbForm: form }]);
+    out.push([lemma, { verbForm: form, irregular: true }]);
   }
   const sForm = { number: 'pl', verbForm: 'pres3', ambiguous: true };
   if (w.length > 4 && w.endsWith('ies')) out.push([w.slice(0, -3) + 'y', sForm]);
@@ -155,12 +155,37 @@ const VERBY_BEFORE = ['who', 'that', 'which', 'i', 'you', 'he', 'she', 'it', 'we
 const NOUNY_BEFORE = ['the', 'a', 'an', 'this', 'these', 'those', 'my', 'your', 'his', 'her', 'its', 'our', 'their', 'of', 'in', 'on', 'at', 'for', 'with', 'many', 'some', 'few', 'all'];
 
 /** Nudge an ambiguous word ("lives") towards the reading its neighbour implies. */
-function posScore(pos, prevWord) {
-  if (pos === 'v' && (VERBY_BEFORE.includes(prevWord) || AUXILIARIES.includes(prevWord))) return 2;
-  if (pos === 'n' && NOUNY_BEFORE.includes(prevWord)) return 2;
-  if (pos === 'v' && NOUNY_BEFORE.includes(prevWord)) return -2;
-  if (pos === 'n' && VERBY_BEFORE.includes(prevWord)) return -1;
-  return 0;
+function posScore(pos, prevWord, inflection, prevIsSubject) {
+  let score = 0;
+  if (pos === 'v' && (VERBY_BEFORE.includes(prevWord) || AUXILIARIES.includes(prevWord))) score += 2;
+  if (pos === 'n' && NOUNY_BEFORE.includes(prevWord)) score += 2;
+  if (pos === 'v' && NOUNY_BEFORE.includes(prevWord)) score -= 2;
+  if (pos === 'n' && VERBY_BEFORE.includes(prevWord)) score -= 1;
+  // "her neighbours thought" is a verb; "she had a thought" is a noun. An
+  // irregular past form straight after a subject is almost always the verb.
+  if (pos === 'v' && inflection?.irregular && prevIsSubject) score += 2.5;
+  return score;
+}
+
+/** Does this word read as a noun in its own right (not as an inflected verb)? */
+function nounReading(word, index) {
+  for (const [lemma, inf] of readings(word)) {
+    if (inf.verbForm && !inf.ambiguous) continue;
+    const entry = index.byKey.get(lemma);
+    if (!entry) continue;
+    if (entry.pos !== 'n') return null;
+    return { gender: entry.gender, plural: inf.number === 'pl' || (inf.ambiguous && /s$/.test(word)) };
+  }
+  return null;
+}
+
+/** Could this word be the subject of the verb that follows it? */
+function subjectish(tokens, i, index) {
+  if (i == null || i < 0 || tokens[i].kind !== 'word') return false;
+  const word = tokens[i].raw.toLowerCase();
+  if (SUBJECTS[word]) return true;
+  if (/^\p{Lu}/u.test(tokens[i].raw) && !index.byKey.has(word)) return true; // a name
+  return !!nounReading(word, index);
 }
 
 // ── analysis ────────────────────────────────────────────────────────────────
@@ -211,6 +236,7 @@ export function analyze(text, index = DEFAULT_INDEX) {
       if (isCapMidSentence) continue;
       const prevIdx = prevWordIndex(tokens, ti);
       const prevWord = prevIdx != null ? tokens[prevIdx].raw.toLowerCase() : '';
+      const prevSubjectish = subjectish(tokens, prevIdx, index);
       const options = [];
       readings(token.raw).forEach(([lemma, raw], order) => {
         const entry = index.byKey.get(lemma);
@@ -225,7 +251,10 @@ export function analyze(text, index = DEFAULT_INDEX) {
           if (inflection.verbForm && entry.pos !== 'v') return;
           if (inflection.degree && entry.pos !== 'adj' && entry.pos !== 'adv') return;
         }
-        options.push({ entry, span: [ti], inflection, score: posScore(entry.pos, prevWord) - order * 0.1 });
+        options.push({
+          entry, span: [ti], inflection,
+          score: posScore(entry.pos, prevWord, inflection, prevSubjectish) - order * 0.1,
+        });
       });
       if (options.length) {
         options.sort((a, b) => b.score - a.score);
@@ -463,11 +492,13 @@ function headNoun(tokens, ti, index, firing) {
     if (fired && fired.entry.pos === 'n') {
       return { gender: fired.entry.gender, plural: fired.inflection.number === 'pl', attributive: true };
     }
+    const asNoun = nounReading(word, index);
+    if (asNoun) return { ...asNoun, attributive: true };
     let modifier = false;
     for (const [lemma, inf] of readings(word)) {
       const e = index.byKey.get(lemma);
       if (!e) continue;
-      if (e.pos === 'n') return { gender: e.gender, plural: inf.number === 'pl' || (inf.ambiguous && /s$/.test(word)), attributive: true };
+      void inf;
       if (e.pos === 'adj' || e.pos === 'adv' || e.pos === 'det') { modifier = true; break; }
       return null; // a verb/preposition/conjunction ends the noun phrase
     }
@@ -496,15 +527,18 @@ function subjectNoun(tokens, ti, index, firing) {
     }
     steps++;
     const w = t.raw.toLowerCase();
-    if (COPULAS.includes(w) || (t.candidate && t.candidate.entry.pos === 'v')) { sawCopula = true; continue; }
+    if (COPULAS.includes(w)) { sawCopula = true; continue; }
+    if (t.candidate && t.candidate.entry.pos === 'v') return null; // an ordinary verb, not a copula
     if (!sawCopula) continue;
     if (w === 'they' || w === 'we') return { gender: 'm', plural: true };
     if (w === 'she') return { gender: 'f', plural: false };
     if (w === 'he' || w === 'it') return { gender: 'm', plural: false };
-    for (const [lemma, inf] of readings(w)) {
-      const e = index.byKey.get(lemma);
-      if (e && e.pos === 'n') return { gender: e.gender, plural: inf.number === 'pl' || inf.ambiguous === true && /s$/.test(w) };
-    }
+    const settled = t.candidate?.entry;
+    if (settled && settled.pos !== 'n') continue;
+    const asNoun = settled
+      ? { gender: settled.gender, plural: t.candidate.inflection.number === 'pl' }
+      : nounReading(w, index);
+    if (asNoun) return asNoun;
   }
   return null;
 }
@@ -523,14 +557,15 @@ function subject(tokens, ti, index) {
     steps++;
     const w = t.raw.toLowerCase();
     if (SUBJECTS[w]) return { person: SUBJECTS[w], plural: w === 'we' || w === 'they' };
-    let isNoun = false;
-    let plural = false;
-    for (const [lemma, inf] of readings(w)) {
-      const e = index.byKey.get(lemma);
-      if (!e) continue;
-      if (e.pos === 'n') { isNoun = true; plural = inf.number === 'pl' || (inf.ambiguous && /s$/.test(w)); }
-      break;
-    }
+    // analyze() already settled this word's part of speech in context; trust it
+    // over a fresh guess ("lives" after "who" is a verb, not lots of lives).
+    const settled = t.candidate?.entry;
+    if (settled && settled.pos !== 'n') continue;
+    const asNoun = settled
+      ? { gender: settled.gender, plural: t.candidate.inflection.number === 'pl' }
+      : nounReading(w, index);
+    const isNoun = !!asNoun;
+    let plural = asNoun?.plural || false;
     // An unknown capitalised word is a name: treat it as a singular subject.
     if (!isNoun && /^\p{Lu}/u.test(t.raw) && !index.byKey.has(w)) {
       const pl = compound(tokens, j, ti, index);

@@ -54,8 +54,51 @@ Proper nouns are left alone — *Madrid* stays *Madrid*.
 - **Too soon** keeps a word in English until you say otherwise.
 - **Peek** (the button, or hold `P`) shows the English for everything at once.
 - **← / →** nudge the dial; hold shift for bigger steps.
-- **Listen** reads the page aloud, switching between a Spanish and an English
-  voice mid-sentence so the Spanish sounds like Spanish.
+- **Listen** opens the player — see below.
+
+## Listening
+
+Press **Listen** and the page is read aloud, sentence by sentence, with the
+current sentence highlighted and the word being spoken outlined. It follows you
+down the page and rolls on into the next part of a book by itself.
+
+Listening is the harder half. You cannot hover a word you missed, so the player
+adds what the page doesn't need:
+
+- **A spoken gloss.** The first time each Spanish word appears, an English voice
+  says what it meant — quieter and a little quicker, so it reads as an aside
+  rather than part of the sentence. Set it to every time, or off, in Settings.
+- **Two voices.** Every Spanish word goes to a Spanish voice and everything else
+  to an English one, so *la casa* is not read with an English accent. Pick the
+  voices in Settings; the player warns you if no Spanish voice is installed.
+- **A gap for shadowing.** Set a pause after each Spanish word — half a second,
+  or a second and a half — and say the word back into it. Articles don't get one:
+  a gap between *la* and *casa* helps nobody.
+
+Transport: play/pause (space), previous and next sentence (`,` and `.`), speed,
+a scrubber, and a sleep timer. Move the difficulty dial mid-sentence and the
+sentence starts again with the new wording. Stop, come back tomorrow, and Listen
+picks up where you left off. ▶ in any word's popover starts reading from there.
+
+### An MP3 you can take with you
+
+Browser voices are free but cannot be recorded — the Web Speech API gives you
+sound, not samples. So **Export → Audiobook** calls a cloud voice service with
+your own key and hands back a single MP3: each Spanish word rendered by a
+Spanish voice, each gloss by an English one, joined in order.
+
+| | Google Cloud TTS | ElevenLabs |
+|---|---|---|
+| Cost | cheapest | dearer |
+| Voice quality | good | best |
+| Exact pauses | yes, via SSML breaks | no — pauses come out as phrasing |
+
+The panel prices the job before you start it (characters, requests, rough
+minutes) because both services bill by the character, and a spoken gloss on
+every word roughly doubles it.
+
+One honest caveat: **current Kindles will not play a sideloaded MP3.** The audio
+is for your phone, the car, a run. The Kindle path is the EPUB above.
 
 ## Getting text in
 
@@ -105,13 +148,17 @@ The key lives in your browser's local storage and is sent only to
   conjugator with the irregulars that matter.
 - `src/diglot/weave.js` — the engine. `analyze()` finds every swappable span
   once; `applyLevel()` decides and inflects on each slider move.
+- `src/diglot/speech.js` — narration: sentence splitting, spoken glosses, the
+  runs and silences. The reader draws from this too, so the highlight always
+  matches the voice.
+- `src/diglot/tts.js` — rendering narration to MP3 through a cloud voice service.
 - `src/diglot/ingest.js` — URL fetching, readability, cleaning, splitting.
 - `src/diglot/epub.js` — EPUB reader and writer, dependency-free (ZIP by hand,
   `DecompressionStream` for the inflating).
 - `src/diglot/llm.js` — the optional Claude calls.
 - `src/diglot/build.js` — bundles everything into `diglot/diglot.html`.
 - `diglot/index.html`, `diglot/app.js` — the app.
-- `test/diglot-*.test.js` — `npm test`.
+- `test/diglot-*.test.js` — `npm test` (41 tests).
 
 ## What it is not
 
