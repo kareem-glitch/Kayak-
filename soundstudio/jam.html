@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SoundStudio jam</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
+<style>
+:root{
+  --bg:#121c1f; --surface:#182529; --raised:#1f2f34; --ink:#e6eee8; --muted:#9aaba7; --line:#2f4247;
+  --amber:#f0a238; --amber-ink:#1b1206; --ai:#b3a7ec; --ai-soft:#262340; --human:#7cbedc; --human-soft:#15323f;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#e6ebe3; --surface:#f4f6f1; --raised:#ffffff; --ink:#1c2526; --muted:#566361; --line:#c7d0c5;
+    --amber:#b86a10; --amber-ink:#ffffff; --ai:#5b4b9c; --ai-soft:#e6e2f4; --human:#1b5d7e; --human-soft:#d5e7ef;
+  }
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-0.015em}
+h1{font-size:1.05rem;font-weight:800}
+h2{font-size:1.3rem;font-weight:800;line-height:1.15}
+p{margin:0}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:600;cursor:pointer}
+.btn-primary{background:var(--amber);color:var(--amber-ink)}
+.btn-primary:disabled{opacity:.55;cursor:default}
+.btn-quiet{background:transparent;border:1px solid var(--line)}
+.muted{color:var(--muted)}
+.small{font-size:.9rem}
+[hidden]{display:none !important}
+
+/* Join */
+.join{min-height:100vh;display:grid;place-items:center;padding:24px}
+.join-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px}
+.join-card h2{font-size:2rem;margin-bottom:6px}
+.join-card label{display:block;margin:18px 0 6px;color:var(--muted);font-size:.9rem}
+.join-card input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--raised)}
+.join-card .btn{width:100%;margin-top:20px}
+.err{color:#e0806a;margin-top:12px;font-size:.9rem;min-height:1.2em}
+
+/* Room */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.topbar-actions{display:flex;gap:8px;flex-wrap:wrap}
+.topbar .btn{padding:8px 12px;font-size:.9rem}
+.btn-toggle[aria-pressed="false"]{border-color:#e0806a;color:#e0806a}
+.room{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;padding:18px;max-width:1400px;margin:0 auto}
+@media (max-width:980px){.room{grid-template-columns:1fr}}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;align-content:start}
+.tile{position:relative;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:var(--raised);border:1px solid var(--line)}
+.tile .vid,.tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile .initial{position:absolute;inset:0;display:grid;place-items:center;font:800 2.4rem/1 "Bricolage Grotesque",sans-serif;color:var(--muted)}
+.tile .tname{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;padding:4px 10px;border-radius:999px;font-size:.85rem}
+.tile .badge{position:absolute;right:10px;top:10px;background:var(--amber);color:var(--amber-ink);padding:3px 9px;border-radius:999px;font-size:.78rem;font-weight:600}
+.tile.speaking{border-color:var(--amber)}
+.band-tile{aspect-ratio:4/3;border-radius:16px;background:var(--ai-soft);padding:16px;display:flex;flex-direction:column;justify-content:space-between}
+.band-tile .now-chord{font:800 clamp(2.4rem,6vw,3.6rem)/1 "Bricolage Grotesque",sans-serif;color:var(--ai)}
+.band-tile .count{font:800 3rem/1 "Bricolage Grotesque",sans-serif;color:var(--amber)}
+.beats{display:flex;gap:8px}
+.beats span{width:14px;height:14px;border-radius:50%;background:var(--line)}
+.beats span.on{background:var(--amber)}
+
+/* Band panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:16px;align-self:start}
+.panel section+section{margin-top:18px}
+textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:12px;background:var(--raised);padding:12px;font:800 1.2rem/1.2 "Bricolage Grotesque",sans-serif;resize:vertical}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:5px 10px;font-size:.82rem;cursor:pointer}
+.chords{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:10px 0 0}
+.chords li{font:600 .95rem/1 "Bricolage Grotesque",sans-serif;padding:8px 10px;border-radius:9px;background:var(--raised);border:1px solid var(--line)}
+.chords li.now{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.facts{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.85rem;margin-top:4px}
+.transport{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+.play{width:56px;height:56px;border-radius:50%;border:0;background:var(--amber);color:var(--amber-ink);display:grid;place-items:center;cursor:pointer}
+.play svg{width:24px;height:24px}
+.opts{display:flex;gap:6px 14px;flex-wrap:wrap;color:var(--muted);font-size:.85rem;align-items:center}
+.opts input[type=checkbox]{accent-color:var(--amber)}
+.opts input[type=number]{width:4.2em;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:var(--raised)}
+.strips{display:grid;gap:8px;margin-top:10px}
+.strip{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:11px 12px;border-radius:14px;background:var(--ai-soft)}
+.strip.human{background:var(--human-soft)}
+.strip.off{background:transparent;border:1px solid var(--line)}
+.strip-name{font:800 1.05rem/1.15 "Bricolage Grotesque",sans-serif;display:block}
+.strip-status{font-size:.85rem;color:var(--ai)}
+.strip.human .strip-status{color:var(--human)}
+.strip.off .strip-status{color:var(--muted)}
+.seat{border:1.5px solid var(--ai);background:transparent;color:var(--ai);border-radius:999px;padding:7px 12px;font-weight:600;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.strip.human .seat{background:var(--human);border-color:var(--human);color:var(--raised)}
+.meter{grid-column:1/-1;height:5px;border-radius:3px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--ai)}
+.vol{grid-column:1/-1;display:flex;gap:8px;align-items:center;font-size:.8rem;color:var(--muted)}
+.vol input{flex:1;accent-color:var(--ai)}
+.status{font-size:.85rem;color:var(--muted);min-height:1.2em;margin-top:8px}
+.hostbox{padding:12px;border-radius:14px;border:1px dashed var(--line)}
+.tile.me video{transform:scaleX(-1)}
+.conn{margin-top:10px}
+.conn .slider{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:6px}
+.conn .slider input{accent-color:var(--amber)}
+.conn .stats{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.82rem;margin-top:8px;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<div class="join" id="joinView">
+  <div class="join-card">
+    <h1 class="muted">SoundStudio</h1>
+    <h2>Jam room</h2>
+    <p class="muted small" id="roomLine">Camera and live audio, straight from browser to browser.</p>
+    <label for="nameInput">Your name</label>
+    <input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?">
+    <p class="muted small" style="margin-top:14px">Use wired headphones. Bluetooth adds too much delay to play in time.</p>
+    <button class="btn btn-primary" id="joinBtn">Join the jam</button>
+    <p class="err" id="joinErr" role="alert"></p>
+  </div>
+</div>
+
+<div id="roomView" hidden>
+  <div class="topbar">
+    <h1 id="roomTitle">SoundStudio</h1>
+    <div class="topbar-actions">
+      <button class="btn btn-quiet btn-toggle" id="micBtn" aria-pressed="true">Mic on</button>
+      <button class="btn btn-quiet btn-toggle" id="camBtn" aria-pressed="true">Camera on</button>
+      <button class="btn btn-quiet" id="inviteBtn">Copy invite link</button>
+      <button class="btn btn-quiet" id="leaveBtn">Leave</button>
+    </div>
+  </div>
+  <div class="room">
+    <div class="grid" id="grid">
+      <div class="band-tile" id="bandTile">
+        <div class="facts" id="bandTileTitle">The band is waiting for someone to run it</div>
+        <div><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span></div>
+        <div class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <aside class="panel" aria-label="Backing band">
+      <section id="hostSection">
+        <div class="hostbox" id="claimBox">
+          <p class="small">One person runs the band from their device and everyone hears it. Whoever runs it controls the prompt and play button.</p>
+          <div class="row"><button class="btn btn-primary" id="claimBtn">Run the band from here</button></div>
+          <p class="status" id="claimStatus"></p>
+        </div>
+        <div id="hostControls" hidden>
+          <label class="muted small" for="prompt">What are we playing?</label>
+          <textarea id="prompt" placeholder="Slow funk in E minor, 96 bpm"></textarea>
+          <div class="row"><button class="btn btn-primary" id="genBtn">Generate backing band</button></div>
+          <div class="chips" id="examples"></div>
+          <p class="status" id="genStatus" role="status"></p>
+        </div>
+      </section>
+
+      <section>
+        <h2 id="arrTitle">No band yet</h2>
+        <div class="facts" id="facts"></div>
+        <p class="muted small" id="arrNotes"></p>
+        <ol class="chords" id="chords" aria-label="Chord loop"></ol>
+        <div class="transport" id="transport" hidden>
+          <button class="play" id="playBtn" aria-label="Play"><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+          <div class="opts">
+            <label><input type="checkbox" id="countIn" checked> Count in</label>
+            <label><input type="checkbox" id="clickAll"> Click</label>
+            <label>BPM <input type="number" id="bpm" min="50" max="200"></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="conn">
+        <h2>Connection</h2>
+        <div class="slider"><label class="muted small" for="buffer">Buffer <span id="bufferMs"></span></label><input type="range" id="buffer" min="2" max="16" step="1" value="4" aria-label="Audio buffer"></div>
+        <div class="stats" id="connStats">Waiting for your friend…</div>
+      </section>
+
+      <section>
+        <h2>Parts</h2>
+        <p class="muted small">Tap a part to take it. The AI drops out of that part for everyone.</p>
+        <div class="strips" id="strips"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="/vendor/peerjs-1.5.4.min.js"></script>
+<script type="module">
+import { encodePacket, decodePacket, packetBytes, seqDelta } from './audio/hub-protocol.js';
+const $ = s => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+/* ================= Music theory & styles ================= */
+const NAMES = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+function pcOf(s){ const b={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[s[0].toUpperCase()]; if(b===undefined) return null; let v=b; if(s[1]==='#') v++; else if(s[1]==='b') v--; return (v+12)%12; }
+const QUAL = {'':[0,4,7],maj:[0,4,7],M:[0,4,7],m:[0,3,7],min:[0,3,7],'-':[0,3,7],'5':[0,7],'6':[0,4,7,9],m6:[0,3,7,9],'7':[0,4,7,10],maj7:[0,4,7,11],M7:[0,4,7,11],m7:[0,3,7,10],min7:[0,3,7,10],'-7':[0,3,7,10],m7b5:[0,3,6,10],dim:[0,3,6],dim7:[0,3,6,9],aug:[0,4,8],sus2:[0,2,7],sus4:[0,5,7],sus:[0,5,7],'7sus4':[0,5,7,10],'9':[0,4,7,10,14],m9:[0,3,7,10,14],maj9:[0,4,7,11,14],add9:[0,4,7,14],'11':[0,4,7,10,14,17],m11:[0,3,7,10,14,17],'13':[0,4,7,10,14,21],mmaj7:[0,3,7,11]};
+function parseChord(name){
+  const m=/^\s*([A-Ga-g])([#b]?)([^/\s]*)(?:\/([A-Ga-g][#b]?))?\s*$/.exec(name||''); if(!m) return null;
+  const root=pcOf(m[1]+m[2]); let q=m[3]||'', ints=QUAL[q], t=q;
+  while(!ints && t.length){ t=t.slice(0,-1); ints=QUAL[t]; }
+  return { root, ints: ints||QUAL[''], bass: m[4]?pcOf(m[4]):root };
+}
+const STYLES = {
+  funk:{label:'Funk',bpm:100,root:4,minor:true,swing:false,bass:'syncopated',keys:'stabs',guitar:'scratch',prog:{maj:[[0,'9',2],[5,'9',2]],min:[[0,'m7',2],[5,'7',2]]},drums:{kick:'X.....x...X.....',snare:'....X..o.o..X..o',hat:'XxxxXxxxXxxxXxxx'}},
+  rock:{label:'Rock',bpm:120,root:9,minor:false,swing:false,bass:'root8',keys:'pad',guitar:'power',prog:{maj:[[0,'',1],[10,'',1],[5,'',1],[0,'',1]],min:[[0,'m',1],[8,'',1],[10,'',1],[0,'m',1]]},drums:{kick:'X.......X.X.....',snare:'....X.......X...',hat:'x.x.x.x.x.x.x.x.'}},
+  blues:{label:'Blues shuffle',bpm:92,root:9,minor:false,swing:true,bass:'walking',keys:'comp',guitar:'strum',prog:{maj:[[0,'7',4],[5,'7',2],[0,'7',2],[7,'7',1],[5,'7',1],[0,'7',1],[7,'7',1]],min:[[0,'m7',4],[5,'m7',2],[0,'m7',2],[8,'7',1],[7,'7',1],[0,'m7',2]]},drums:{kick:'X.......x.......',snare:'....X.......X...',hat:'x.x.x.x.x.x.x.x.'}},
+  lofi:{label:'Lo-fi',bpm:78,root:5,minor:false,swing:true,bass:'sustained',keys:'pad',guitar:'arp',prog:{maj:[[0,'maj7',1],[9,'m7',1],[2,'m7',1],[7,'7',1]],min:[[0,'m9',1],[5,'m7',1],[10,'7',1],[3,'maj7',1]]},drums:{kick:'X......x..x.....',snare:'....X.......X...',hat:'x.x.x.x.x.x.x.x.'}},
+  jazz:{label:'Jazz',bpm:130,root:10,minor:false,swing:true,bass:'walking',keys:'comp',guitar:'fourbeat',prog:{maj:[[2,'m7',1],[7,'7',1],[0,'maj7',2]],min:[[2,'m7b5',1],[7,'7',1],[0,'m7',2]]},drums:{kick:'o...o...o...o...',snare:'......o.......o.',ride:'x...x.x.x...x.x.'}},
+  pop:{label:'Pop',bpm:110,root:0,minor:false,swing:false,bass:'root8',keys:'pad',guitar:'strum',prog:{maj:[[0,'',1],[7,'',1],[9,'m',1],[5,'',1]],min:[[0,'m',1],[8,'',1],[3,'',1],[10,'',1]]},drums:{kick:'X.......X.x.....',snare:'....X.......X...',hat:'x.x.x.x.x.x.x.x.'}},
+  reggae:{label:'Reggae',bpm:76,root:9,minor:true,swing:true,bass:'onedrop',keys:'bubble',guitar:'skank',prog:{maj:[[0,'',2],[5,'',2]],min:[[0,'m',2],[5,'m',2]]},drums:{kick:'........X.......',snare:'........x.......',hat:'x.x.x.x.x.x.x.x.'}},
+  hiphop:{label:'Hip hop',bpm:88,root:0,minor:true,swing:true,bass:'sustained',keys:'pad',guitar:'off',prog:{maj:[[0,'maj7',1],[9,'m7',1],[2,'m7',1],[7,'7',1]],min:[[0,'m7',1],[8,'maj7',1],[5,'m7',1],[7,'7',1]]},drums:{kick:'X......x.xX.....',snare:'....X.......X...',hat:'x.x.x.x.x.x.x.x.'}}
+};
+const BASS_TYPES=['root8','sustained','syncopated','walking','onedrop','off'], KEYS_TYPES=['pad','stabs','comp','bubble','off'], GTR_TYPES=['power','strum','scratch','skank','arp','fourbeat','off'];
+const DESC={root8:'eighth-note roots',sustained:'long, low notes',syncopated:'a syncopated line',walking:'a walking line',onedrop:'a one-drop line',pad:'pads',stabs:'stabs',comp:'comping',bubble:'the bubble',power:'power chords',strum:'strumming',scratch:'funk scratching',skank:'the skank',arp:'arpeggios',fourbeat:'four to the bar'};
+const STYLE_WORDS=[['reggae',['reggae','dub','ska','one drop']],['hiphop',['hip hop','hip-hop','hiphop','boom bap','rap','trap']],['lofi',['lo-fi','lofi','lo fi','chill','study','rainy']],['jazz',['jazz','bebop','bossa','ii-v','2-5-1']],['blues',['blues','shuffle','12 bar','12-bar']],['funk',['funk','groove','disco','neo soul','soul']],['rock',['rock','punk','grunge','indie','metal']],['pop',['pop']]];
+
+function localArrangement(prompt){
+  const p=prompt.toLowerCase(); let style='pop';
+  for(const [s,w] of STYLE_WORDS){ if(w.some(x=>p.includes(x))){ style=s; break; } }
+  const S=STYLES[style]; let bpm=S.bpm;
+  const b=/(\d{2,3})\s*(bpm|beats)/i.exec(prompt);
+  if(b) bpm=clamp(+b[1],50,200); else if(/\bslow\b/.test(p)) bpm=Math.round(S.bpm*.82); else if(/\b(fast|uptempo|up-tempo)\b/.test(p)) bpm=Math.round(S.bpm*1.2);
+  let root=S.root, minor=S.minor;
+  const k=/\bin\s+([a-gA-G])\s?(#|b|sharp|flat)?(?![a-z])\s*(major|minor|maj|min|m)?\b/.exec(prompt);
+  if(k){ const acc=k[2]==='sharp'?'#':k[2]==='flat'?'b':(k[2]||''); if(k[3]||acc||k[1]===k[1].toUpperCase()){ root=pcOf(k[1].toUpperCase()+acc); if(k[3]) minor=/^(minor|min|m)$/i.test(k[3]); } }
+  if(/\bminor\b/.test(p)) minor=true; else if(/\bmajor\b/.test(p)) minor=false;
+  const key=NAMES[root]+(minor?' minor':' major');
+  return { title:S.label+' in '+key, style, bpm, key, swing:S.swing,
+    chords:(minor?S.prog.min:S.prog.maj).map(([o,q,bars])=>({name:NAMES[(root+o)%12]+q,bars})),
+    bass:S.bass, keys:S.keys, guitar:S.guitar, notes:'' };
+}
+function finalize(a, source){
+  const style=STYLES[a&&a.style]?a.style:'pop', S=STYLES[style];
+  const chords=(Array.isArray(a&&a.chords)?a.chords:[]).map(c=>({name:String((c&&c.name)||'').trim(),bars:[1,2,4].includes(+(c&&c.bars))?+c.bars:1})).map(c=>({...c,parsed:parseChord(c.name)})).filter(c=>c.parsed);
+  if(!chords.length) throw new Error('no chords');
+  let total=0; const kept=[]; for(const c of chords){ if(total+c.bars>32) break; kept.push(c); total+=c.bars; }
+  const barMap=[]; kept.forEach((c,i)=>{ for(let n=0;n<c.bars;n++) barMap.push(i); });
+  return { title:String(a.title||'Untitled jam').slice(0,60), style, bpm:clamp(Math.round(+a.bpm||S.bpm),50,200), key:String(a.key||'').slice(0,24), swing:!!a.swing,
+    chords:kept, barMap, bass:BASS_TYPES.includes(a.bass)?a.bass:S.bass, keys:KEYS_TYPES.includes(a.keys)?a.keys:S.keys, guitar:GTR_TYPES.includes(a.guitar)?a.guitar:S.guitar,
+    notes:String(a.notes||'').slice(0,220), source };
+}
+
+/* ================= Shared state ================= */
+const S = {
+  arr: null, playing: false, hostId: null, hostName: '',
+  seats: [
+    { id:'drums', label:'Drums', human:false, who:'' },
+    { id:'bass', label:'Bass', human:false, who:'' },
+    { id:'keys', label:'Keys', human:false, who:'' },
+    { id:'guitar', label:'Rhythm guitar', human:false, who:'' }
+  ]
+};
+let isHost = false, myName = '', myId = '';
+
+/* ================= Audio engine (host only) ================= */
+let E = null, counter = 0, voiceIdx = 0;
+function buildEngine(){
+  const limiter = new Tone.Limiter(-1).toDestination();
+  const master = new Tone.Volume(-3).connect(limiter);
+  limiter.connect(bandOut); // also sent to the other player, in the same packets as your mic
+  const chan = () => { const ch=new Tone.Channel({volume:0}).connect(master); const meter=new Tone.Meter({smoothing:.75}); ch.connect(meter); return {ch,meter}; };
+  const e = { drums:chan(), bass:chan(), keys:chan(), guitar:chan() };
+  const clickCh = new Tone.Channel({volume:-6}).toDestination(); // click is heard only by the host
+  e.kick=new Tone.MembraneSynth({pitchDecay:.04,octaves:6,envelope:{attack:.001,decay:.35,sustain:0,release:.1}}).connect(e.drums.ch);
+  e.snare=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.16,sustain:0}}).connect(new Tone.Filter(1700,'highpass').connect(e.drums.ch)); e.snare.volume.value=-8;
+  e.hat=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.045,sustain:0}}).connect(new Tone.Filter(7500,'highpass').connect(e.drums.ch)); e.hat.volume.value=-16;
+  e.ride=new Tone.NoiseSynth({noise:{type:'pink'},envelope:{attack:.001,decay:.3,sustain:0}}).connect(new Tone.Filter(5200,'highpass').connect(e.drums.ch)); e.ride.volume.value=-18;
+  e.bassSynth=new Tone.MonoSynth({oscillator:{type:'sawtooth'},filter:{Q:2,type:'lowpass',rolloff:-24},envelope:{attack:.005,decay:.2,sustain:.6,release:.15},filterEnvelope:{attack:.005,decay:.12,sustain:.3,release:.2,baseFrequency:110,octaves:2.4}}).connect(e.bass.ch); e.bassSynth.volume.value=-8;
+  e.ep=new Tone.PolySynth(Tone.FMSynth,{harmonicity:3,modulationIndex:8,oscillator:{type:'sine'},modulation:{type:'sine'},envelope:{attack:.004,decay:1.2,sustain:.25,release:.8},modulationEnvelope:{attack:.002,decay:.4,sustain:.1,release:.5}}).connect(e.keys.ch); e.ep.maxPolyphony=32; e.ep.volume.value=-16;
+  e.pad=new Tone.PolySynth(Tone.AMSynth,{envelope:{attack:.35,decay:.4,sustain:.8,release:1.4}}).connect(e.keys.ch); e.pad.maxPolyphony=32; e.pad.volume.value=-20;
+  e.gDist=new Tone.Distortion(.6); e.gDist.wet.value=0; e.gDist.chain(new Tone.Filter(3400,'lowpass'), e.guitar.ch);
+  e.gtr=Array.from({length:8},()=>{ const v=new Tone.PluckSynth({attackNoise:1,dampening:3800,resonance:.93}).connect(e.gDist); v.volume.value=-4; return v; });
+  e.click=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.001,decay:.05,sustain:0,release:.02}}).connect(clickCh);
+  return e;
+}
+const mf = m => Tone.Frequency(m,'midi').toFrequency();
+const chordAt = bar => S.arr.chords[S.arr.barMap[((bar%S.arr.barMap.length)+S.arr.barMap.length)%S.arr.barMap.length]];
+const hit = (pat,step) => { const c=pat&&pat[step]; return c==='X'?1:c==='x'?.72:c==='o'?.32:0; };
+const bassRoot = pc => 28+((pc-4+12)%12);
+function keysVoicing(p){ const base=52+((p.root-4+12)%12); return [...new Set(p.ints.map(i=>{ let n=base+i; while(n>76) n-=12; return n; }))].sort((a,b)=>a-b).map(mf); }
+function gtrVoicing(p){ const r=40+((p.root-4+12)%12); const third=p.ints.find(i=>i===3||i===4)??(p.ints.includes(2)?2:p.ints.includes(5)?5:4); const fifth=p.ints.includes(6)?6:p.ints.includes(8)?8:7; const sev=p.ints.find(i=>i===9||i===10||i===11); return [r,r+fifth,r+12,r+12+third,sev!==undefined?r+12+sev:r+12+fifth].map(mf); }
+function strum(freqs,time,dir=1,gap=.012){ (dir>0?freqs:[...freqs].reverse()).forEach((f,i)=>E.gtr[voiceIdx++%E.gtr.length].triggerAttack(f,time+i*gap)); }
+
+function playDrums(step,time){ const d=STYLES[S.arr.style].drums; let v;
+  if((v=hit(d.kick,step))) E.kick.triggerAttackRelease('C1','8n',time,v);
+  if((v=hit(d.snare,step))) E.snare.triggerAttackRelease('16n',time,v);
+  if((v=hit(d.hat,step))) E.hat.triggerAttackRelease('32n',time,v);
+  if((v=hit(d.ride,step))) E.ride.triggerAttackRelease('8n',time,v); }
+function playBass(step,time,ch,next){
+  const p=ch.parsed, r=bassRoot(p.bass), third=p.ints.includes(3)?3:4, fifth=p.ints.includes(6)?6:7, b7=p.ints.includes(11)?11:10; let pat=null;
+  switch(S.arr.bass){
+    case 'root8': pat={0:[0,'8n'],2:[0,'8n'],4:[0,'8n'],6:[0,'8n'],8:[0,'8n'],10:[0,'8n'],12:[0,'8n'],14:[12,'8n']}; break;
+    case 'sustained': pat={0:[0,'2n'],8:[fifth,'4n.'],14:[12,'16n']}; break;
+    case 'syncopated': pat={0:[0,'8n'],3:[12,'16n'],6:[0,'16n'],8:[b7,'16n'],10:[fifth,'8n'],13:[12,'16n'],14:[b7,'16n']}; break;
+    case 'onedrop': pat={4:[0,'8n'],6:[0,'16n'],8:[fifth,'8n'],11:[b7,'16n'],12:[0,'8n'],14:[third,'8n']}; break;
+    case 'walking':
+      if(step===0) pat={0:[0,'4n']}; else if(step===4) pat={4:[third,'4n']}; else if(step===8) pat={8:[fifth,'4n']};
+      else if(step===12){ let t=bassRoot(next.parsed.bass); while(t-r>7) t-=12; while(r-t>7) t+=12; pat={12:[t+(Math.random()<.5?-1:1)-r,'4n']}; }
+      break;
+  }
+  if(pat&&pat[step]) E.bassSynth.triggerAttackRelease(mf(r+pat[step][0]),pat[step][1],time,.9);
+}
+function playKeys(step,time,ch,bar){ const v=keysVoicing(ch.parsed);
+  switch(S.arr.keys){
+    case 'pad': if(step===0) E.pad.triggerAttackRelease(v,'1m',time,.55); break;
+    case 'stabs': if([3,6,10,14].includes(step)) E.ep.triggerAttackRelease(v,'16n',time,step===6?.75:.6); break;
+    case 'comp': if(step===0) E.ep.triggerAttackRelease(v,'8n.',time,.6); else if(step===6) E.ep.triggerAttackRelease(v,'8n',time,.5); else if(step===12&&bar%2===1) E.ep.triggerAttackRelease(v,'8n',time,.45); break;
+    case 'bubble': if([2,6,10,14].includes(step)) E.ep.triggerAttackRelease(v,'16n',time,step%8===6?.55:.4); break;
+  } }
+function playGuitar(step,time,ch){ const v=gtrVoicing(ch.parsed);
+  switch(S.arr.guitar){
+    case 'power': if(step%2===0) strum(v.slice(0,3),time,1,.004); break;
+    case 'strum': { const m={0:1,6:-1,8:1,12:1,14:-1}; if(m[step]) strum(v,time,m[step],m[step]>0?.013:.009); break; }
+    case 'scratch': if([2,4,7,10,12,14].includes(step)) strum(v.slice(2),time,step%4===0?1:-1,.005); break;
+    case 'skank': if(step===4||step===12) strum(v.slice(2),time,-1,.006); break;
+    case 'arp': if(step%2===0){ const o=[0,2,3,4,2,3,1,2]; strum([v[o[(step/2)%8]]],time); } break;
+    case 'fourbeat': if(step%4===0) strum(v.slice(0,4),time,1,.008); break;
+  } }
+
+function tick(time){
+  const c=counter++;
+  if(c<0){ const s=c+16; if(s%4===0){ E.click.triggerAttackRelease(s===0?'C6':'G5','32n',time); Tone.Draw.schedule(()=>{ showBeat({count:s/4+1, beat:s/4}); send({t:'beat',count:s/4+1,beat:s/4},false); },time); } return; }
+  const step=c%16, bar=Math.floor(c/16), ch=chordAt(bar), next=chordAt(bar+1);
+  if($('#clickAll').checked && step%4===0) E.click.triggerAttackRelease(step===0?'C6':'G5','32n',time);
+  playDrums(step,time); playBass(step,time,ch,next); playKeys(step,time,ch,bar); if(S.arr.guitar!=='off') playGuitar(step,time,ch);
+  if(step%4===0){ const idx=S.arr.barMap[bar%S.arr.barMap.length]; Tone.Draw.schedule(()=>{ const m={chord:idx,beat:step/4}; showBeat(m); send({t:'beat',...m},false); },time); }
+}
+function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.mute=s.human; }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
+async function startBand(){
+  await Tone.start();
+  Tone.Transport.stop(); Tone.Transport.cancel(); Tone.Transport.position=0;
+  Tone.Transport.bpm.value=S.arr.bpm; Tone.Transport.swing=S.arr.swing?.3:0; Tone.Transport.swingSubdivision='8n';
+  counter=$('#countIn').checked?-16:0;
+  Tone.Transport.scheduleRepeat(tick,'16n',0); Tone.Transport.start('+0.08');
+  S.playing=true; broadcastState(); render(); requestAnimationFrame(meterLoop);
+}
+function stopBand(){
+  Tone.Transport.stop(); Tone.Transport.cancel(); E.pad.releaseAll(); E.ep.releaseAll();
+  S.playing=false; broadcastState(); render(); showBeat({}); send({t:'beat'},false);
+}
+function meterLoop(){
+  if(!S.playing||!E) return;
+  S.seats.forEach(s=>{ const el=document.querySelector(`[data-meter="${s.id}"]`); if(!el) return; const db=E[s.id].meter.getValue(); el.style.width=(Number.isFinite(db)?clamp((db+54)/54,0,1)*100:0).toFixed(1)+'%'; });
+  requestAnimationFrame(meterLoop);
+}
+
+/* ================= Networking (two people, browser to browser) ================= */
+// A public PeerJS broker only introduces the two browsers. Everything else is
+// direct: control messages on a reliable channel, audio on an unordered,
+// never-retransmitted channel carrying the hub packet format.
+const FRAMES = 128, RATE = 48000, blockMs = FRAMES / RATE * 1000;
+let peer = null, conn = null, audioDc = null, ctx = null, io = null, bandOut = null, micGain = null, media = null, friend = null, seq = 0;
+const st = { sent: 0, recv: 0, lost: 0, lastSeq: null, under: 0, rtt: null };
+window.jamStats = st;
+const pkt = new Uint8Array(packetBytes(FRAMES, 3));
+
+function send(msg){ if(conn && conn.open) conn.send(msg); }
+function broadcastState(){ if(!isHost) return; send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, hostId:S.hostId, hostName:S.hostName }); }
+function onData(m){
+  if(!m) return;
+  if(m.ping!==undefined){ send({ pong:m.ping }); return; }
+  if(m.pong!==undefined){ st.rtt=performance.now()-m.pong; return; }
+  if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); if(isHost) broadcastState(); render(); return; }
+  if(m.t==='state' && !isHost){ Object.assign(S,{ arr:m.arr, playing:m.playing, seats:m.seats, hostId:m.hostId, hostName:m.hostName }); render(); }
+  else if(m.t==='beat' && !isHost){ showBeat(m); }
+  else if(m.t==='seat' && isHost){ setSeat(m.id, m.human, m.who); }
+}
+function setSeat(id, human, who){
+  const s=S.seats.find(x=>x.id===id); if(!s) return;
+  s.human=!!human; s.who=String(who||'').slice(0,40);
+  applyMutes(); broadcastState(); render();
+}
+function toggleSeat(id){
+  const s=S.seats.find(x=>x.id===id); if(!s) return;
+  const human=!s.human, who=human?myName:'';
+  if(isHost) setSeat(id,human,who);
+  else if(S.hostId) send({t:'seat',id,human,who});
+}
+
+
+// Audio thread: input 0 is your instrument/mic (mono), input 1 the band (stereo,
+// host only). Each 128-frame block goes out as one packet: [mic] or [mic, bandL, bandR].
+// Received packets are mixed to stereo and played from a small queue.
+const worklet = `
+class JamIO extends AudioWorkletProcessor {
+  constructor(){ super(); this.q=[]; this.max=4; this.under=0; this.started=false; this.band=false;
+    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.started=true; this.q.push(d.planes); while(this.q.length>this.max) this.q.shift(); } else if(d.max) this.max=d.max; else if(d.band!==undefined) this.band=d.band; }; }
+  process(inputs, outputs){
+    const mic=inputs[0][0], band=inputs[1];
+    const planes=[mic?mic.slice(0):new Float32Array(128)];
+    if(this.band&&band&&band.length){ planes.push(band[0].slice(0), (band[1]||band[0]).slice(0)); }
+    this.port.postMessage(planes);
+    const out=outputs[0], blk=this.q.shift();
+    if(blk){ const m=blk[0], l=blk[1], r=blk[2]||blk[1];
+      for(let i=0;i<128;i++){ out[0][i]=m[i]+(l?l[i]:0); if(out[1]) out[1][i]=m[i]+(r?r[i]:0); } }
+    else { out.forEach(c=>c.fill(0)); if(this.started) this.under++; }
+    if(currentFrame % 4800 < 128) this.port.postMessage({ under:this.under });
+    return true;
+  }
+}
+registerProcessor('jam-io', JamIO);`;
+
+async function startAudio(stream){
+  // One 48 kHz audio context shared with Tone.js. It must be Tone's own kind of
+  // context (Tone breaks on a plain AudioContext), and our worklet module is added
+  // on the context directly because Tone's helper only loads one module.
+  const old = Tone.getContext().rawContext;
+  ctx = new (old.constructor)({ latencyHint:'interactive', sampleRate:RATE });
+  Tone.setContext(ctx); // the original context stays suspended (closing it breaks Tone.start)
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type:'text/javascript' })));
+  io = Tone.getContext().createAudioWorkletNode('jam-io', { numberOfInputs:2, numberOfOutputs:1, outputChannelCount:[2] });
+  io.connect(ctx.destination);
+  io.port.postMessage({ max:+$('#buffer').value });
+  micGain = ctx.createGain(); micGain.connect(io, 0, 0);
+  bandOut = ctx.createGain(); bandOut.connect(io, 0, 1);
+  if(stream.getAudioTracks().length) ctx.createMediaStreamSource(new MediaStream(stream.getAudioTracks())).connect(micGain);
+  io.port.onmessage = e => {
+    const d = e.data;
+    if(d.under !== undefined){ st.under = d.under; return; }
+    if(!audioDc || audioDc.readyState !== 'open') return;
+    const n = encodePacket(pkt, { seq:seq++, timeUs:(performance.timeOrigin+performance.now())*1000, sampleRate:RATE, frames:FRAMES, wantChannels:3, planes:d });
+    audioDc.send(pkt.subarray(0, n)); st.sent++;
+  };
+  await ctx.resume();
+}
+
+function wireConn(c){
+  conn = c;
+  c.on('open', () => {
+    audioDc = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
+    audioDc.binaryType = 'arraybuffer';
+    audioDc.onmessage = e => {
+      const p = decodePacket(new Uint8Array(e.data)); if(!p) return;
+      if(st.lastSeq !== null){ const d = seqDelta(st.lastSeq, p.seq); if(d <= 0) return; if(d > 1) st.lost += d - 1; }
+      st.lastSeq = p.seq; st.recv++; st.chans = p.planes.length;
+      if(p.planes[1]){ let pk = 0; for(const v of p.planes[1]) pk = Math.max(pk, Math.abs(v)); st.bandPeak = Math.max(pk, (st.bandPeak || 0) * 0.99); }
+      io.port.postMessage({ planes:p.planes });
+    };
+    send({ t:'hello', id:myId, name:myName });
+    setInterval(() => send({ ping:performance.now() }), 1000);
+  });
+  c.on('data', onData);
+  c.on('close', () => {
+    if(friend){ tiles.get(friend.identity)?.remove(); tiles.delete(friend.identity); }
+    if(friend && S.hostId === friend.identity){ S.hostId = null; S.hostName = ''; S.playing = false; S.seats.forEach(s => { s.human = false; s.who = ''; }); }
+    friend = null; conn = null; audioDc = null; render();
+    $('#connStats').textContent = 'Your friend left. Send the invite link again to reconnect.';
+  });
+}
+function showVideoIn(t, stream){ const v = document.createElement('video'); v.autoplay = v.playsInline = v.muted = true; v.srcObject = stream; t.querySelector('.vid').replaceChildren(v); t.querySelector('.initial').hidden = true; }
+
+async function join(){
+  const name=$('#nameInput').value.trim();
+  if(!name){ $('#joinErr').textContent='Add your name so the band knows who you are.'; return; }
+  myName=name; $('#joinBtn').disabled=true; $('#joinErr').textContent='';
+  try{
+    try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
+    catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
+    await startAudio(media);
+    const videoOnly = new MediaStream(media.getVideoTracks());
+    // ?broker=host:port uses a self-hosted PeerJS broker (for testing); default is the public one.
+    const broker = params.get('broker'), [bh, bp] = (broker || '').split(':');
+    peer = new Peer(Object.assign({ config:{ iceServers:[{ urls:'stun:stun.l.google.com:19302' }] } }, broker ? { host:bh, port:+bp, path:'/', secure:false } : {}));
+    await new Promise((res, rej) => { peer.on('open', id => { myId = id; res(); }); peer.on('error', rej); });
+    peer.on('error', e => { $('#connStats').textContent = 'Connection problem: ' + (e.type || e.message); });
+    peer.on('connection', c => { if(conn) { c.close(); return; } wireConn(c); });
+    peer.on('call', call => { call.answer(videoOnly); call.on('stream', s => { if(friend) showVideoIn(tileFor(friend), s); else setTimeout(() => friend && showVideoIn(tileFor(friend), s), 1500); }); });
+    $('#joinView').hidden=true; $('#roomView').hidden=false; $('#roomTitle').textContent='SoundStudio jam';
+    const me = { identity:myId, name:myName };
+    const t = tileFor(me); if(media.getVideoTracks().length) showVideoIn(t, videoOnly);
+    if(joinId){
+      wireConn(peer.connect(joinId, { serialization:'json' }));
+      const call = peer.call(joinId, videoOnly);
+      call.on('stream', s => { const show = () => friend ? showVideoIn(tileFor(friend), s) : setTimeout(show, 300); show(); });
+    } else {
+      inviteLink = location.origin + location.pathname + '?join=' + myId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
+      $('#connStats').textContent = 'Send the invite link to a friend to start.';
+    }
+    render();
+    setInterval(() => {
+      if(!conn) return;
+      const net = st.rtt === null ? '–' : Math.round(st.rtt / 2) + ' ms';
+      const out = Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000);
+      const loss = st.recv ? (100 * st.lost / (st.recv + st.lost)).toFixed(1) : '0.0';
+      $('#connStats').innerHTML = `<span>Network ≈ ${net}</span><span>Buffer ${Math.round($('#buffer').value * blockMs)} ms</span><span>Your output ${out} ms</span><span>Lost ${loss}%</span><span>Dropouts ${st.under}</span>`;
+    }, 250);
+  }catch(e){
+    $('#joinErr').textContent='Couldn’t start: '+(e.message||e.type||e)+'. Allow camera and microphone, then try again.'; $('#joinBtn').disabled=false;
+  }
+}
+
+async function claimBand(){
+  if(S.hostId && S.hostId!==myId){ $('#claimStatus').textContent=S.hostName+' is already running the band.'; return; }
+  await Tone.start();
+  if(!E) E=buildEngine();
+  isHost=true; S.hostId=myId; S.hostName=myName;
+  io.port.postMessage({ band:true });
+  if(!S.arr) S.arr=finalize(localArrangement('Slow funk in E minor, 96 bpm'),'local');
+  applyMutes(); broadcastState(); render();
+}
+
+async function generate(){
+  const prompt=$('#prompt').value.trim();
+  if(!prompt){ $('#genStatus').textContent='Describe the jam first, for example “slow funk in E minor”.'; return; }
+  $('#genBtn').disabled=true; $('#genStatus').textContent='Writing the arrangement…';
+  let arr=null, note='';
+  try{
+    const r=await fetch('/api/arrange',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({prompt})});
+    if(r.ok) arr=finalize(await r.json(),'claude');
+  }catch(e){}
+  if(!arr){ arr=finalize(localArrangement(prompt),'local'); note='Arranged with the built-in interpreter.'; }
+  S.arr=arr;
+  if(S.playing){ Tone.Transport.bpm.value=arr.bpm; Tone.Transport.swing=arr.swing?.3:0; }
+  applyMutes(); broadcastState(); render();
+  $('#genStatus').textContent=note||(S.playing?'New arrangement is playing.':'Ready. Press play.');
+  $('#genBtn').disabled=false;
+}
+
+/* ================= Rendering ================= */
+const tiles=new Map();
+function tileFor(p){
+  let t=tiles.get(p.identity);
+  if(!t){
+    t=document.createElement('div'); t.className='tile'+(p.identity===myId?' me':'');
+    t.innerHTML='<div class="vid"></div><div class="initial"></div><span class="tname"></span><span class="badge" hidden>Running the band</span>';
+    $('#grid').appendChild(t); tiles.set(p.identity,t);
+  }
+  const n=p.name||p.identity;
+  t.querySelector('.initial').textContent=n.slice(0,1).toUpperCase();
+  t.querySelector('.tname').textContent=n+(p.identity===myId?' (you)':'');
+  t.querySelector('.badge').hidden=p.identity!==S.hostId;
+  return t;
+}
+function showBeat(m){
+  document.querySelectorAll('#beats span').forEach((el,i)=>el.classList.toggle('on',i===m.beat));
+  $('#countNum').textContent=m.count?String(m.count):'';
+  const idx=m.chord;
+  document.querySelectorAll('#chords li').forEach((el,i)=>el.classList.toggle('now',i===idx));
+  $('#nowChord').textContent=(idx!==undefined&&S.arr&&S.arr.chords[idx])?S.arr.chords[idx].name:'';
+}
+function partDesc(id){
+  if(!S.arr) return null;
+  if(id==='drums') return STYLES[S.arr.style].label+' groove';
+  const t=S.arr[id]; return t==='off'?null:DESC[t];
+}
+function render(){
+  const a=S.arr;
+  tiles.forEach((t,id)=>t.querySelector('.badge').hidden=id!==S.hostId);
+  const hostHere = isHost;
+  $('#claimBox').hidden = hostHere;
+  $('#hostControls').hidden = !hostHere;
+  $('#transport').hidden = !hostHere || !a;
+  $('#claimBtn').disabled = !!S.hostId && !hostHere;
+  $('#claimStatus').textContent = S.hostId && !hostHere ? S.hostName+' is running the band.' : '';
+  $('#bandTileTitle').textContent = S.hostId ? (a ? a.title+(S.playing?'':' (stopped)') : S.hostName+' is setting up the band') : 'The band is waiting for someone to run it';
+  $('#arrTitle').textContent = a ? a.title : 'No band yet';
+  $('#arrNotes').textContent = a ? a.notes : ''; $('#arrNotes').hidden=!(a&&a.notes);
+  const facts=$('#facts'); facts.innerHTML='';
+  if(a) [STYLES[a.style].label, a.key, a.bpm+' bpm', a.swing?'Swung':'Straight'].forEach(x=>{ const s=document.createElement('span'); s.textContent=x; facts.appendChild(s); });
+  const ol=$('#chords'); ol.innerHTML='';
+  if(a) a.chords.forEach(c=>{ const li=document.createElement('li'); li.textContent=c.name+(c.bars>1?' ×'+c.bars:''); ol.appendChild(li); });
+  if(a && hostHere) $('#bpm').value=a.bpm;
+  $('#playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
+  $('#playBtn').setAttribute('aria-label', S.playing?'Stop':'Play');
+  const box=$('#strips'); box.innerHTML='';
+  S.seats.forEach(s=>{
+    const d=partDesc(s.id), off=d===null&&!s.human&&!!a;
+    const el=document.createElement('div'); el.className='strip'+(s.human?' human':'')+(off?' off':'');
+    const head=document.createElement('div');
+    const nm=document.createElement('span'); nm.className='strip-name'; nm.textContent=s.label;
+    const st=document.createElement('span'); st.className='strip-status';
+    st.textContent = s.human ? 'Played by '+(s.who||'a human') : !a ? 'Waiting for the band' : off ? 'Sitting out in this style' : 'AI playing '+d;
+    head.append(nm, st);
+    const btn=document.createElement('button'); btn.className='seat';
+    const mine = s.human && s.who===myName;
+    btn.textContent = s.human ? (mine||isHost ? 'Hand back to AI' : 'Taken') : "I'll play this";
+    btn.disabled = !S.hostId || (s.human && !mine && !isHost);
+    btn.onclick=()=>toggleSeat(s.id);
+    el.append(head, btn);
+    if(isHost){
+      const v=document.createElement('label'); v.className='vol'; v.textContent='Level';
+      const r=document.createElement('input'); r.type='range'; r.min=-30; r.max=6; r.value=Math.round(E?E[s.id].ch.volume.value:0)||0;
+      r.setAttribute('aria-label',s.label+' level');
+      r.oninput=()=>{ E[s.id].ch.volume.value = +r.value<=-30 ? -Infinity : +r.value; };
+      v.appendChild(r); el.appendChild(v);
+      const m=document.createElement('div'); m.className='meter'; m.innerHTML=`<i data-meter="${s.id}"></i>`; el.appendChild(m);
+    }
+    box.appendChild(el);
+  });
+}
+
+/* ================= Wiring ================= */
+const params=new URLSearchParams(location.search);
+const joinId=params.get('join');
+let inviteLink=null;
+if(joinId) $('#roomLine').textContent='Your friend invited you. Add your name and join.';
+try{ $('#nameInput').value=localStorage.getItem('ss.name')||''; }catch(e){}
+$('#nameInput').addEventListener('input',()=>{ try{ localStorage.setItem('ss.name',$('#nameInput').value); }catch(e){} });
+$('#nameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') join(); });
+$('#joinBtn').onclick=join;
+$('#claimBtn').onclick=claimBand;
+$('#genBtn').onclick=generate;
+$('#playBtn').onclick=()=>S.playing?stopBand():startBand();
+$('#bpm').addEventListener('change',()=>{ const v=clamp(Math.round(+$('#bpm').value||S.arr.bpm),50,200); S.arr.bpm=v; Tone.Transport.bpm.value=v; broadcastState(); render(); });
+const showBuffer=()=>{ $('#bufferMs').textContent='≈ '+Math.round($('#buffer').value*blockMs)+' ms'; };
+$('#buffer').oninput=()=>{ showBuffer(); io&&io.port.postMessage({ max:+$('#buffer').value }); }; showBuffer();
+$('#inviteBtn').onclick=async()=>{ const link=inviteLink||(joinId?location.href:location.href); try{ await navigator.clipboard.writeText(link); $('#inviteBtn').textContent='Link copied'; setTimeout(()=>$('#inviteBtn').textContent='Copy invite link',1800); }catch(e){ prompt('Copy this invite link',link); } };
+window.getInvite=()=>inviteLink;
+$('#leaveBtn').onclick=()=>{ try{ conn&&conn.close(); peer&&peer.destroy(); }catch(e){} location.href=location.pathname; };
+$('#micBtn').onclick=()=>{ if(!micGain) return; const on=micGain.gain.value===0; micGain.gain.value=on?1:0; $('#micBtn').textContent=on?'Mic on':'Mic off'; $('#micBtn').setAttribute('aria-pressed',String(on)); };
+$('#camBtn').onclick=()=>{ const v=media&&media.getVideoTracks()[0]; if(!v) return; v.enabled=!v.enabled; $('#camBtn').textContent=v.enabled?'Camera on':'Camera off'; $('#camBtn').setAttribute('aria-pressed',String(v.enabled)); };
+['Slow funk in E minor, 96 bpm','12-bar blues shuffle in A','Lo-fi hip hop for a rainy night','Reggae one drop in G','Up-tempo jazz ii-V-I in Bb','Driving indie rock in D'].forEach(t=>{
+  const b=document.createElement('button'); b.className='chip'; b.textContent=t; b.onclick=()=>{ $('#prompt').value=t; generate(); }; $('#examples').appendChild(b);
+});
+</script>
+</body>
+</html>
