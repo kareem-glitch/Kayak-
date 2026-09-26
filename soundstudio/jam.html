@@ -7,6 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+// Remember every AudioContext the page creates, including the one inside Tone.js,
+// so the output device picker can switch all of them (AudioContext.setSinkId).
+window.__audioContexts = [];
+(() => { const Orig = window.AudioContext; if (!Orig) return;
+  window.AudioContext = class extends Orig { constructor(...a) { super(...a); window.__audioContexts.push(this); } }; })();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
 <style>
 :root{
@@ -104,6 +111,8 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .conn{margin-top:10px}
 .conn .slider{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:6px}
 .conn .slider input{accent-color:var(--amber)}
+.devsel{width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font:inherit;font-size:.9rem;margin:4px 0 8px}
+.conn label{display:block}
 .conn .stats{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.82rem;margin-top:8px;font-variant-numeric:tabular-nums}
 </style>
 </head>
@@ -170,6 +179,17 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
             <label>BPM <input type="number" id="bpm" min="50" max="200"></label>
           </div>
         </div>
+      </section>
+
+      <section class="conn">
+        <h2>Audio devices</h2>
+        <label class="muted small" for="inDev">Input (mic or audio interface)</label>
+        <select id="inDev" class="devsel"></select>
+        <label class="muted small" for="inCh">Input channel</label>
+        <select id="inCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2</option></select>
+        <label class="muted small" for="outDev">Output (headphones or interface)</label>
+        <select id="outDev" class="devsel"></select>
+        <p class="muted small" id="outNote" hidden>This browser uses your computer’s sound output. To choose here, use Chrome or Edge.</p>
       </section>
 
       <section class="conn">
@@ -340,7 +360,8 @@ function tick(time){
 }
 const dbOrOff = v => v <= -30 ? -Infinity : v;
 function applyBandVolume(){ const v=+$('#bandVol').value; $('#bandVolDb').textContent = v<=-40 ? '(off)' : '('+(v>0?'+':'')+v+' dB)'; if(E) E.master.volume.value = v<=-40 ? -Infinity : -3+v; }
-function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.mute=s.human; E[s.id].ch.volume.value=dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
+// A taken seat is silenced through its volume (setting volume after Channel.mute would undo the mute).
+function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.volume.value = s.human ? -Infinity : dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
 // Start this device's band at wall-clock time atLocal (ms), aiming for the
 // sound to leave the speakers then: we start early by the output latency.
 async function playAt(atLocal, countIn){
@@ -380,6 +401,44 @@ function meterLoop(){
 // never-retransmitted channel carrying the hub packet format.
 const FRAMES = 128, RATE = 48000, blockMs = FRAMES / RATE * 1000;
 let pendingVideo = null, connTimer = null;
+// ---- Audio devices ----
+const MIC_OPTS = { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:{ ideal:2 } };
+let micStream = null, micNodes = [];
+function connectMic(stream){
+  micNodes.forEach(n => { try{ n.disconnect(); }catch(e){} }); micNodes = [];
+  micStream = stream;
+  const src = ctx.createMediaStreamSource(stream), ch = $('#inCh').value;
+  const chans = (stream.getAudioTracks()[0].getSettings().channelCount) || src.channelCount || 1;
+  if(ch === 'mix' || chans < 2){ src.connect(micGain); micNodes = [src]; }
+  else { const split = ctx.createChannelSplitter(2); src.connect(split); split.connect(micGain, ch === '2' ? 1 : 0); micNodes = [src, split]; }
+  $('#inCh').disabled = chans < 2;
+}
+async function useInput(deviceId){
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:Object.assign({}, MIC_OPTS, deviceId ? { deviceId:{ exact:deviceId } } : {}) });
+  const old = micStream; connectMic(stream);
+  if(old && old !== stream) old.getAudioTracks().forEach(t => t.stop());
+  try{ localStorage.setItem('ss.inDev', deviceId || ''); }catch(e){}
+}
+async function useOutput(deviceId){
+  const all = [...new Set([ctx, ...window.__audioContexts].filter(Boolean))];
+  await Promise.all(all.map(c => c.setSinkId ? c.setSinkId(deviceId || '').catch(() => {}) : null));
+  try{ localStorage.setItem('ss.outDev', deviceId || ''); }catch(e){}
+}
+async function fillDevices(){
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  const fill = (sel, kind, saved) => {
+    const list = devs.filter(d => d.kind === kind && d.deviceId !== 'communications');
+    const cur = sel.value || saved;
+    sel.replaceChildren(...list.map((d, i) => { const o = document.createElement('option'); o.value = d.deviceId === 'default' ? '' : d.deviceId; o.textContent = d.label || (kind === 'audioinput' ? 'Input ' : 'Output ') + (i + 1); return o; }));
+    if([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  };
+  let savedIn = '', savedOut = ''; try{ savedIn = localStorage.getItem('ss.inDev') || ''; savedOut = localStorage.getItem('ss.outDev') || ''; }catch(e){}
+  const liveIn = micStream && micStream.getAudioTracks()[0] && micStream.getAudioTracks()[0].getSettings().deviceId;
+  fill($('#inDev'), 'audioinput', liveIn || savedIn);
+  const canOut = 'setSinkId' in AudioContext.prototype;
+  $('#outDev').hidden = !canOut; $('#outNote').hidden = canOut;
+  if(canOut) fill($('#outDev'), 'audiooutput', savedOut);
+}
 // Shared clock: estimate (their clock - my clock) from the fastest ping round trip.
 const clk = () => performance.timeOrigin + performance.now();
 const syncSamples = [];
@@ -451,9 +510,9 @@ async function startAudio(stream){
   io = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs:2, numberOfOutputs:1, outputChannelCount:[2] });
   io.connect(ctx.destination);
   io.port.postMessage({ max:+$('#buffer').value });
-  micGain = ctx.createGain(); micGain.connect(io, 0, 0);
+  micGain = ctx.createGain(); micGain.channelCount = 1; micGain.channelCountMode = 'explicit'; micGain.connect(io, 0, 0);
   bandOut = ctx.createGain(); bandOut.connect(io, 0, 1);
-  if(stream.getAudioTracks().length) ctx.createMediaStreamSource(new MediaStream(stream.getAudioTracks())).connect(micGain);
+  if(stream.getAudioTracks().length) connectMic(new MediaStream(stream.getAudioTracks()));
   io.port.onmessage = e => {
     const d = e.data;
     if(d.under !== undefined){ st.under = d.under; return; }
@@ -506,8 +565,10 @@ async function join(){
   myName=name; $('#joinBtn').disabled=true; $('#joinErr').textContent='';
   Tone.start();
   try{
-    try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
-    catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
+    let savedIn = ''; try{ savedIn = localStorage.getItem('ss.inDev') || ''; }catch(e){}
+    const audioReq = Object.assign({}, MIC_OPTS, savedIn ? { deviceId:{ ideal:savedIn } } : {});
+    try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
+    catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
     let audioProblem = null;
     try { await startAudio(media); } catch(e) { audioProblem = e; console.error('audio setup failed', e); }
     const videoOnly = new MediaStream(media.getVideoTracks());
@@ -541,6 +602,11 @@ async function join(){
       try { sessionStorage.setItem('ss.hostId', myId); } catch(e) {}
       $('#connStats').textContent = 'Send this invite link to your friend:';
       $('#bigInvite').hidden = false;
+    }
+    if(!audioProblem){
+      await fillDevices().catch(() => {});
+      try{ const o = localStorage.getItem('ss.outDev'); if(o) await useOutput(o); }catch(e){}
+      navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
     render();
     if(audioProblem) status('Audio couldn’t start on this device (' + (audioProblem.name || audioProblem) + '). Video still works.');
@@ -679,6 +745,9 @@ $('#buffer').oninput=()=>{ showBuffer(); io&&io.port.postMessage({ max:+$('#buff
 $('#inviteBtn').onclick=async()=>{ const link=inviteLink||(joinId?location.href:location.href); try{ await navigator.clipboard.writeText(link); $('#inviteBtn').textContent='Link copied'; setTimeout(()=>$('#inviteBtn').textContent='Copy invite link',1800); }catch(e){ prompt('Copy this invite link',link); } };
 window.getInvite=()=>inviteLink;
 window.jamEngine=()=>E;   // for automated tests
+$('#inDev').onchange=()=>useInput($('#inDev').value).then(fillDevices).catch(e=>status('Couldn’t switch input: '+(e.name||e)));
+$('#inCh').onchange=()=>{ if(micStream) connectMic(micStream); };
+$('#outDev').onchange=()=>useOutput($('#outDev').value);
 try{ const v=localStorage.getItem('ss.bandVol'); if(v!==null) $('#bandVol').value=v; }catch(e){}
 $('#bandVol').oninput=()=>{ applyBandVolume(); try{ localStorage.setItem('ss.bandVol',$('#bandVol').value); }catch(e){} };
 applyBandVolume();
