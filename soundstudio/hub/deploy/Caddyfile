@@ -1,0 +1,5 @@
+# SS_HOST is the server's free hostname, e.g. 203-0-113-7.sslip.io
+{$SS_HOST} {
+	# Video signalling for LiveKit (wss://SS_HOST)
+	reverse_proxy 127.0.0.1:7880
+}

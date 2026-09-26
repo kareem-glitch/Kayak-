@@ -1,0 +1,9 @@
+# Self-hosted LiveKit, video only. API key/secret come from LIVEKIT_KEYS in .env
+# ("key: secret"), which must match LIVEKIT_API_KEY/SECRET on Vercel.
+port: 7880
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: false
+logging:
+  level: info

@@ -7,3 +7,4 @@ hub/secrets/
 *.pem
 *.key
 __pycache__/
+.vercel

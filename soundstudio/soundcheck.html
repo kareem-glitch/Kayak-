@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SoundStudio soundcheck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.js"></script>
+<style>
+:root{
+  --bg:#121c1f; --surface:#182529; --raised:#1f2f34; --ink:#e6eee8; --muted:#9aaba7; --line:#2f4247;
+  --amber:#f0a238; --amber-ink:#1b1206; --ai:#b3a7ec; --ai-soft:#262340; --human:#7cbedc; --human-soft:#15323f; --bad:#e0806a;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#e6ebe3; --surface:#f4f6f1; --raised:#ffffff; --ink:#1c2526; --muted:#566361; --line:#c7d0c5;
+    --amber:#b86a10; --amber-ink:#ffffff; --ai:#5b4b9c; --ai-soft:#e6e2f4; --human:#1b5d7e; --human-soft:#d5e7ef; --bad:#b0452c;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-0.015em}
+h1{font-size:1.05rem;font-weight:800;color:var(--muted)}
+h2{font-size:2rem;font-weight:800;line-height:1.1;margin:2px 0 6px}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+[hidden]{display:none !important}
+.card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px}
+.muted{color:var(--muted)} .small{font-size:.9rem}
+label{display:block;margin:16px 0 6px;color:var(--muted);font-size:.9rem}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--raised)}
+.btn{width:100%;margin-top:20px;border:0;border-radius:12px;padding:13px 16px;font-weight:600;cursor:pointer;background:var(--amber);color:var(--amber-ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn-quiet{background:transparent;border:1px solid var(--line);color:var(--ink);margin-top:10px}
+.note{margin-top:14px;padding:10px 12px;border-radius:12px;background:var(--human-soft);color:var(--ink);font-size:.9rem}
+.err{color:var(--bad);margin-top:12px;font-size:.9rem;min-height:1.2em}
+.status{display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.dot.live{background:#4cc38a;box-shadow:0 0 0 4px color-mix(in srgb,#4cc38a 25%,transparent)}
+.meters{display:grid;gap:14px;margin-top:20px}
+.meter-row{display:grid;grid-template-columns:5.5rem 1fr;align-items:center;gap:12px}
+.meter-row span{font:800 1rem/1 "Bricolage Grotesque",sans-serif}
+.meter{height:12px;border-radius:6px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.meter i{display:block;height:100%;width:0;border-radius:6px;transition:width .06s linear}
+#meterYou i{background:var(--human)} #meterRoom i{background:var(--ai)}
+.slider{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.slider input{padding:0;accent-color:var(--amber);border:0;background:none}
+.card.wide{max-width:980px}
+.actions{display:flex;gap:10px;margin-top:10px}.actions .btn{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:16px}
+.tile{position:relative;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:var(--raised);border:1px solid var(--line)}
+.tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile .initial{position:absolute;inset:0;display:grid;place-items:center;font:800 2.4rem/1 "Bricolage Grotesque",sans-serif;color:var(--muted)}
+.tile .tname{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;padding:4px 10px;border-radius:999px;font-size:.85rem}
+.tile.me video{transform:scaleX(-1)}
+.stats{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:16px;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<main class="card">
+  <h1>SoundStudio</h1>
+  <h2>Soundcheck</h2>
+  <p class="muted" id="roomLine"></p>
+
+  <div id="setup">
+    <label for="displayName">Your name</label>
+    <input id="displayName" maxlength="40" autocomplete="nickname" placeholder="What should the band call you?">
+    <label for="hub" id="hubLabel">Audio server address</label>
+    <input id="hub" placeholder="e.g. 203.0.113.7" autocomplete="off" spellcheck="false">
+    <label for="input">What to send</label>
+    <select id="input"><option value="mic">Microphone or audio interface</option><option value="tone">Test tone (no mic needed)</option></select>
+    <p class="note">Wear wired headphones. Speakers or Bluetooth will feed back or lag.</p>
+    <button class="btn" id="go">Connect</button>
+    <p class="err" id="err" role="alert"></p>
+  </div>
+
+  <div id="live" hidden>
+    <p class="status"><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></p>
+    <div class="grid" id="grid"></div>
+    <div class="meters">
+      <div class="meter-row"><span>You</span><div class="meter" id="meterYou"><i></i></div></div>
+      <div class="meter-row"><span>The room</span><div class="meter" id="meterRoom"><i></i></div></div>
+    </div>
+    <label for="buffer">Buffer (lower is tighter, higher is smoother)</label>
+    <div class="slider"><input type="range" id="buffer" min="2" max="16" step="1" value="4"><span id="bufferMs" class="small"></span></div>
+    <div class="stats" id="stats"></div>
+    <div class="actions"><button class="btn btn-quiet" id="invite">Copy invite link</button><button class="btn btn-quiet" id="leave">Leave</button></div>
+  </div>
+</main>
+
+<script type="module">
+import { encodePacket, decodePacket, packetBytes, seqDelta } from './audio/hub-protocol.js';
+
+const $ = id => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const FRAMES = 128, RATE = 48000, SEND_CH = 1, RECV_CH = 2, PORT = 4464;
+const blockMs = FRAMES / RATE * 1000;
+
+let room = (q.get('room') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+if (!room) { room = 'jam-' + Math.random().toString(36).slice(2, 7); q.set('room', room); history.replaceState(null, '', '?' + q); }
+$('roomLine').textContent = 'Room: ' + room;
+try { $('hub').value = q.get('hub') || localStorage.getItem('ss.hub') || ''; } catch { $('hub').value = q.get('hub') || ''; }
+
+// "203.0.113.7" -> "203-0-113-7.sslip.io", the free hostname the server's certificate is issued for.
+const hubHost = v => { v = v.trim().replace(/^https?:\/\//, '').replace(/[:/].*$/, ''); return /^\d+\.\d+\.\d+\.\d+$/.test(v) ? v.replace(/\./g, '-') + '.sslip.io' : v; };
+
+// Audio thread: forwards each 128-frame input block to the page and plays
+// received blocks from a small queue (silence when empty, drop oldest when full).
+const worklet = `
+class HubIO extends AudioWorkletProcessor {
+  constructor(){ super(); this.q=[]; this.max=4; this.under=0; this.peak=0;
+    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.q.push(d.planes); while(this.q.length>this.max) this.q.shift(); } else if(d.max) this.max=d.max; }; }
+  process(inputs, outputs){
+    const inp=inputs[0];
+    if(inp&&inp[0]){ const b=inp[0]; for(let i=0;i<b.length;i++){ const a=Math.abs(b[i]); if(a>this.peak) this.peak=a; } this.port.postMessage(b.slice(0)); }
+    const out=outputs[0], blk=this.q.shift();
+    for(let c=0;c<out.length;c++){ const src=blk&&(blk[c]||blk[0]); if(src) out[c].set(src); else out[c].fill(0); }
+    if(!blk) this.under++;
+    if(currentFrame % 4800 < 128){ this.port.postMessage({queue:this.q.length, under:this.under, peak:this.peak}); this.peak=0; }
+    return true;
+  }
+}
+registerProcessor('hub-io', HubIO);`;
+
+let ctx, node, ws, pc, dc, stream, timer, lk;
+try { $('displayName').value = localStorage.getItem('ss.name') || ''; } catch {}
+
+// Video only: cameras go through the self-hosted LiveKit server on the same
+// machine; no microphone is ever published there. All sound uses the hub.
+const tiles = new Map();
+function tileFor(p, me) {
+  let t = tiles.get(p.identity);
+  if (!t) {
+    t = document.createElement('div'); t.className = 'tile' + (me ? ' me' : '');
+    t.innerHTML = '<div class="initial"></div><span class="tname"></span>';
+    $('grid').appendChild(t); tiles.set(p.identity, t);
+  }
+  const n = p.name || p.identity;
+  t.querySelector('.initial').textContent = n.slice(0, 1).toUpperCase();
+  t.querySelector('.tname').textContent = n + (me ? ' (you)' : '');
+  return t;
+}
+function showVideo(t, track) { t.querySelector('video')?.remove(); const v = track.attach(); v.muted = true; v.playsInline = true; t.prepend(v); t.querySelector('.initial').hidden = true; }
+async function startVideo(host, displayName) {
+  const { Room, RoomEvent, Track } = LivekitClient;
+  const r = await fetch(`/api/token?room=${encodeURIComponent(room)}&name=${encodeURIComponent(displayName)}`);
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || 'no video pass');
+  lk = new Room({ adaptiveStream: true, dynacast: true });
+  lk.on(RoomEvent.TrackSubscribed, (track, pub, p) => { if (track.kind === 'video') showVideo(tileFor(p), track); });
+  lk.on(RoomEvent.TrackUnsubscribed, (track, pub, p) => { track.detach().forEach(el => el.remove()); const t = tiles.get(p.identity); if (t) t.querySelector('.initial').hidden = false; });
+  lk.on(RoomEvent.ParticipantConnected, p => tileFor(p));
+  lk.on(RoomEvent.ParticipantDisconnected, p => { tiles.get(p.identity)?.remove(); tiles.delete(p.identity); });
+  await lk.connect(j.url || `wss://${host}`, j.token);
+  tileFor(lk.localParticipant, true);
+  lk.remoteParticipants.forEach(p => tileFor(p));
+  try {
+    await lk.localParticipant.setCameraEnabled(true);
+    const cam = lk.localParticipant.getTrackPublication(Track.Source.Camera);
+    if (cam && cam.track) showVideo(tileFor(lk.localParticipant, true), cam.track);
+  } catch { /* no camera: keep the initial tile */ }
+}
+const st = { sent: 0, recv: 0, lost: 0, lastSeq: null, queue: 0, under: 0, youPeak: 0, roomPeak: 0, chans: 0 };
+window.hubStats = st;
+
+function setStatus(text, live) { $('statusText').textContent = text; $('dot').classList.toggle('live', !!live); }
+function fail(msg) { $('err').textContent = msg; $('go').disabled = false; $('setup').hidden = false; $('live').hidden = true; cleanup(); }
+function meter(id, peak) { $(id).firstElementChild.style.width = Math.min(100, Math.max(0, (20 * Math.log10(peak + 1e-6) + 54) / 54 * 100)).toFixed(1) + '%'; }
+function showBuffer() { $('bufferMs').textContent = '≈ ' + Math.round($('buffer').value * blockMs) + ' ms'; }
+
+async function connect() {
+  $('err').textContent = ''; $('go').disabled = true;
+  const displayName = $('displayName').value.trim();
+  if (!displayName) return fail('Add your name so the band knows who you are.');
+  try { localStorage.setItem('ss.name', displayName); } catch {}
+  const host = q.get('host') || hubHost($('hub').value);
+  if (!host) return fail('Add the audio server address first.');
+  try { localStorage.setItem('ss.hub', $('hub').value.trim()); } catch {}
+
+  let name = q.get('name');
+  if (!name) {
+    try { const r = await fetch('/api/hub-token?room=' + encodeURIComponent(room)); const j = await r.json(); if (!r.ok) throw new Error(j.error); name = j.name; }
+    catch (e) { return fail('Could not get a room pass: ' + (e.message || e)); }
+  }
+  try { const r = await fetch(`https://${host}:${PORT}/ping`); if (!r.ok) throw 0; }
+  catch { return fail(`Can’t reach the audio server at ${host}. Check the address, or that the server has finished setting up.`); }
+
+  $('setup').hidden = true; $('live').hidden = false; document.querySelector('.card').classList.add('wide'); setStatus('Starting audio…');
+  startVideo(host, displayName).catch(e => console.warn('video unavailable:', e));
+  ctx = new AudioContext({ sampleRate: RATE, latencyHint: 'interactive' });
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type: 'text/javascript' })));
+  node = new AudioWorkletNode(ctx, 'hub-io', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+  node.connect(ctx.destination);
+  node.port.postMessage({ max: +$('buffer').value });
+  if ($('input').value === 'mic') {
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } }); }
+    catch { return fail('Microphone access was blocked. Allow it in the browser, or choose the test tone.'); }
+    ctx.createMediaStreamSource(stream).connect(node);
+  } else {
+    const osc = new OscillatorNode(ctx, { frequency: +(q.get('freq') || 440) }), g = new GainNode(ctx, { gain: 0.25 });
+    osc.connect(g).connect(node); osc.start();
+  }
+  await ctx.resume();
+
+  setStatus('Joining the room…');
+  ws = new WebSocket(`wss://${host}:${PORT}/webrtc?name=${encodeURIComponent(name)}`);
+  pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+  dc = pc.createDataChannel('audio', { ordered: false, maxRetransmits: 0 });
+  dc.binaryType = 'arraybuffer';
+  pc.onicecandidate = e => { if (e.candidate && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ice', candidate: e.candidate.candidate, sdpMid: e.candidate.sdpMid, sdpMLineIndex: e.candidate.sdpMLineIndex })); };
+  pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') fail('The audio connection failed. A firewall may be blocking it.'); };
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'answer') await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp });
+    else if (m.type === 'ice' && m.candidate) await pc.addIceCandidate({ candidate: m.candidate, sdpMid: m.sdpMid, sdpMLineIndex: m.sdpMLineIndex }).catch(() => {});
+    else if (m.type === 'error') fail('The audio server said: ' + m.message);
+  };
+  ws.onerror = () => fail('Couldn’t open a connection to the audio server.');
+  ws.onopen = async () => {
+    ws.send(JSON.stringify({ protocol: 'webrtc', version: 1 }));
+    await pc.setLocalDescription(await pc.createOffer());
+    ws.send(JSON.stringify({ type: 'offer', sdp: pc.localDescription.sdp }));
+  };
+
+  let seq = 0; const pkt = new Uint8Array(packetBytes(FRAMES, SEND_CH));
+  dc.onopen = () => setStatus('Live. Play something!', true);
+  dc.onclose = () => setStatus('Disconnected');
+  node.port.onmessage = e => {
+    const d = e.data;
+    if (d.queue !== undefined) { st.queue = d.queue; st.under = d.under; st.youPeak = d.peak; return; }
+    if (dc.readyState !== 'open') return;
+    const n = encodePacket(pkt, { seq: seq++, timeUs: (performance.timeOrigin + performance.now()) * 1000, sampleRate: RATE, frames: FRAMES, wantChannels: RECV_CH, planes: [d] });
+    dc.send(pkt.subarray(0, n)); st.sent++;
+  };
+  let roomPeak = 0;
+  dc.onmessage = e => {
+    const p = decodePacket(new Uint8Array(e.data)); if (!p) return;
+    if (st.lastSeq !== null) { const d = seqDelta(st.lastSeq, p.seq); if (d <= 0) return; if (d > 1) st.lost += d - 1; }
+    st.lastSeq = p.seq; st.recv++; st.chans = p.planes.length;
+    node.port.postMessage({ planes: p.planes });
+    for (const v of p.planes[0]) { const a = Math.abs(v); if (a > roomPeak) roomPeak = a; }
+  };
+  timer = setInterval(() => {
+    st.roomPeak = roomPeak; roomPeak = 0;
+    meter('meterYou', st.youPeak); meter('meterRoom', st.roomPeak);
+    const lossPct = st.recv ? (100 * st.lost / (st.recv + st.lost)).toFixed(1) : '0.0';
+    $('stats').innerHTML = `<span>Sent ${st.sent}</span><span>Received ${st.recv}</span><span>Lost ${lossPct}%</span><span>Gaps ${st.under}</span><span>Output delay ${Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000)} ms</span>`;
+  }, 100);
+}
+
+function cleanup() {
+  clearInterval(timer);
+  try { lk && lk.disconnect(); } catch {}
+  lk = null; tiles.forEach(t => t.remove()); tiles.clear(); document.querySelector('.card').classList.remove('wide');
+  try { dc && dc.close(); pc && pc.close(); ws && ws.close(); } catch {}
+  try { stream && stream.getTracks().forEach(t => t.stop()); ctx && ctx.close(); } catch {}
+  ws = pc = dc = ctx = node = stream = null;
+}
+
+$('go').onclick = connect;
+$('leave').onclick = () => { cleanup(); $('live').hidden = true; $('setup').hidden = false; $('go').disabled = false; };
+$('buffer').oninput = () => { showBuffer(); node && node.port.postMessage({ max: +$('buffer').value }); };
+$('invite').onclick = async () => {
+  const u = new URL(location.href); if ($('hub').value) u.searchParams.set('hub', $('hub').value.trim());
+  try { await navigator.clipboard.writeText(u.href); $('invite').textContent = 'Link copied'; setTimeout(() => $('invite').textContent = 'Copy invite link', 1800); } catch { prompt('Copy this invite link', u.href); }
+};
+showBuffer();
+fetch('/api/hub-token?room=' + encodeURIComponent(room)).then(r => r.json()).then(j => { if (j.hub && !$('hub').value) { $('hub').value = j.hub; $('hub').hidden = $('hubLabel').hidden = true; } }).catch(() => {});
+</script>
+</body>
+</html>

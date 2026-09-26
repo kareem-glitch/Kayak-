@@ -18,6 +18,12 @@ if [[ -z "${HUB_SECRET:-}" ]]; then
   exit 1
 fi
 
+# On a fresh server the certificate may still be on its way (CERT_WAIT seconds).
+for _ in $(seq 1 "${CERT_WAIT:-600}"); do
+  [[ -r "$CERT_FILE" && -r "$KEY_FILE" ]] && break
+  sleep 1
+done
+
 tls_args=()
 if [[ -r "$CERT_FILE" && -r "$KEY_FILE" ]]; then
   tls_args=(--certfile "$CERT_FILE" --keyfile "$KEY_FILE")

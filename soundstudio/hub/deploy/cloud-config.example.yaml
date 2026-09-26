@@ -1,0 +1,17 @@
+#cloud-config
+# Paste the filled-in version into Hetzner's "Cloud config" box when creating an
+# Ubuntu 24.04 server. It installs the whole SoundStudio backend (audio hub,
+# video server, HTTPS) with no terminal needed; allow ~15 minutes.
+# The two secrets must match the Vercel project's HUB_SECRET and
+# LIVEKIT_API_KEY / LIVEKIT_API_SECRET. Never commit a filled-in copy.
+package_update: true
+packages: [git, curl]
+write_files:
+  - path: /opt/soundstudio/.env
+    permissions: '0600'
+    content: |
+      HUB_SECRET=<same as Vercel HUB_SECRET>
+      LIVEKIT_KEYS=<LIVEKIT_API_KEY>: <LIVEKIT_API_SECRET>
+runcmd:
+  - git clone --depth 1 --branch claude/zen-goodall-nmoxe1 https://github.com/kareem-glitch/Kayak-.git /opt/soundstudio/src
+  - bash /opt/soundstudio/src/soundstudio/hub/deploy/bootstrap.sh

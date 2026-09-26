@@ -1,0 +1,46 @@
+# Everything SoundStudio needs on one server, for testing and small sessions:
+#   caddy   - HTTPS certificate for SS_HOST (Let's Encrypt), proxies video signalling
+#   livekit - self-hosted video server (cameras only; no audio goes through it)
+#   hub     - the audio hub (JackTrip + room patcher)
+# Started by bootstrap.sh; settings come from /opt/soundstudio/.env.
+services:
+  caddy:
+    image: caddy:2.11
+    restart: unless-stopped
+    network_mode: host
+    env_file: /opt/soundstudio/.env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    restart: unless-stopped
+    network_mode: host
+    env_file: /opt/soundstudio/.env
+    command: --config /etc/livekit.yaml --node-ip ${SS_IP}
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+
+  hub:
+    build: ..
+    image: soundstudio-hub
+    restart: unless-stopped
+    network_mode: host
+    env_file: /opt/soundstudio/.env
+    # Root only so it can read the certificate Caddy obtains (Caddy keeps its
+    # keys root-only). The hub still runs inside its own container.
+    user: "0"
+    environment:
+      CERT_FILE: /caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${SS_HOST}/${SS_HOST}.crt
+      KEY_FILE: /caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${SS_HOST}/${SS_HOST}.key
+    volumes:
+      - caddy_data:/caddy:ro
+    cap_add: [SYS_NICE]
+    ulimits:
+      rtprio: 95
+      memlock: -1
+    shm_size: 256m
+
+volumes:
+  caddy_data:
