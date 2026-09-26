@@ -180,6 +180,11 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
         <div class="stats" id="connDebug" style="opacity:.7"></div>
       </section>
 
+      <section class="conn">
+        <h2>Band volume</h2>
+        <div class="slider"><label class="muted small" for="bandVol">How loud the band is for you <span id="bandVolDb"></span></label><input type="range" id="bandVol" min="-40" max="6" step="1" value="0" aria-label="Band volume"></div>
+      </section>
+
       <section>
         <h2>Parts</h2>
         <p class="muted small">Tap a part to take it. The AI drops out of that part for everyone.</p>
@@ -248,6 +253,7 @@ function finalize(a, source){
 /* ================= Shared state ================= */
 const S = {
   arr: null, playing: false, hostId: null, hostName: '',
+  levels: { drums:0, bass:0, keys:0, guitar:0 },   // part levels in dB, set by the host, applied on every device
   seats: [
     { id:'drums', label:'Drums', human:false, who:'' },
     { id:'bass', label:'Bass', human:false, who:'' },
@@ -265,7 +271,7 @@ function buildEngine(){
   // Every device runs its own copy of the band, started on a shared clock (see
   // playAt), so nobody hears the band through the network.
   const chan = () => { const ch=new Tone.Channel({volume:0}).connect(master); const meter=new Tone.Meter({smoothing:.75}); ch.connect(meter); return {ch,meter}; };
-  const e = { drums:chan(), bass:chan(), keys:chan(), guitar:chan() };
+  const e = { master, drums:chan(), bass:chan(), keys:chan(), guitar:chan() };
   const clickCh = new Tone.Channel({volume:-6}).toDestination(); // count-in/click, heard locally
   e.kick=new Tone.MembraneSynth({pitchDecay:.04,octaves:6,envelope:{attack:.001,decay:.35,sustain:0,release:.1}}).connect(e.drums.ch);
   e.snare=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.16,sustain:0}}).connect(new Tone.Filter(1700,'highpass').connect(e.drums.ch)); e.snare.volume.value=-8;
@@ -277,6 +283,7 @@ function buildEngine(){
   e.gDist=new Tone.Distortion(.6); e.gDist.wet.value=0; e.gDist.chain(new Tone.Filter(3400,'lowpass'), e.guitar.ch);
   e.gtr=Array.from({length:8},()=>{ const v=new Tone.PluckSynth({attackNoise:1,dampening:3800,resonance:.93}).connect(e.gDist); v.volume.value=-4; return v; });
   e.click=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.001,decay:.05,sustain:0,release:.02}}).connect(clickCh);
+  setTimeout(() => { applyBandVolume(); applyMutes(); });
   return e;
 }
 const mf = m => Tone.Frequency(m,'midi').toFrequency();
@@ -331,7 +338,9 @@ function tick(time){
   playDrums(step,time); playBass(step,time,ch,next); playKeys(step,time,ch,bar); if(S.arr.guitar!=='off') playGuitar(step,time,ch);
   if(step%4===0){ const idx=S.arr.barMap[bar%S.arr.barMap.length]; Tone.Draw.schedule(()=>showBeat({chord:idx,beat:step/4}),time); }
 }
-function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.mute=s.human; }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
+const dbOrOff = v => v <= -30 ? -Infinity : v;
+function applyBandVolume(){ const v=+$('#bandVol').value; $('#bandVolDb').textContent = v<=-40 ? '(off)' : '('+(v>0?'+':'')+v+' dB)'; if(E) E.master.volume.value = v<=-40 ? -Infinity : -3+v; }
+function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.mute=s.human; E[s.id].ch.volume.value=dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
 // Start this device's band at wall-clock time atLocal (ms), aiming for the
 // sound to leave the speakers then: we start early by the output latency.
 async function playAt(atLocal, countIn){
@@ -387,13 +396,13 @@ window.jamStats = st;
 const pkt = new Uint8Array(packetBytes(FRAMES, 3));
 
 function send(msg){ if(conn && conn.open) conn.send(msg); }
-function broadcastState(){ if(!isHost) return; send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, hostId:S.hostId, hostName:S.hostName }); }
+function broadcastState(){ if(!isHost) return; send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, levels:S.levels, hostId:S.hostId, hostName:S.hostName }); }
 function onData(m){
   if(!m) return;
   if(m.ping!==undefined){ send({ pong:m.ping, at:clk() }); return; }
   if(m.pong!==undefined){ clockSample(m.pong, m.at); return; }
   if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); $('#bigInvite').hidden=true; if(pendingVideo){ showVideoIn(tileFor(friend), pendingVideo); pendingVideo=null; } status(`Connected to ${m.name}.`); if(isHost) broadcastState(); render(); return; }
-  if(m.t==='state' && !isHost){ const playing=S.playing; Object.assign(S,{ arr:m.arr, seats:m.seats, hostId:m.hostId, hostName:m.hostName }); applyMutes(); render(); S.playing=playing; }
+  if(m.t==='state' && !isHost){ const playing=S.playing; Object.assign(S,{ arr:m.arr, seats:m.seats, levels:m.levels||S.levels, hostId:m.hostId, hostName:m.hostName }); applyMutes(); render(); S.playing=playing; }
   else if(m.t==='start' && !isHost){ playAt(m.at - (st.offset || 0), m.countIn); }
   else if(m.t==='stop' && !isHost){ stopLocal(); }
   else if(m.t==='seat' && isHost){ setSeat(m.id, m.human, m.who); }
@@ -640,9 +649,9 @@ function render(){
     el.append(head, btn);
     if(isHost){
       const v=document.createElement('label'); v.className='vol'; v.textContent='Level';
-      const r=document.createElement('input'); r.type='range'; r.min=-30; r.max=6; r.value=Math.round(E?E[s.id].ch.volume.value:0)||0;
+      const r=document.createElement('input'); r.type='range'; r.min=-30; r.max=6; r.value=S.levels[s.id]||0;
       r.setAttribute('aria-label',s.label+' level');
-      r.oninput=()=>{ E[s.id].ch.volume.value = +r.value<=-30 ? -Infinity : +r.value; };
+      r.oninput=()=>{ S.levels[s.id]=+r.value; applyMutes(); clearTimeout(r._t); r._t=setTimeout(broadcastState,150); };
       v.appendChild(r); el.appendChild(v);
       const m=document.createElement('div'); m.className='meter'; m.innerHTML=`<i data-meter="${s.id}"></i>`; el.appendChild(m);
     }
@@ -669,6 +678,10 @@ const showBuffer=()=>{ $('#bufferMs').textContent='≈ '+Math.round($('#buffer')
 $('#buffer').oninput=()=>{ showBuffer(); io&&io.port.postMessage({ max:+$('#buffer').value }); }; showBuffer();
 $('#inviteBtn').onclick=async()=>{ const link=inviteLink||(joinId?location.href:location.href); try{ await navigator.clipboard.writeText(link); $('#inviteBtn').textContent='Link copied'; setTimeout(()=>$('#inviteBtn').textContent='Copy invite link',1800); }catch(e){ prompt('Copy this invite link',link); } };
 window.getInvite=()=>inviteLink;
+window.jamEngine=()=>E;   // for automated tests
+try{ const v=localStorage.getItem('ss.bandVol'); if(v!==null) $('#bandVol').value=v; }catch(e){}
+$('#bandVol').oninput=()=>{ applyBandVolume(); try{ localStorage.setItem('ss.bandVol',$('#bandVol').value); }catch(e){} };
+applyBandVolume();
 $('#bigInvite').onclick=async()=>{ try{ await navigator.clipboard.writeText(inviteLink); $('#bigInvite').textContent='Link copied. Send it to your friend'; setTimeout(()=>$('#bigInvite').textContent='Copy invite link',2500); }catch(e){ prompt('Copy this invite link',inviteLink); } };
 $('#leaveBtn').onclick=()=>{ try{ conn&&conn.close(); peer&&peer.destroy(); }catch(e){} location.href=location.pathname; };
 $('#micBtn').onclick=()=>{ if(!micGain) return; const on=micGain.gain.value===0; micGain.gain.value=on?1:0; $('#micBtn').textContent=on?'Mic on':'Mic off'; $('#micBtn').setAttribute('aria-pressed',String(on)); };
