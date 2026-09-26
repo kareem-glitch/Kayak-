@@ -262,13 +262,11 @@ let E = null, counter = 0, voiceIdx = 0;
 function buildEngine(){
   const limiter = new Tone.Limiter(-1).toDestination();
   const master = new Tone.Volume(-3).connect(limiter);
-  // The band plays here and is also sent to the other player, in the same packets as your mic.
-  const dest = Tone.getContext().createMediaStreamDestination();
-  limiter.connect(dest);
-  ctx.createMediaStreamSource(dest.stream).connect(bandOut);
+  // Every device runs its own copy of the band, started on a shared clock (see
+  // playAt), so nobody hears the band through the network.
   const chan = () => { const ch=new Tone.Channel({volume:0}).connect(master); const meter=new Tone.Meter({smoothing:.75}); ch.connect(meter); return {ch,meter}; };
   const e = { drums:chan(), bass:chan(), keys:chan(), guitar:chan() };
-  const clickCh = new Tone.Channel({volume:-6}).toDestination(); // click is heard only by the host
+  const clickCh = new Tone.Channel({volume:-6}).toDestination(); // count-in/click, heard locally
   e.kick=new Tone.MembraneSynth({pitchDecay:.04,octaves:6,envelope:{attack:.001,decay:.35,sustain:0,release:.1}}).connect(e.drums.ch);
   e.snare=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.16,sustain:0}}).connect(new Tone.Filter(1700,'highpass').connect(e.drums.ch)); e.snare.volume.value=-8;
   e.hat=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.045,sustain:0}}).connect(new Tone.Filter(7500,'highpass').connect(e.drums.ch)); e.hat.volume.value=-16;
@@ -327,25 +325,40 @@ function playGuitar(step,time,ch){ const v=gtrVoicing(ch.parsed);
 
 function tick(time){
   const c=counter++;
-  if(c<0){ const s=c+16; if(s%4===0){ E.click.triggerAttackRelease(s===0?'C6':'G5','32n',time); Tone.Draw.schedule(()=>{ showBeat({count:s/4+1, beat:s/4}); send({t:'beat',count:s/4+1,beat:s/4},false); },time); } return; }
+  if(c<0){ const s=c+16; if(s%4===0){ E.click.triggerAttackRelease(s===0?'C6':'G5','32n',time); Tone.Draw.schedule(()=>showBeat({count:s/4+1, beat:s/4}),time); } return; }
   const step=c%16, bar=Math.floor(c/16), ch=chordAt(bar), next=chordAt(bar+1);
   if($('#clickAll').checked && step%4===0) E.click.triggerAttackRelease(step===0?'C6':'G5','32n',time);
   playDrums(step,time); playBass(step,time,ch,next); playKeys(step,time,ch,bar); if(S.arr.guitar!=='off') playGuitar(step,time,ch);
-  if(step%4===0){ const idx=S.arr.barMap[bar%S.arr.barMap.length]; Tone.Draw.schedule(()=>{ const m={chord:idx,beat:step/4}; showBeat(m); send({t:'beat',...m},false); },time); }
+  if(step%4===0){ const idx=S.arr.barMap[bar%S.arr.barMap.length]; Tone.Draw.schedule(()=>showBeat({chord:idx,beat:step/4}),time); }
 }
 function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.mute=s.human; }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
-async function startBand(){
+// Start this device's band at wall-clock time atLocal (ms), aiming for the
+// sound to leave the speakers then: we start early by the output latency.
+async function playAt(atLocal, countIn){
   await Tone.start();
+  if(!E) E=buildEngine();
+  applyMutes();
   Tone.Transport.stop(); Tone.Transport.cancel(); Tone.Transport.position=0;
   Tone.Transport.bpm.value=S.arr.bpm; Tone.Transport.swing=S.arr.swing?.3:0; Tone.Transport.swingSubdivision='8n';
-  counter=$('#countIn').checked?-16:0;
-  Tone.Transport.scheduleRepeat(tick,'16n',0); Tone.Transport.start('+0.08');
-  S.playing=true; broadcastState(); render(); requestAnimationFrame(meterLoop);
+  counter=countIn?-16:0;
+  Tone.Transport.scheduleRepeat(tick,'16n',0);
+  const raw=Tone.getContext().rawContext, outLat=(raw.outputLatency||0)+(raw.baseLatency||0);
+  const when=raw.currentTime+(atLocal-clk())/1000-outLat;
+  Tone.Transport.start(Math.max(raw.currentTime+0.02, when));
+  window.jamStart = { atLocal, offset: st.offset || 0, outLat };
+  S.playing=true; render(); requestAnimationFrame(meterLoop);
 }
-function stopBand(){
+function stopLocal(){
+  if(!E) return;
   Tone.Transport.stop(); Tone.Transport.cancel(); E.pad.releaseAll(); E.ep.releaseAll();
-  S.playing=false; broadcastState(); render(); showBeat({}); send({t:'beat'},false);
+  S.playing=false; render(); showBeat({});
 }
+async function startBand(){
+  const countIn=$('#countIn').checked, at=clk()+600;   // 0.6 s for the message to arrive
+  broadcastState(); send({ t:'start', at, countIn });
+  await playAt(at, countIn); broadcastState();
+}
+function stopBand(){ send({ t:'stop' }); stopLocal(); broadcastState(); }
 function meterLoop(){
   if(!S.playing||!E) return;
   S.seats.forEach(s=>{ const el=document.querySelector(`[data-meter="${s.id}"]`); if(!el) return; const db=E[s.id].meter.getValue(); el.style.width=(Number.isFinite(db)?clamp((db+54)/54,0,1)*100:0).toFixed(1)+'%'; });
@@ -358,6 +371,10 @@ function meterLoop(){
 // never-retransmitted channel carrying the hub packet format.
 const FRAMES = 128, RATE = 48000, blockMs = FRAMES / RATE * 1000;
 let pendingVideo = null, connTimer = null;
+// Shared clock: estimate (their clock - my clock) from the fastest ping round trip.
+const clk = () => performance.timeOrigin + performance.now();
+const syncSamples = [];
+function clockSample(sentAt, theirAt){ const now = clk(), rtt = now - sentAt; syncSamples.push({ rtt, off: theirAt - (sentAt + rtt / 2) }); if(syncSamples.length > 20) syncSamples.shift(); st.rtt = rtt; st.offset = syncSamples.reduce((a, b) => b.rtt < a.rtt ? b : a).off; }
 // STUN finds a direct path; the TURN relay (free public Open Relay, best effort)
 // carries the call when routers or mobile networks block direct connections.
 const ICE = [
@@ -373,11 +390,12 @@ function send(msg){ if(conn && conn.open) conn.send(msg); }
 function broadcastState(){ if(!isHost) return; send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, hostId:S.hostId, hostName:S.hostName }); }
 function onData(m){
   if(!m) return;
-  if(m.ping!==undefined){ send({ pong:m.ping }); return; }
-  if(m.pong!==undefined){ st.rtt=performance.now()-m.pong; return; }
+  if(m.ping!==undefined){ send({ pong:m.ping, at:clk() }); return; }
+  if(m.pong!==undefined){ clockSample(m.pong, m.at); return; }
   if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); $('#bigInvite').hidden=true; if(pendingVideo){ showVideoIn(tileFor(friend), pendingVideo); pendingVideo=null; } status(`Connected to ${m.name}.`); if(isHost) broadcastState(); render(); return; }
-  if(m.t==='state' && !isHost){ Object.assign(S,{ arr:m.arr, playing:m.playing, seats:m.seats, hostId:m.hostId, hostName:m.hostName }); render(); }
-  else if(m.t==='beat' && !isHost){ showBeat(m); }
+  if(m.t==='state' && !isHost){ const playing=S.playing; Object.assign(S,{ arr:m.arr, seats:m.seats, hostId:m.hostId, hostName:m.hostName }); applyMutes(); render(); S.playing=playing; }
+  else if(m.t==='start' && !isHost){ playAt(m.at - (st.offset || 0), m.countIn); }
+  else if(m.t==='stop' && !isHost){ stopLocal(); }
   else if(m.t==='seat' && isHost){ setSeat(m.id, m.human, m.who); }
 }
 function setSeat(id, human, who){
@@ -455,7 +473,8 @@ function wireConn(c){
       if(io) io.port.postMessage({ planes:p.planes });
     };
     send({ t:'hello', id:myId, name:myName });
-    setInterval(() => send({ ping:performance.now() }), 1000);
+    for(let i=0;i<8;i++) setTimeout(() => send({ ping:clk() }), 150*i);   // quick initial clock sync
+    setInterval(() => send({ ping:clk() }), 1000);
   });
   c.on('data', onData);
   c.on('close', () => {
@@ -476,6 +495,7 @@ async function join(){
   const name=$('#nameInput').value.trim();
   if(!name){ $('#joinErr').textContent='Add your name so the band knows who you are.'; return; }
   myName=name; $('#joinBtn').disabled=true; $('#joinErr').textContent='';
+  Tone.start();
   try{
     try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
     catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
@@ -494,7 +514,7 @@ async function join(){
     const t = tileFor(me); if(media.getVideoTracks().length) showVideoIn(t, videoOnly);
     if(joinId){
       const dial = () => {
-        wireConn(peer.connect(joinId, { serialization:'json' }));
+        wireConn(peer.connect(joinId, { serialization:'json', reliable:true }));
         const call = peer.call(joinId, videoOnly);
         call.on('stream', gotVideo);
       };
@@ -536,7 +556,6 @@ async function claimBand(){
   await Tone.start();
   if(!E) E=buildEngine();
   isHost=true; S.hostId=myId; S.hostName=myName;
-  io && io.port.postMessage({ band:true });
   if(!S.arr) S.arr=finalize(localArrangement('Slow funk in E minor, 96 bpm'),'local');
   applyMutes(); broadcastState(); render();
 }
@@ -552,8 +571,8 @@ async function generate(){
   }catch(e){}
   if(!arr){ arr=finalize(localArrangement(prompt),'local'); note='Arranged with the built-in interpreter.'; }
   S.arr=arr;
-  if(S.playing){ Tone.Transport.bpm.value=arr.bpm; Tone.Transport.swing=arr.swing?.3:0; }
   applyMutes(); broadcastState(); render();
+  if(S.playing){ const c=$('#countIn').checked; $('#countIn').checked=false; await startBand(); $('#countIn').checked=c; }
   $('#genStatus').textContent=note||(S.playing?'New arrangement is playing.':'Ready. Press play.');
   $('#genBtn').disabled=false;
 }
@@ -645,7 +664,7 @@ $('#joinBtn').onclick=join;
 $('#claimBtn').onclick=claimBand;
 $('#genBtn').onclick=generate;
 $('#playBtn').onclick=()=>S.playing?stopBand():startBand();
-$('#bpm').addEventListener('change',()=>{ const v=clamp(Math.round(+$('#bpm').value||S.arr.bpm),50,200); S.arr.bpm=v; Tone.Transport.bpm.value=v; broadcastState(); render(); });
+$('#bpm').addEventListener('change',()=>{ const v=clamp(Math.round(+$('#bpm').value||S.arr.bpm),50,200); S.arr.bpm=v; broadcastState(); render(); if(S.playing){ const c=$('#countIn').checked; $('#countIn').checked=false; startBand(); $('#countIn').checked=c; } });
 const showBuffer=()=>{ $('#bufferMs').textContent='≈ '+Math.round($('#buffer').value*blockMs)+' ms'; };
 $('#buffer').oninput=()=>{ showBuffer(); io&&io.port.postMessage({ max:+$('#buffer').value }); }; showBuffer();
 $('#inviteBtn').onclick=async()=>{ const link=inviteLink||(joinId?location.href:location.href); try{ await navigator.clipboard.writeText(link); $('#inviteBtn').textContent='Link copied'; setTimeout(()=>$('#inviteBtn').textContent='Copy invite link',1800); }catch(e){ prompt('Copy this invite link',link); } };
