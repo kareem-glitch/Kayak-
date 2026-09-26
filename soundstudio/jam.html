@@ -176,6 +176,8 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
         <h2>Connection</h2>
         <div class="slider"><label class="muted small" for="buffer">Buffer <span id="bufferMs"></span></label><input type="range" id="buffer" min="2" max="16" step="1" value="4" aria-label="Audio buffer"></div>
         <div class="stats" id="connStats">Waiting for your friend…</div>
+        <button class="btn btn-primary" id="bigInvite" style="width:100%;margin-top:10px" hidden>Copy invite link</button>
+        <div class="stats" id="connDebug" style="opacity:.7"></div>
       </section>
 
       <section>
@@ -370,7 +372,7 @@ function onData(m){
   if(!m) return;
   if(m.ping!==undefined){ send({ pong:m.ping }); return; }
   if(m.pong!==undefined){ st.rtt=performance.now()-m.pong; return; }
-  if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); if(pendingVideo){ showVideoIn(tileFor(friend), pendingVideo); pendingVideo=null; } status(`Connected to ${m.name}.`); if(isHost) broadcastState(); render(); return; }
+  if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); $('#bigInvite').hidden=true; if(pendingVideo){ showVideoIn(tileFor(friend), pendingVideo); pendingVideo=null; } status(`Connected to ${m.name}.`); if(isHost) broadcastState(); render(); return; }
   if(m.t==='state' && !isHost){ Object.assign(S,{ arr:m.arr, playing:m.playing, seats:m.seats, hostId:m.hostId, hostName:m.hostName }); render(); }
   else if(m.t==='beat' && !isHost){ showBeat(m); }
   else if(m.t==='seat' && isHost){ setSeat(m.id, m.human, m.who); }
@@ -456,6 +458,7 @@ function wireConn(c){
   });
   c.on('data', onData);
   c.on('close', () => {
+    if(conn !== c) return;
     if(friend){ tiles.get(friend.identity)?.remove(); tiles.delete(friend.identity); }
     if(friend && S.hostId === friend.identity){ S.hostId = null; S.hostName = ''; S.playing = false; S.seats.forEach(s => { s.human = false; s.who = ''; }); }
     friend = null; conn = null; audioDc = null; render();
@@ -482,21 +485,37 @@ async function join(){
     peer = new Peer(Object.assign({ config:{ iceServers:ICE } }, broker ? { host:bh, port:+bp, path:'/', secure:false } : {}));
     await new Promise((res, rej) => { peer.on('open', id => { myId = id; res(); }); peer.on('error', rej); });
     peer.on('error', e => status(e.type === 'peer-unavailable' ? 'That invite link has expired (it changes whenever your friend reloads the page). Ask them for a fresh one.' : 'Connection problem: ' + (e.type || e.message)));
-    peer.on('connection', c => { if(conn) { c.close(); return; } wireConn(c); });
+    peer.on('connection', c => { if(conn && conn !== c){ try{ conn.close(); }catch(e){} } wireConn(c); });
     peer.on('call', call => { call.answer(videoOnly); call.on('stream', gotVideo); });
     $('#joinView').hidden=true; $('#roomView').hidden=false; $('#roomTitle').textContent='SoundStudio jam';
     const me = { identity:myId, name:myName };
     const t = tileFor(me); if(media.getVideoTracks().length) showVideoIn(t, videoOnly);
     if(joinId){
-      wireConn(peer.connect(joinId, { serialization:'json' }));
-      const call = peer.call(joinId, videoOnly);
-      call.on('stream', gotVideo);
+      const dial = () => {
+        wireConn(peer.connect(joinId, { serialization:'json' }));
+        const call = peer.call(joinId, videoOnly);
+        call.on('stream', gotVideo);
+      };
+      dial();
+      let tries = 1;
+      const retry = setInterval(() => {
+        if(audioDc && audioDc.readyState === 'open'){ clearInterval(retry); return; }
+        if(tries >= 3){ clearInterval(retry); return; }
+        tries++; status(`Still connecting… (attempt ${tries})`); dial();
+      }, 8000);
       status('Connecting to your friend…');
     } else {
       inviteLink = location.origin + location.pathname + '?join=' + myId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
-      $('#connStats').textContent = 'Send the invite link to a friend to start.';
+      history.replaceState(null, '', inviteLink);   // copying the address bar now works too
+      try { sessionStorage.setItem('ss.hostId', myId); } catch(e) {}
+      $('#connStats').textContent = 'Send this invite link to your friend:';
+      $('#bigInvite').hidden = false;
     }
     render();
+    setInterval(() => {
+      const pc = conn && conn.peerConnection;
+      $('#connDebug').textContent = `me ${myId.slice(0,6)} · ${joinId ? 'joining ' + joinId.slice(0,6) : 'hosting'} · link ${conn ? (conn.open ? 'open' : 'opening') : 'none'} · net ${pc ? pc.iceConnectionState : '–'} · audio ${audioDc ? audioDc.readyState : '–'} · friend ${friend ? friend.name : '–'}`;
+    }, 500);
     setInterval(() => {
       if(!conn || !audioDc || audioDc.readyState !== 'open' || !st.recv) return;
       const net = st.rtt === null ? '–' : Math.round(st.rtt / 2) + ' ms';
@@ -611,7 +630,9 @@ function render(){
 
 /* ================= Wiring ================= */
 const params=new URLSearchParams(location.search);
-const joinId=params.get('join');
+// If this tab was hosting and got reloaded, its old invite id is dead: host again.
+let joinId=params.get('join');
+try{ if(joinId && sessionStorage.getItem('ss.hostId')===joinId){ joinId=null; history.replaceState(null,'',location.pathname); } }catch(e){}
 let inviteLink=null;
 if(joinId) $('#roomLine').textContent='Your friend invited you. Add your name and join.';
 try{ $('#nameInput').value=localStorage.getItem('ss.name')||''; }catch(e){}
@@ -626,6 +647,7 @@ const showBuffer=()=>{ $('#bufferMs').textContent='≈ '+Math.round($('#buffer')
 $('#buffer').oninput=()=>{ showBuffer(); io&&io.port.postMessage({ max:+$('#buffer').value }); }; showBuffer();
 $('#inviteBtn').onclick=async()=>{ const link=inviteLink||(joinId?location.href:location.href); try{ await navigator.clipboard.writeText(link); $('#inviteBtn').textContent='Link copied'; setTimeout(()=>$('#inviteBtn').textContent='Copy invite link',1800); }catch(e){ prompt('Copy this invite link',link); } };
 window.getInvite=()=>inviteLink;
+$('#bigInvite').onclick=async()=>{ try{ await navigator.clipboard.writeText(inviteLink); $('#bigInvite').textContent='Link copied. Send it to your friend'; setTimeout(()=>$('#bigInvite').textContent='Copy invite link',2500); }catch(e){ prompt('Copy this invite link',inviteLink); } };
 $('#leaveBtn').onclick=()=>{ try{ conn&&conn.close(); peer&&peer.destroy(); }catch(e){} location.href=location.pathname; };
 $('#micBtn').onclick=()=>{ if(!micGain) return; const on=micGain.gain.value===0; micGain.gain.value=on?1:0; $('#micBtn').textContent=on?'Mic on':'Mic off'; $('#micBtn').setAttribute('aria-pressed',String(on)); };
 $('#camBtn').onclick=()=>{ const v=media&&media.getVideoTracks()[0]; if(!v) return; v.enabled=!v.enabled; $('#camBtn').textContent=v.enabled?'Camera on':'Camera off'; $('#camBtn').setAttribute('aria-pressed',String(v.enabled)); };
