@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SoundStudio quick test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="/vendor/peerjs-1.5.4.min.js"></script>
+<style>
+:root{
+  --bg:#121c1f; --surface:#182529; --raised:#1f2f34; --ink:#e6eee8; --muted:#9aaba7; --line:#2f4247;
+  --amber:#f0a238; --amber-ink:#1b1206; --ai:#b3a7ec; --ai-soft:#262340; --human:#7cbedc; --human-soft:#15323f; --bad:#e0806a;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#e6ebe3; --surface:#f4f6f1; --raised:#ffffff; --ink:#1c2526; --muted:#566361; --line:#c7d0c5;
+    --amber:#b86a10; --amber-ink:#ffffff; --ai:#5b4b9c; --ai-soft:#e6e2f4; --human:#1b5d7e; --human-soft:#d5e7ef; --bad:#b0452c;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-0.015em}
+h1{font-size:1.05rem;font-weight:800;color:var(--muted)}
+h2{font-size:2rem;font-weight:800;line-height:1.1;margin:2px 0 6px}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+[hidden]{display:none !important}
+.card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px}
+.muted{color:var(--muted)} .small{font-size:.9rem}
+label{display:block;margin:16px 0 6px;color:var(--muted);font-size:.9rem}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--raised)}
+.btn{width:100%;margin-top:20px;border:0;border-radius:12px;padding:13px 16px;font-weight:600;cursor:pointer;background:var(--amber);color:var(--amber-ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn-quiet{background:transparent;border:1px solid var(--line);color:var(--ink);margin-top:10px}
+.note{margin-top:14px;padding:10px 12px;border-radius:12px;background:var(--human-soft);color:var(--ink);font-size:.9rem}
+.err{color:var(--bad);margin-top:12px;font-size:.9rem;min-height:1.2em}
+.status{display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:600}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.dot.live{background:#4cc38a;box-shadow:0 0 0 4px color-mix(in srgb,#4cc38a 25%,transparent)}
+.meters{display:grid;gap:14px;margin-top:20px}
+.meter-row{display:grid;grid-template-columns:5.5rem 1fr;align-items:center;gap:12px}
+.meter-row span{font:800 1rem/1 "Bricolage Grotesque",sans-serif}
+.meter{height:12px;border-radius:6px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.meter i{display:block;height:100%;width:0;border-radius:6px;transition:width .06s linear}
+#meterYou i{background:var(--human)} #meterRoom i{background:var(--ai)}
+.slider{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.slider input{padding:0;accent-color:var(--amber);border:0;background:none}
+.card.wide{max-width:980px}
+.actions{display:flex;gap:10px;margin-top:10px}.actions .btn{margin-top:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:16px}
+.tile{position:relative;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:var(--raised);border:1px solid var(--line)}
+.tile video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile .initial{position:absolute;inset:0;display:grid;place-items:center;font:800 2.4rem/1 "Bricolage Grotesque",sans-serif;color:var(--muted)}
+.tile .tname{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;padding:4px 10px;border-radius:999px;font-size:.85rem}
+.tile.me video{transform:scaleX(-1)}
+.stats{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:16px;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<!-- Throwaway two-person test with no server of our own: a public PeerJS broker
+     introduces the two browsers, then camera video and raw audio (hub packet
+     format, AudioWorklet, no Opus, no jitter-buffer smoothing) flow directly
+     between them. The real product sends audio through the hub instead. -->
+<main class="card">
+  <h1>SoundStudio</h1>
+  <h2>Quick test</h2>
+  <p class="muted" id="lead">Two people, camera and live audio, straight from browser to browser.</p>
+  <div id="setup">
+    <label for="input">What to send</label>
+    <select id="input"><option value="mic">Microphone or audio interface</option><option value="tone">Test tone (no mic needed)</option></select>
+    <p class="note">Wear wired headphones. Speakers or Bluetooth will feed back or lag.</p>
+    <button class="btn" id="go">Start</button>
+    <p class="err" id="err" role="alert"></p>
+  </div>
+  <div id="live" hidden>
+    <p class="status"><span class="dot" id="dot"></span><span id="statusText">Starting…</span></p>
+    <div class="actions" id="inviteRow" hidden><button class="btn" id="invite">Copy invite link</button></div>
+    <div class="grid" id="grid">
+      <div class="tile me" id="tileMe"><div class="initial">You</div><span class="tname">You</span></div>
+      <div class="tile" id="tileThem"><div class="initial">…</div><span class="tname">Waiting for your friend</span></div>
+    </div>
+    <div class="meters">
+      <div class="meter-row"><span>You</span><div class="meter" id="meterYou"><i></i></div></div>
+      <div class="meter-row"><span>Them</span><div class="meter" id="meterRoom"><i></i></div></div>
+    </div>
+    <label for="buffer">Buffer (lower is tighter, higher is smoother)</label>
+    <div class="slider"><input type="range" id="buffer" min="2" max="16" step="1" value="4"><span id="bufferMs" class="small"></span></div>
+    <div class="stats" id="stats"></div>
+  </div>
+</main>
+<script type="module">
+import { encodePacket, decodePacket, packetBytes, seqDelta } from './audio/hub-protocol.js';
+const $ = id => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const joinId = q.get('join');
+const FRAMES = 128, RATE = 48000, blockMs = FRAMES / RATE * 1000;
+if (joinId) $('lead').textContent = 'Your friend invited you. Press Start to join them.';
+
+const worklet = `
+class IO extends AudioWorkletProcessor {
+  constructor(){ super(); this.q=[]; this.max=4; this.under=0; this.peak=0;
+    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.q.push(d.planes); while(this.q.length>this.max) this.q.shift(); } else if(d.max) this.max=d.max; }; }
+  process(inputs, outputs){
+    const inp=inputs[0];
+    if(inp&&inp[0]){ const b=inp[0]; for(let i=0;i<b.length;i++){ const a=Math.abs(b[i]); if(a>this.peak) this.peak=a; } this.port.postMessage(b.slice(0)); }
+    const out=outputs[0], blk=this.q.shift();
+    for(let c=0;c<out.length;c++){ const src=blk&&(blk[c]||blk[0]); if(src) out[c].set(src); else out[c].fill(0); }
+    if(!blk) this.under++;
+    if(currentFrame % 4800 < 128){ this.port.postMessage({queue:this.q.length, under:this.under, peak:this.peak}); this.peak=0; }
+    return true;
+  }
+}
+registerProcessor('io', IO);`;
+
+const st = { sent: 0, recv: 0, lost: 0, lastSeq: null, under: 0, youPeak: 0, themPeak: 0, rtt: null };
+window.qtStats = st;
+let ctx, node, media, peer, conn, audio, themPeak = 0, seq = 0;
+const pkt = new Uint8Array(packetBytes(FRAMES, 1));
+
+function setStatus(t, live) { $('statusText').textContent = t; $('dot').classList.toggle('live', !!live); }
+function meter(id, p) { $(id).firstElementChild.style.width = Math.min(100, Math.max(0, (20 * Math.log10(p + 1e-6) + 54) / 54 * 100)).toFixed(1) + '%'; }
+function showBuffer() { $('bufferMs').textContent = '≈ ' + Math.round($('buffer').value * blockMs) + ' ms'; }
+function showVideo(id, stream, name) { const t = $(id); t.querySelector('video')?.remove(); const v = document.createElement('video'); v.autoplay = v.playsInline = v.muted = true; v.srcObject = stream; t.prepend(v); t.querySelector('.initial').hidden = true; if (name) t.querySelector('.tname').textContent = name; }
+
+// Raw audio channel: unordered, never retransmitted (UDP-like). Both sides
+// create it with the same id, so it opens without another negotiation round.
+function wireAudio(pc) {
+  audio = pc.createDataChannel('audio', { negotiated: true, id: 7, ordered: false, maxRetransmits: 0 });
+  audio.binaryType = 'arraybuffer';
+  audio.onopen = () => setStatus('Connected. Play something!', true);
+  audio.onmessage = e => {
+    const p = decodePacket(new Uint8Array(e.data)); if (!p) return;
+    if (st.lastSeq !== null) { const d = seqDelta(st.lastSeq, p.seq); if (d <= 0) return; if (d > 1) st.lost += d - 1; }
+    st.lastSeq = p.seq; st.recv++;
+    node.port.postMessage({ planes: p.planes });
+    for (const v of p.planes[0]) { const a = Math.abs(v); if (a > themPeak) themPeak = a; }
+  };
+}
+function onConn(c) {
+  conn = c;
+  c.on('open', () => {
+    wireAudio(c.peerConnection);
+    setInterval(() => c.open && c.send({ ping: performance.now() }), 1000);
+  });
+  c.on('data', d => { if (d && d.ping !== undefined) c.send({ pong: d.ping }); else if (d && d.pong !== undefined) st.rtt = performance.now() - d.pong; });
+  c.on('close', () => setStatus('Your friend left.'));
+}
+
+async function start() {
+  $('go').disabled = true; $('err').textContent = '';
+  const tone = $('input').value === 'tone';
+  try {
+    media = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: tone ? false : { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  } catch { $('go').disabled = false; return void ($('err').textContent = 'Camera or microphone access was blocked. Allow it in the browser and try again.'); }
+  $('setup').hidden = true; $('live').hidden = false; document.querySelector('.card').classList.add('wide');
+  showVideo('tileMe', media, 'You');
+  ctx = new AudioContext({ sampleRate: RATE, latencyHint: 'interactive' });
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type: 'text/javascript' })));
+  node = new AudioWorkletNode(ctx, 'io', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+  node.connect(ctx.destination); node.port.postMessage({ max: +$('buffer').value });
+  if (tone) { const o = new OscillatorNode(ctx, { frequency: +(q.get('freq') || 440) }), g = new GainNode(ctx, { gain: 0.25 }); o.connect(g).connect(node); o.start(); }
+  else ctx.createMediaStreamSource(new MediaStream(media.getAudioTracks())).connect(node);
+  await ctx.resume();
+  node.port.onmessage = e => {
+    const d = e.data;
+    if (d.queue !== undefined) { st.under = d.under; st.youPeak = d.peak; return; }
+    if (!audio || audio.readyState !== 'open') return;
+    const n = encodePacket(pkt, { seq: seq++, timeUs: (performance.timeOrigin + performance.now()) * 1000, sampleRate: RATE, frames: FRAMES, wantChannels: 1, planes: [d] });
+    audio.send(pkt.subarray(0, n)); st.sent++;
+  };
+
+  const videoOnly = new MediaStream(media.getVideoTracks());
+  peer = new Peer({ config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
+  peer.on('error', e => setStatus('Connection problem: ' + (e.type || e.message)));
+  peer.on('call', call => { call.answer(videoOnly); call.on('stream', s => showVideo('tileThem', s, 'Your friend')); });
+  peer.on('connection', onConn);
+  peer.on('open', id => {
+    if (joinId) {
+      setStatus('Connecting to your friend…');
+      onConn(peer.connect(joinId, { serialization: 'json' }));
+      const call = peer.call(joinId, videoOnly); call.on('stream', s => showVideo('tileThem', s, 'Your friend'));
+    } else {
+      setStatus('Ready. Send the invite link to a friend.');
+      $('inviteRow').hidden = false;
+      const link = location.origin + location.pathname + '?join=' + id;
+      $('invite').onclick = async () => { try { await navigator.clipboard.writeText(link); $('invite').textContent = 'Link copied'; setTimeout(() => $('invite').textContent = 'Copy invite link', 1800); } catch { prompt('Copy this invite link', link); } };
+      window.inviteLink = link;
+    }
+  });
+
+  setInterval(() => {
+    st.themPeak = themPeak; themPeak = 0;
+    meter('meterYou', st.youPeak); meter('meterRoom', st.themPeak);
+    const out = Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000);
+    const net = st.rtt === null ? '–' : Math.round(st.rtt / 2) + ' ms';
+    const lossPct = st.recv ? (100 * st.lost / (st.recv + st.lost)).toFixed(1) : '0.0';
+    $('stats').innerHTML = `<span>Network one-way ≈ ${net}</span><span>Buffer ${Math.round($('buffer').value * blockMs)} ms</span><span>Your output ${out} ms</span><span>Lost ${lossPct}%</span><span>Gaps ${st.under}</span>`;
+  }, 100);
+}
+$('go').onclick = start;
+$('buffer').oninput = () => { showBuffer(); node && node.port.postMessage({ max: +$('buffer').value }); };
+showBuffer();
+</script>
+</body>
+</html>
