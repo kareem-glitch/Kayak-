@@ -19,6 +19,15 @@ if ! command -v docker >/dev/null; then
   curl -fsSL https://get.docker.com | sh
 fi
 
+# Oracle Cloud's Ubuntu images ship iptables rules that reject everything but
+# SSH, ahead of anything ufw adds. Clear them so ufw below is the one firewall.
+if [[ -f /etc/iptables/rules.v4 ]]; then
+  iptables -P INPUT ACCEPT
+  iptables -F INPUT
+  rm -f /etc/iptables/rules.v4 /etc/iptables/rules.v6
+  systemctl disable --now netfilter-persistent 2>/dev/null || true
+fi
+
 # Firewall: SSH, HTTPS (+80 for certificates), audio hub, video.
 apt-get install -y ufw
 ufw default deny incoming
