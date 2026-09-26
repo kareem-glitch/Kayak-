@@ -195,7 +195,7 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
       <section class="conn">
         <h2>Connection</h2>
         <div class="slider"><label class="muted small" for="buffer">Buffer <span id="bufferMs"></span></label><input type="range" id="buffer" min="2" max="16" step="1" value="4" aria-label="Audio buffer"></div>
-        <div class="stats" id="connStats">Waiting for your friend…</div>
+        <div class="stats" id="connStats">Waiting for others…</div>
         <button class="btn btn-primary" id="bigInvite" style="width:100%;margin-top:10px" hidden>Copy invite link</button>
         <div class="stats" id="connDebug" style="opacity:.7"></div>
       </section>
@@ -364,18 +364,28 @@ function applyBandVolume(){ const v=+$('#bandVol').value; $('#bandVolDb').textCo
 function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.volume.value = s.human ? -Infinity : dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
 // Start this device's band at wall-clock time atLocal (ms), aiming for the
 // sound to leave the speakers then: we start early by the output latency.
-async function playAt(atLocal, countIn){
+// Start this device's band at wall-clock time atLocal (ms) with the 16th-note
+// counter at startCounter (-16 = one bar of count-in), early by the output
+// latency so the sound leaves the speakers on time.
+let bandT0 = 0, bandCounter0 = 0;   // band host only: when and where the band started
+async function playAt(atLocal, startCounter){
   await Tone.start();
   if(!E) E=buildEngine();
   applyMutes();
-  Tone.Transport.stop(); Tone.Transport.cancel(); Tone.Transport.position=0;
-  Tone.Transport.bpm.value=S.arr.bpm; Tone.Transport.swing=S.arr.swing?.3:0; Tone.Transport.swingSubdivision='8n';
-  counter=countIn?-16:0;
-  Tone.Transport.scheduleRepeat(tick,'16n',0);
   const raw=Tone.getContext().rawContext, outLat=(raw.outputLatency||0)+(raw.baseLatency||0);
+  Tone.Transport.stop(raw.currentTime); Tone.Transport.cancel(0); Tone.Transport.position=0;
+  Tone.Transport.bpm.value=S.arr.bpm; Tone.Transport.swing=S.arr.swing?.3:0; Tone.Transport.swingSubdivision='8n';
+  // Ignore a repeat of the start we're already playing (e.g. a retried join).
+  const zero0 = atLocal - startCounter * 15000 / S.arr.bpm;
+  if(S.playing && window.jamStart && Math.abs(window.jamStart.zero - zero0) < 50) return;
+  // If this start time has already passed (slow message, late joiner), come in at the next bar.
+  const barMs=4*60000/S.arr.bpm;
+  while(atLocal < clk()+300){ atLocal += barMs; startCounter += 16; }
+  counter=startCounter;
+  Tone.Transport.scheduleRepeat(tick,'16n',0);
   const when=raw.currentTime+(atLocal-clk())/1000-outLat;
-  Tone.Transport.start(Math.max(raw.currentTime+0.02, when));
-  window.jamStart = { atLocal, offset: st.offset || 0, outLat };
+  Tone.Transport.start(Math.max(raw.currentTime+0.15, when));
+  window.jamStart = { atLocal, startCounter, outLat, zero: atLocal - startCounter * 15000 / S.arr.bpm };   // zero = when bar 1 beat 1 would have sounded
   S.playing=true; render(); requestAnimationFrame(meterLoop);
 }
 function stopLocal(){
@@ -384,9 +394,16 @@ function stopLocal(){
   S.playing=false; render(); showBeat({});
 }
 async function startBand(){
-  const countIn=$('#countIn').checked, at=clk()+600;   // 0.6 s for the message to arrive
-  broadcastState(); send({ t:'start', at, countIn });
-  await playAt(at, countIn); broadcastState();
+  const at=clk()+600, c0=$('#countIn').checked?-16:0;   // 0.6 s for the message to arrive
+  bandT0=at; bandCounter0=c0;
+  broadcastState(); send({ t:'start', at, counter:c0 });
+  await playAt(at, c0); broadcastState();
+}
+// Someone joined mid-song: start their band at the next bar line, in step.
+function sendCatchUp(id){
+  if(!S.playing || !bandT0) return;
+  const barMs=4*60000/S.arr.bpm, k=Math.ceil((clk()+800-bandT0)/barMs);
+  send({ t:'start', at:bandT0+k*barMs, counter:bandCounter0+k*16 }, id);
 }
 function stopBand(){ send({ t:'stop' }); stopLocal(); broadcastState(); }
 function meterLoop(){
@@ -395,12 +412,8 @@ function meterLoop(){
   requestAnimationFrame(meterLoop);
 }
 
-/* ================= Networking (two people, browser to browser) ================= */
-// A public PeerJS broker only introduces the two browsers. Everything else is
-// direct: control messages on a reliable channel, audio on an unordered,
-// never-retransmitted channel carrying the hub packet format.
+/* ================= Networking (up to 4 people, browser to browser) ================= */
 const FRAMES = 128, RATE = 48000, blockMs = FRAMES / RATE * 1000;
-let pendingVideo = null, connTimer = null;
 // ---- Audio devices ----
 const MIC_OPTS = { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:{ ideal:2 } };
 let micStream = null, micNodes = [];
@@ -439,33 +452,57 @@ async function fillDevices(){
   $('#outDev').hidden = !canOut; $('#outNote').hidden = canOut;
   if(canOut) fill($('#outDev'), 'audiooutput', savedOut);
 }
-// Shared clock: estimate (their clock - my clock) from the fastest ping round trip.
+// ---- Room: up to 4 people, everyone connected directly to everyone ----
+// The invite link names the room's creator ("owner"), who introduces newcomers
+// to the others. Control messages go over a reliable channel per person; audio
+// over an unordered, never-retransmitted channel carrying the hub packet format.
+const MAX_ROOM = 4;
+let roomFull = false;
 const clk = () => performance.timeOrigin + performance.now();
-const syncSamples = [];
-function clockSample(sentAt, theirAt){ const now = clk(), rtt = now - sentAt; syncSamples.push({ rtt, off: theirAt - (sentAt + rtt / 2) }); if(syncSamples.length > 20) syncSamples.shift(); st.rtt = rtt; st.offset = syncSamples.reduce((a, b) => b.rtt < a.rtt ? b : a).off; }
 // STUN finds a direct path; the TURN relay (free public Open Relay, best effort)
 // carries the call when routers or mobile networks block direct connections.
 const ICE = [
   { urls:'stun:stun.l.google.com:19302' },
   { urls:['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username:'openrelayproject', credential:'openrelayproject' },
 ];
-let peer = null, conn = null, audioDc = null, ctx = null, io = null, bandOut = null, micGain = null, media = null, friend = null, seq = 0;
-const st = { sent: 0, recv: 0, lost: 0, lastSeq: null, under: 0, rtt: null };
-window.jamStats = st;
-const pkt = new Uint8Array(packetBytes(FRAMES, 3));
+let peer = null, ctx = null, io = null, micGain = null, media = null, videoOnly = null, seq = 0;
+const peers = new Map();    // peer id -> { conn, audio, name, rtt, offset, samples, lastSeq, recv, lost, video }
+const st = { sent: 0, under: 0 };
+window.jamStats = st; window.jamPeers = peers;
+const pkt = new Uint8Array(packetBytes(FRAMES, 1));
 
-function send(msg){ if(conn && conn.open) conn.send(msg); }
-function broadcastState(){ if(!isHost) return; send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, levels:S.levels, hostId:S.hostId, hostName:S.hostName }); }
-function onData(m){
-  if(!m) return;
-  if(m.ping!==undefined){ send({ pong:m.ping, at:clk() }); return; }
-  if(m.pong!==undefined){ clockSample(m.pong, m.at); return; }
-  if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); $('#bigInvite').hidden=true; if(pendingVideo){ showVideoIn(tileFor(friend), pendingVideo); pendingVideo=null; } status(`Connected to ${m.name}.`); if(isHost) broadcastState(); render(); return; }
+function send(msg, to){ for(const [id, p] of peers) if((!to || to === id) && p.conn && p.conn.open) p.conn.send(msg); }
+function broadcastState(to){ if(!isHost) return; send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, levels:S.levels, hostId:S.hostId, hostName:S.hostName }, to); }
+function roomCount(){ return 1 + [...peers.values()].filter(p => p.name).length; }
+function isOwner(){ return !joinId; }
+
+// Clock offset to one person (their clock - mine), from the fastest ping round trip.
+function clockSample(p, sentAt, theirAt){
+  const now = clk(), rtt = now - sentAt;
+  p.samples.push({ rtt, off: theirAt - (sentAt + rtt / 2) }); if(p.samples.length > 20) p.samples.shift();
+  p.rtt = rtt; p.offset = p.samples.reduce((a, b) => b.rtt < a.rtt ? b : a).off;
+}
+
+function onData(m, id){
+  const p = peers.get(id); if(!m || !p) return;
+  if(m.ping!==undefined){ send({ pong:m.ping, at:clk() }, id); return; }
+  if(m.pong!==undefined){ clockSample(p, m.pong, m.at); return; }
+  if(m.t==='hello'){
+    p.name = m.name; tileFor({ identity:id, name:m.name });
+    if(p.video){ showVideoIn(tileFor({ identity:id, name:m.name }), p.video); }
+    // the owner introduces a newcomer to everyone else already here
+    if(isOwner() && m.newcomer) send({ t:'members', ids:[...peers.keys()].filter(x => x !== id && peers.get(x).name) }, id);
+    if(isHost){ broadcastState(id); sendCatchUp(id); }
+    $('#bigInvite').hidden = roomCount() >= MAX_ROOM; showRoomStatus(); render(); return;
+  }
+  if(m.t==='members'){ m.ids.forEach(x => { if(x !== myId && !peers.has(x)) dial(x, false); }); return; }
+  if(m.t==='full'){ roomFull = true; status('This room is full (4 players max). Ask the others to make space, or start a new room.'); return; }
   if(m.t==='state' && !isHost){ const playing=S.playing; Object.assign(S,{ arr:m.arr, seats:m.seats, levels:m.levels||S.levels, hostId:m.hostId, hostName:m.hostName }); applyMutes(); render(); S.playing=playing; }
-  else if(m.t==='start' && !isHost){ playAt(m.at - (st.offset || 0), m.countIn); }
+  else if(m.t==='start' && !isHost){ const go = () => playAt(m.at - (p.offset || 0), m.counter); if(p.samples.length >= 3) go(); else setTimeout(go, 1300); }   // wait for the clocks to sync
   else if(m.t==='stop' && !isHost){ stopLocal(); }
   else if(m.t==='seat' && isHost){ setSeat(m.id, m.human, m.who); }
 }
+
 function setSeat(id, human, who){
   const s=S.seats.find(x=>x.id===id); if(!s) return;
   s.human=!!human; s.who=String(who||'').slice(0,40);
@@ -475,26 +512,28 @@ function toggleSeat(id){
   const s=S.seats.find(x=>x.id===id); if(!s) return;
   const human=!s.human, who=human?myName:'';
   if(isHost) setSeat(id,human,who);
-  else if(S.hostId) send({t:'seat',id,human,who});
+  else if(S.hostId) send({t:'seat',id,human,who}, S.hostId);
 }
 
-
-// Audio thread: input 0 is your instrument/mic (mono), input 1 the band (stereo,
-// host only). Each 128-frame block goes out as one packet: [mic] or [mic, bandL, bandR].
-// Received packets are mixed to stereo and played from a small queue.
+// Audio thread: input 0 is your instrument/mic (mono); every 128-frame block
+// goes out as one packet. Each other player has their own small queue; the
+// queues are mixed to stereo.
 const worklet = `
 class JamIO extends AudioWorkletProcessor {
-  constructor(){ super(); this.q=[]; this.max=4; this.under=0; this.started=false; this.band=false;
-    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.started=true; this.q.push(d.planes); while(this.q.length>this.max) this.q.shift(); } else if(d.max) this.max=d.max; else if(d.band!==undefined) this.band=d.band; }; }
+  constructor(){ super(); this.q=new Map(); this.max=4; this.under=0;
+    this.port.onmessage=e=>{ const d=e.data;
+      if(d.planes){ let q=this.q.get(d.id); if(!q){ q=[]; this.q.set(d.id,q); } q.push(d.planes); while(q.length>this.max) q.shift(); }
+      else if(d.gone) this.q.delete(d.gone);
+      else if(d.max) this.max=d.max; }; }
   process(inputs, outputs){
-    const mic=inputs[0][0], band=inputs[1];
-    const planes=[mic?mic.slice(0):new Float32Array(128)];
-    if(this.band&&band&&band.length){ planes.push(band[0].slice(0), (band[1]||band[0]).slice(0)); }
-    this.port.postMessage(planes);
-    const out=outputs[0], blk=this.q.shift();
-    if(blk){ const m=blk[0], l=blk[1], r=blk[2]||blk[1];
-      for(let i=0;i<128;i++){ out[0][i]=m[i]+(l?l[i]:0); if(out[1]) out[1][i]=m[i]+(r?r[i]:0); } }
-    else { out.forEach(c=>c.fill(0)); if(this.started) this.under++; }
+    const mic=inputs[0][0];
+    this.port.postMessage(mic?mic.slice(0):new Float32Array(128));
+    const out=outputs[0]; out.forEach(c=>c.fill(0));
+    for(const q of this.q.values()){
+      const blk=q.shift(); if(!blk){ this.under++; continue; }
+      const m=blk[0], l=blk[1], r=blk[2]||blk[1];
+      for(let i=0;i<128;i++){ out[0][i]+=m[i]+(l?l[i]:0); if(out[1]) out[1][i]+=m[i]+(r?r[i]:0); }
+    }
     if(currentFrame % 4800 < 128) this.port.postMessage({ under:this.under });
     return true;
   }
@@ -502,62 +541,74 @@ class JamIO extends AudioWorkletProcessor {
 registerProcessor('jam-io', JamIO);`;
 
 async function startAudio(stream){
-  // Same audio setup as the quick test (plain 48 kHz context + worklet), which
-  // works on every device we've tried. The band runs in Tone.js's own context
-  // and is fed in through a stream (see buildEngine).
+  // Plain 48 kHz context + worklet (as in the quick test). The band runs in
+  // Tone.js's own context on every device, started on a shared clock.
   ctx = new AudioContext({ sampleRate:RATE, latencyHint:'interactive' });
   await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type:'text/javascript' })));
-  io = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs:2, numberOfOutputs:1, outputChannelCount:[2] });
+  io = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[2] });
   io.connect(ctx.destination);
   io.port.postMessage({ max:+$('#buffer').value });
   micGain = ctx.createGain(); micGain.channelCount = 1; micGain.channelCountMode = 'explicit'; micGain.connect(io, 0, 0);
-  bandOut = ctx.createGain(); bandOut.connect(io, 0, 1);
   if(stream.getAudioTracks().length) connectMic(new MediaStream(stream.getAudioTracks()));
   io.port.onmessage = e => {
     const d = e.data;
     if(d.under !== undefined){ st.under = d.under; return; }
-    if(!audioDc || audioDc.readyState !== 'open') return;
-    const n = encodePacket(pkt, { seq:seq++, timeUs:(performance.timeOrigin+performance.now())*1000, sampleRate:RATE, frames:FRAMES, wantChannels:3, planes:d });
-    audioDc.send(pkt.subarray(0, n)); st.sent++;
+    let n = 0;
+    for(const p of peers.values()){
+      if(!p.audio || p.audio.readyState !== 'open') continue;
+      if(!n) n = encodePacket(pkt, { seq:seq++, timeUs:clk()*1000, sampleRate:RATE, frames:FRAMES, wantChannels:1, planes:[d] });
+      p.audio.send(pkt.subarray(0, n));
+    }
+    if(n) st.sent++;
   };
   await ctx.resume();
 }
 
-function wireConn(c){
-  conn = c;
-  clearTimeout(connTimer);
-  connTimer = setTimeout(() => { if(!audioDc || audioDc.readyState !== 'open') status(BLOCKED); }, 20000);
-  const watchIce = () => { const pc = c.peerConnection; if(!pc) return setTimeout(watchIce, 200);
-    pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') status(BLOCKED); if(pc.iceConnectionState === 'disconnected') status('Connection dropped, trying to recover…'); }); };
-  watchIce();
-  c.on('open', () => {
-    audioDc = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
-    audioDc.binaryType = 'arraybuffer';
-    audioDc.onmessage = e => {
-      const p = decodePacket(new Uint8Array(e.data)); if(!p) return;
-      if(st.lastSeq !== null){ const d = seqDelta(st.lastSeq, p.seq); if(d <= 0) return; if(d > 1) st.lost += d - 1; }
-      st.lastSeq = p.seq; st.recv++; st.chans = p.planes.length;
-      if(p.planes[1]){ let pk = 0; for(const v of p.planes[1]) pk = Math.max(pk, Math.abs(v)); st.bandPeak = Math.max(pk, (st.bandPeak || 0) * 0.99); }
-      if(io) io.port.postMessage({ planes:p.planes });
-    };
-    send({ t:'hello', id:myId, name:myName });
-    for(let i=0;i<8;i++) setTimeout(() => send({ ping:clk() }), 150*i);   // quick initial clock sync
-    setInterval(() => send({ ping:clk() }), 1000);
-  });
-  c.on('data', onData);
-  c.on('close', () => {
-    if(conn !== c) return;
-    if(friend){ tiles.get(friend.identity)?.remove(); tiles.delete(friend.identity); }
-    if(friend && S.hostId === friend.identity){ S.hostId = null; S.hostName = ''; S.playing = false; S.seats.forEach(s => { s.human = false; s.who = ''; }); }
-    friend = null; conn = null; audioDc = null; render();
-    $('#connStats').textContent = 'Your friend left. Send the invite link again to reconnect.';
-  });
-}
-function gotVideo(s){ if(friend) showVideoIn(tileFor(friend), s); else pendingVideo = s; }
-// Plain-language connection status, so a failed direct connection is obvious.
-function status(t){ $('#connStats').textContent = t; }
-const BLOCKED = 'Couldn’t connect: one of your networks is blocking direct connections (common on mobile data and office Wi-Fi). Try both on home Wi-Fi.';
 function showVideoIn(t, stream){ const v = document.createElement('video'); v.autoplay = v.playsInline = v.muted = true; v.srcObject = stream; t.querySelector('.vid').replaceChildren(v); t.querySelector('.initial').hidden = true; }
+function status(t){ $('#connStats').textContent = t; }
+const BLOCKED = 'Couldn’t connect to someone: a network is blocking direct connections (common on mobile data and office Wi-Fi). Try home Wi-Fi.';
+function showRoomStatus(){ const names = [...peers.values()].filter(p => p.name).map(p => p.name); status(names.length ? `In the room: you, ${names.join(', ')} (${roomCount()}/${MAX_ROOM})` : (isOwner() ? 'Send this invite link to up to 3 friends:' : 'Connecting…')); }
+
+function removePeer(id){
+  const p = peers.get(id); if(!p) return;
+  peers.delete(id); io && io.port.postMessage({ gone:id });
+  tiles.get(id)?.remove(); tiles.delete(id);
+  if(S.hostId === id){ S.hostId = null; S.hostName = ''; stopLocal(); S.seats.forEach(s => { s.human = false; s.who = ''; }); applyMutes(); }
+  if(p.name) showRoomStatus();
+  $('#bigInvite').hidden = !isOwner() || roomCount() >= MAX_ROOM;
+  render();
+}
+
+// One reliable control connection + one raw audio channel per person.
+function wireConn(c, newcomer){
+  const id = c.peer, old = peers.get(id);
+  if(old && old.conn !== c){ try{ old.conn.close(); }catch(e){} }
+  const p = { conn:c, audio:null, name:old && old.name, rtt:null, offset:0, samples:[], lastSeq:null, recv:0, lost:0, video:old && old.video };
+  peers.set(id, p);
+  c.on('open', () => {
+    p.audio = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
+    p.audio.binaryType = 'arraybuffer';
+    p.audio.onmessage = e => {
+      const pk = decodePacket(new Uint8Array(e.data)); if(!pk) return;
+      if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1) p.lost += d - 1; }
+      p.lastSeq = pk.seq; p.recv++;
+      if(io) io.port.postMessage({ id, planes:pk.planes });
+    };
+    const pc = c.peerConnection;
+    pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') status(BLOCKED); });
+    send({ t:'hello', id:myId, name:myName, newcomer }, id);
+    for(let i=0;i<8;i++) setTimeout(() => send({ ping:clk() }, id), 150*i);   // quick initial clock sync
+  });
+  c.on('data', m => onData(m, id));
+  c.on('close', () => { if(peers.get(id) && peers.get(id).conn === c) removePeer(id); });
+  setTimeout(() => { if(peers.get(id) === p && (!p.audio || p.audio.readyState !== 'open')) status(BLOCKED); }, 20000);
+}
+function dial(id, newcomer){
+  wireConn(peer.connect(id, { serialization:'json', reliable:true }), newcomer);
+  const call = peer.call(id, videoOnly);
+  call.on('stream', s => gotVideo(id, s));
+}
+function gotVideo(id, s){ const p = peers.get(id); if(p) p.video = s; if(p && p.name) showVideoIn(tileFor({ identity:id, name:p.name }), s); }
 
 async function join(){
   const name=$('#nameInput').value.trim();
@@ -571,37 +622,35 @@ async function join(){
     catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
     let audioProblem = null;
     try { await startAudio(media); } catch(e) { audioProblem = e; console.error('audio setup failed', e); }
-    const videoOnly = new MediaStream(media.getVideoTracks());
+    videoOnly = new MediaStream(media.getVideoTracks());
     // ?broker=host:port uses a self-hosted PeerJS broker (for testing); default is the public one.
     const broker = params.get('broker'), [bh, bp] = (broker || '').split(':');
     peer = new Peer(Object.assign({ config:{ iceServers:ICE } }, broker ? { host:bh, port:+bp, path:'/', secure:false } : {}));
     await new Promise((res, rej) => { peer.on('open', id => { myId = id; res(); }); peer.on('error', rej); });
-    peer.on('error', e => status(e.type === 'peer-unavailable' ? 'That invite link has expired (it changes whenever your friend reloads the page). Ask them for a fresh one.' : 'Connection problem: ' + (e.type || e.message)));
-    peer.on('connection', c => { if(conn && conn !== c){ try{ conn.close(); }catch(e){} } wireConn(c); });
-    peer.on('call', call => { call.answer(videoOnly); call.on('stream', gotVideo); });
+    peer.on('error', e => status(e.type === 'peer-unavailable' ? (peers.size ? 'Someone in the room couldn’t be reached.' : 'That invite link has expired (it changes whenever the room’s creator reloads). Ask for a fresh one.') : 'Connection problem: ' + (e.type || e.message)));
+    peer.on('connection', c => {
+      if(roomCount() >= MAX_ROOM && !peers.has(c.peer)){ c.on('open', () => { const tell = setInterval(() => c.open && c.send({ t:'full' }), 400); setTimeout(() => { clearInterval(tell); c.close(); }, 6000); }); return; }
+      wireConn(c, false);
+    });
+    // A video call can arrive just before its control connection; wait briefly for it.
+    peer.on('call', call => { let n = 0; const answer = () => { if(peers.has(call.peer)){ call.answer(videoOnly); call.on('stream', s => gotVideo(call.peer, s)); } else if(n++ < 25) setTimeout(answer, 200); }; answer(); });
     $('#joinView').hidden=true; $('#roomView').hidden=false; $('#roomTitle').textContent='SoundStudio jam';
-    const me = { identity:myId, name:myName };
-    const t = tileFor(me); if(media.getVideoTracks().length) showVideoIn(t, videoOnly);
+    const t = tileFor({ identity:myId, name:myName }); if(media.getVideoTracks().length) showVideoIn(t, videoOnly);
     if(joinId){
-      const dial = () => {
-        wireConn(peer.connect(joinId, { serialization:'json', reliable:true }));
-        const call = peer.call(joinId, videoOnly);
-        call.on('stream', gotVideo);
-      };
-      dial();
+      dial(joinId, true); status('Connecting…');
       let tries = 1;
       const retry = setInterval(() => {
-        if(audioDc && audioDc.readyState === 'open'){ clearInterval(retry); return; }
-        if(tries >= 3){ clearInterval(retry); return; }
-        tries++; status(`Still connecting… (attempt ${tries})`); dial();
+        const o = peers.get(joinId);
+        if((o && o.name) || roomFull){ clearInterval(retry); return; }
+        if(tries >= 3){ clearInterval(retry); setTimeout(() => { const o2 = peers.get(joinId); if(!(o2 && o2.name) && !roomFull) status('Couldn’t join this room. It may be full (4 players max), or the person who created it has left.'); }, 8000); return; }
+        tries++; status(`Still connecting… (attempt ${tries})`); dial(joinId, true);
       }, 8000);
-      status('Connecting to your friend…');
+      inviteLink = location.href;
     } else {
       inviteLink = location.origin + location.pathname + '?join=' + myId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
-      history.replaceState(null, '', inviteLink);   // copying the address bar now works too
+      history.replaceState(null, '', inviteLink);   // copying the address bar works too
       try { sessionStorage.setItem('ss.hostId', myId); } catch(e) {}
-      $('#connStats').textContent = 'Send this invite link to your friend:';
-      $('#bigInvite').hidden = false;
+      showRoomStatus(); $('#bigInvite').hidden = false;
     }
     if(!audioProblem){
       await fillDevices().catch(() => {});
@@ -610,16 +659,16 @@ async function join(){
     }
     render();
     if(audioProblem) status('Audio couldn’t start on this device (' + (audioProblem.name || audioProblem) + '). Video still works.');
+    setInterval(() => send({ ping:clk() }), 1000);
     setInterval(() => {
-      const pc = conn && conn.peerConnection;
-      $('#connDebug').textContent = `me ${myId.slice(0,6)} · ${joinId ? 'joining ' + joinId.slice(0,6) : 'hosting'} · link ${conn ? (conn.open ? 'open' : 'opening') : 'none'} · net ${pc ? pc.iceConnectionState : '–'} · audio ${audioDc ? audioDc.readyState : '–'} · friend ${friend ? friend.name : '–'}`;
-    }, 500);
-    setInterval(() => {
-      if(!conn || !audioDc || audioDc.readyState !== 'open' || !st.recv) return;
-      const net = st.rtt === null ? '–' : Math.round(st.rtt / 2) + ' ms';
+      const live = [...peers.values()].filter(p => p.name && p.recv);
+      $('#connDebug').textContent = `me ${myId.slice(0,6)} · ${isOwner() ? 'room creator' : 'joined'} · ` + ([...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet');
+      if(!live.length) return;
+      const net = live.map(p => p.rtt === null ? '–' : Math.round(p.rtt / 2) + ' ms').join(', ');
       const out = Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000);
-      const loss = st.recv ? (100 * st.lost / (st.recv + st.lost)).toFixed(1) : '0.0';
-      $('#connStats').innerHTML = `<span>Network ≈ ${net}</span><span>Buffer ${Math.round($('#buffer').value * blockMs)} ms</span><span>Your output ${out} ms</span><span>Lost ${loss}%</span><span>Dropouts ${st.under}</span>`;
+      const recv = live.reduce((a, p) => a + p.recv, 0), lost = live.reduce((a, p) => a + p.lost, 0);
+      const loss = (100 * lost / (recv + lost)).toFixed(1);
+      $('#connStats').innerHTML = `<span>In the room: ${roomCount()}/${MAX_ROOM}</span><span>Network ≈ ${net}</span><span>Buffer ${Math.round($('#buffer').value * blockMs)} ms</span><span>Your output ${out} ms</span><span>Lost ${loss}%</span><span>Dropouts ${st.under}</span>`;
     }, 250);
   }catch(e){
     $('#joinErr').textContent='Couldn’t start: '+(e.message||e.type||e)+'. Allow camera and microphone, then try again.'; $('#joinBtn').disabled=false;
@@ -731,7 +780,7 @@ const params=new URLSearchParams(location.search);
 let joinId=params.get('join');
 try{ if(joinId && sessionStorage.getItem('ss.hostId')===joinId){ joinId=null; history.replaceState(null,'',location.pathname); } }catch(e){}
 let inviteLink=null;
-if(joinId) $('#roomLine').textContent='Your friend invited you. Add your name and join.';
+if(joinId) $('#roomLine').textContent='You’ve been invited to a jam. Add your name and join.';
 try{ $('#nameInput').value=localStorage.getItem('ss.name')||''; }catch(e){}
 $('#nameInput').addEventListener('input',()=>{ try{ localStorage.setItem('ss.name',$('#nameInput').value); }catch(e){} });
 $('#nameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') join(); });
@@ -751,8 +800,8 @@ $('#outDev').onchange=()=>useOutput($('#outDev').value);
 try{ const v=localStorage.getItem('ss.bandVol'); if(v!==null) $('#bandVol').value=v; }catch(e){}
 $('#bandVol').oninput=()=>{ applyBandVolume(); try{ localStorage.setItem('ss.bandVol',$('#bandVol').value); }catch(e){} };
 applyBandVolume();
-$('#bigInvite').onclick=async()=>{ try{ await navigator.clipboard.writeText(inviteLink); $('#bigInvite').textContent='Link copied. Send it to your friend'; setTimeout(()=>$('#bigInvite').textContent='Copy invite link',2500); }catch(e){ prompt('Copy this invite link',inviteLink); } };
-$('#leaveBtn').onclick=()=>{ try{ conn&&conn.close(); peer&&peer.destroy(); }catch(e){} location.href=location.pathname; };
+$('#bigInvite').onclick=async()=>{ try{ await navigator.clipboard.writeText(inviteLink); $('#bigInvite').textContent='Link copied. Send it to your friends'; setTimeout(()=>$('#bigInvite').textContent='Copy invite link',2500); }catch(e){ prompt('Copy this invite link',inviteLink); } };
+$('#leaveBtn').onclick=()=>{ try{ peers.forEach(p=>p.conn.close()); peer&&peer.destroy(); }catch(e){} location.href=location.pathname; };
 $('#micBtn').onclick=()=>{ if(!micGain) return; const on=micGain.gain.value===0; micGain.gain.value=on?1:0; $('#micBtn').textContent=on?'Mic on':'Mic off'; $('#micBtn').setAttribute('aria-pressed',String(on)); };
 $('#camBtn').onclick=()=>{ const v=media&&media.getVideoTracks()[0]; if(!v) return; v.enabled=!v.enabled; $('#camBtn').textContent=v.enabled?'Camera on':'Camera off'; $('#camBtn').setAttribute('aria-pressed',String(v.enabled)); };
 ['Slow funk in E minor, 96 bpm','12-bar blues shuffle in A','Lo-fi hip hop for a rainy night','Reggae one drop in G','Up-tempo jazz ii-V-I in Bb','Driving indie rock in D'].forEach(t=>{
