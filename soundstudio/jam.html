@@ -262,7 +262,10 @@ let E = null, counter = 0, voiceIdx = 0;
 function buildEngine(){
   const limiter = new Tone.Limiter(-1).toDestination();
   const master = new Tone.Volume(-3).connect(limiter);
-  limiter.connect(bandOut); // also sent to the other player, in the same packets as your mic
+  // The band plays here and is also sent to the other player, in the same packets as your mic.
+  const dest = Tone.getContext().createMediaStreamDestination();
+  limiter.connect(dest);
+  ctx.createMediaStreamSource(dest.stream).connect(bandOut);
   const chan = () => { const ch=new Tone.Channel({volume:0}).connect(master); const meter=new Tone.Meter({smoothing:.75}); ch.connect(meter); return {ch,meter}; };
   const e = { drums:chan(), bass:chan(), keys:chan(), guitar:chan() };
   const clickCh = new Tone.Channel({volume:-6}).toDestination(); // click is heard only by the host
@@ -413,14 +416,12 @@ class JamIO extends AudioWorkletProcessor {
 registerProcessor('jam-io', JamIO);`;
 
 async function startAudio(stream){
-  // One 48 kHz audio context shared with Tone.js. It must be Tone's own kind of
-  // context (Tone breaks on a plain AudioContext), and our worklet module is added
-  // on the context directly because Tone's helper only loads one module.
-  const old = Tone.getContext().rawContext;
-  ctx = new (old.constructor)({ latencyHint:'interactive', sampleRate:RATE });
-  Tone.setContext(ctx); // the original context stays suspended (closing it breaks Tone.start)
+  // Same audio setup as the quick test (plain 48 kHz context + worklet), which
+  // works on every device we've tried. The band runs in Tone.js's own context
+  // and is fed in through a stream (see buildEngine).
+  ctx = new AudioContext({ sampleRate:RATE, latencyHint:'interactive' });
   await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type:'text/javascript' })));
-  io = Tone.getContext().createAudioWorkletNode('jam-io', { numberOfInputs:2, numberOfOutputs:1, outputChannelCount:[2] });
+  io = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs:2, numberOfOutputs:1, outputChannelCount:[2] });
   io.connect(ctx.destination);
   io.port.postMessage({ max:+$('#buffer').value });
   micGain = ctx.createGain(); micGain.connect(io, 0, 0);
@@ -451,7 +452,7 @@ function wireConn(c){
       if(st.lastSeq !== null){ const d = seqDelta(st.lastSeq, p.seq); if(d <= 0) return; if(d > 1) st.lost += d - 1; }
       st.lastSeq = p.seq; st.recv++; st.chans = p.planes.length;
       if(p.planes[1]){ let pk = 0; for(const v of p.planes[1]) pk = Math.max(pk, Math.abs(v)); st.bandPeak = Math.max(pk, (st.bandPeak || 0) * 0.99); }
-      io.port.postMessage({ planes:p.planes });
+      if(io) io.port.postMessage({ planes:p.planes });
     };
     send({ t:'hello', id:myId, name:myName });
     setInterval(() => send({ ping:performance.now() }), 1000);
@@ -478,7 +479,8 @@ async function join(){
   try{
     try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
     catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:1 } }); }
-    await startAudio(media);
+    let audioProblem = null;
+    try { await startAudio(media); } catch(e) { audioProblem = e; console.error('audio setup failed', e); }
     const videoOnly = new MediaStream(media.getVideoTracks());
     // ?broker=host:port uses a self-hosted PeerJS broker (for testing); default is the public one.
     const broker = params.get('broker'), [bh, bp] = (broker || '').split(':');
@@ -512,6 +514,7 @@ async function join(){
       $('#bigInvite').hidden = false;
     }
     render();
+    if(audioProblem) status('Audio couldn’t start on this device (' + (audioProblem.name || audioProblem) + '). Video still works.');
     setInterval(() => {
       const pc = conn && conn.peerConnection;
       $('#connDebug').textContent = `me ${myId.slice(0,6)} · ${joinId ? 'joining ' + joinId.slice(0,6) : 'hosting'} · link ${conn ? (conn.open ? 'open' : 'opening') : 'none'} · net ${pc ? pc.iceConnectionState : '–'} · audio ${audioDc ? audioDc.readyState : '–'} · friend ${friend ? friend.name : '–'}`;
@@ -533,7 +536,7 @@ async function claimBand(){
   await Tone.start();
   if(!E) E=buildEngine();
   isHost=true; S.hostId=myId; S.hostName=myName;
-  io.port.postMessage({ band:true });
+  io && io.port.postMessage({ band:true });
   if(!S.arr) S.arr=finalize(localArrangement('Slow funk in E minor, 96 bpm'),'local');
   applyMutes(); broadcastState(); render();
 }
