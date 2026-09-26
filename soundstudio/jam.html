@@ -352,6 +352,13 @@ function meterLoop(){
 // direct: control messages on a reliable channel, audio on an unordered,
 // never-retransmitted channel carrying the hub packet format.
 const FRAMES = 128, RATE = 48000, blockMs = FRAMES / RATE * 1000;
+let pendingVideo = null, connTimer = null;
+// STUN finds a direct path; the TURN relay (free public Open Relay, best effort)
+// carries the call when routers or mobile networks block direct connections.
+const ICE = [
+  { urls:'stun:stun.l.google.com:19302' },
+  { urls:['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username:'openrelayproject', credential:'openrelayproject' },
+];
 let peer = null, conn = null, audioDc = null, ctx = null, io = null, bandOut = null, micGain = null, media = null, friend = null, seq = 0;
 const st = { sent: 0, recv: 0, lost: 0, lastSeq: null, under: 0, rtt: null };
 window.jamStats = st;
@@ -363,7 +370,7 @@ function onData(m){
   if(!m) return;
   if(m.ping!==undefined){ send({ pong:m.ping }); return; }
   if(m.pong!==undefined){ st.rtt=performance.now()-m.pong; return; }
-  if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); if(isHost) broadcastState(); render(); return; }
+  if(m.t==='hello'){ friend={ identity:m.id, name:m.name }; tileFor(friend); if(pendingVideo){ showVideoIn(tileFor(friend), pendingVideo); pendingVideo=null; } status(`Connected to ${m.name}.`); if(isHost) broadcastState(); render(); return; }
   if(m.t==='state' && !isHost){ Object.assign(S,{ arr:m.arr, playing:m.playing, seats:m.seats, hostId:m.hostId, hostName:m.hostName }); render(); }
   else if(m.t==='beat' && !isHost){ showBeat(m); }
   else if(m.t==='seat' && isHost){ setSeat(m.id, m.human, m.who); }
@@ -429,6 +436,11 @@ async function startAudio(stream){
 
 function wireConn(c){
   conn = c;
+  clearTimeout(connTimer);
+  connTimer = setTimeout(() => { if(!audioDc || audioDc.readyState !== 'open') status(BLOCKED); }, 20000);
+  const watchIce = () => { const pc = c.peerConnection; if(!pc) return setTimeout(watchIce, 200);
+    pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') status(BLOCKED); if(pc.iceConnectionState === 'disconnected') status('Connection dropped, trying to recover…'); }); };
+  watchIce();
   c.on('open', () => {
     audioDc = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
     audioDc.binaryType = 'arraybuffer';
@@ -450,6 +462,10 @@ function wireConn(c){
     $('#connStats').textContent = 'Your friend left. Send the invite link again to reconnect.';
   });
 }
+function gotVideo(s){ if(friend) showVideoIn(tileFor(friend), s); else pendingVideo = s; }
+// Plain-language connection status, so a failed direct connection is obvious.
+function status(t){ $('#connStats').textContent = t; }
+const BLOCKED = 'Couldn’t connect: one of your networks is blocking direct connections (common on mobile data and office Wi-Fi). Try both on home Wi-Fi.';
 function showVideoIn(t, stream){ const v = document.createElement('video'); v.autoplay = v.playsInline = v.muted = true; v.srcObject = stream; t.querySelector('.vid').replaceChildren(v); t.querySelector('.initial').hidden = true; }
 
 async function join(){
@@ -463,25 +479,26 @@ async function join(){
     const videoOnly = new MediaStream(media.getVideoTracks());
     // ?broker=host:port uses a self-hosted PeerJS broker (for testing); default is the public one.
     const broker = params.get('broker'), [bh, bp] = (broker || '').split(':');
-    peer = new Peer(Object.assign({ config:{ iceServers:[{ urls:'stun:stun.l.google.com:19302' }] } }, broker ? { host:bh, port:+bp, path:'/', secure:false } : {}));
+    peer = new Peer(Object.assign({ config:{ iceServers:ICE } }, broker ? { host:bh, port:+bp, path:'/', secure:false } : {}));
     await new Promise((res, rej) => { peer.on('open', id => { myId = id; res(); }); peer.on('error', rej); });
-    peer.on('error', e => { $('#connStats').textContent = 'Connection problem: ' + (e.type || e.message); });
+    peer.on('error', e => status(e.type === 'peer-unavailable' ? 'That invite link has expired (it changes whenever your friend reloads the page). Ask them for a fresh one.' : 'Connection problem: ' + (e.type || e.message)));
     peer.on('connection', c => { if(conn) { c.close(); return; } wireConn(c); });
-    peer.on('call', call => { call.answer(videoOnly); call.on('stream', s => { if(friend) showVideoIn(tileFor(friend), s); else setTimeout(() => friend && showVideoIn(tileFor(friend), s), 1500); }); });
+    peer.on('call', call => { call.answer(videoOnly); call.on('stream', gotVideo); });
     $('#joinView').hidden=true; $('#roomView').hidden=false; $('#roomTitle').textContent='SoundStudio jam';
     const me = { identity:myId, name:myName };
     const t = tileFor(me); if(media.getVideoTracks().length) showVideoIn(t, videoOnly);
     if(joinId){
       wireConn(peer.connect(joinId, { serialization:'json' }));
       const call = peer.call(joinId, videoOnly);
-      call.on('stream', s => { const show = () => friend ? showVideoIn(tileFor(friend), s) : setTimeout(show, 300); show(); });
+      call.on('stream', gotVideo);
+      status('Connecting to your friend…');
     } else {
       inviteLink = location.origin + location.pathname + '?join=' + myId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
       $('#connStats').textContent = 'Send the invite link to a friend to start.';
     }
     render();
     setInterval(() => {
-      if(!conn) return;
+      if(!conn || !audioDc || audioDc.readyState !== 'open' || !st.recv) return;
       const net = st.rtt === null ? '–' : Math.round(st.rtt / 2) + ' ms';
       const out = Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000);
       const loss = st.recv ? (100 * st.lost / (st.recv + st.lost)).toFixed(1) : '0.0';
