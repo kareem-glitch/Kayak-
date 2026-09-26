@@ -1,0 +1,58 @@
+diff --git a/src/webrtc/WebRtcDataProtocol.cpp b/src/webrtc/WebRtcDataProtocol.cpp
+index 5717ff0e..1641be31 100644
+--- a/src/webrtc/WebRtcDataProtocol.cpp
++++ b/src/webrtc/WebRtcDataProtocol.cpp
+@@ -105,6 +105,11 @@ WebRtcDataProtocol::WebRtcDataProtocol(JackTrip* jacktrip, const runModeT runmod
+ //*******************************************************************************
+ WebRtcDataProtocol::~WebRtcDataProtocol()
+ {
++    // The data channel can outlive us; don't let its callbacks reach a
++    // destroyed object.
++    if (mDataChannel) {
++        mDataChannel->resetCallbacks();
++    }
+     stop();
+     wait();
+ }
+@@ -152,11 +157,12 @@ void WebRtcDataProtocol::onDataChannelOpen()
+ //*******************************************************************************
+ void WebRtcDataProtocol::onDataChannelClosed()
+ {
+-    // Check if we're already stopped to prevent use-after-free
+-    if (mStopped) {
++    // Check if we're already stopped to prevent use-after-free.
++    // Also runs at most once: both the idle timeout and the channel's own
++    // onClosed callback can report the same close.
++    if (mStopped || !mChannelOpen.exchange(false)) {
+         return;
+     }
+-    mChannelOpen = false;
+     emit signalDataChannelDisconnected();
+     emit signalCeaseTransmission(QStringLiteral("Data channel closed"));
+ }
+@@ -529,5 +535,8 @@ void WebRtcDataProtocol::printWaitedTooLong(int wait_msec)
+         cerr << "WebRTC: No packets for " << wait_msec
+              << "ms — closing data channel (client probably gone)" << endl;
+         mDataChannel->close();
++        // A vanished peer never acknowledges the close, so onClosed may never
++        // fire; stop this session now so the hub releases its slot.
++        onDataChannelClosed();
+     }
+ }
+diff --git a/src/webrtc/WebRtcPeerConnection.cpp b/src/webrtc/WebRtcPeerConnection.cpp
+index 569dfac9..382509f0 100644
+--- a/src/webrtc/WebRtcPeerConnection.cpp
++++ b/src/webrtc/WebRtcPeerConnection.cpp
+@@ -515,6 +515,12 @@ void WebRtcPeerConnection::onSignalingConnectionClosed()
+ {
+     // Note: We don't close the peer connection here because the data channel
+     // may still be active. The signaling connection is ephemeral.
++    // But if the client left before its data channel ever opened, nothing else
++    // will release its hub slot, so report the attempt as failed.
++    if (!mDataChannel || !mDataChannel->isOpen()) {
++        emit connectionFailed(
++            QStringLiteral("Signaling closed before the data channel opened"));
++    }
+ }
+ 
+ //*******************************************************************************

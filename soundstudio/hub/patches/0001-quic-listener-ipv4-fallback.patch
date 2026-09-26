@@ -1,0 +1,16 @@
+diff --git a/src/http3/Http3Server.cpp b/src/http3/Http3Server.cpp
+index 4b88ecc7..c411c3ad 100644
+--- a/src/http3/Http3Server.cpp
++++ b/src/http3/Http3Server.cpp
+@@ -191,6 +191,11 @@ bool Http3Server::start()
+     }
+ 
+     status = mQuicApi->ListenerStart(mQuicListener, &alpnBuffer, 1, &address);
++    if (QUIC_FAILED(status)) {
++        // Dual-stack bind fails on hosts without IPv6; fall back to IPv4 only.
++        QuicAddrSetFamily(&address, QUIC_ADDRESS_FAMILY_INET);
++        status = mQuicApi->ListenerStart(mQuicListener, &alpnBuffer, 1, &address);
++    }
+     if (QUIC_FAILED(status)) {
+         cerr << "Http3Server: Failed to start QUIC listener, status: 0x" << std::hex
+              << status << std::dec << endl;

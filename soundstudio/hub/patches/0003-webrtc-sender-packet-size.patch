@@ -1,0 +1,17 @@
+diff --git a/src/webrtc/WebRtcDataProtocol.cpp b/src/webrtc/WebRtcDataProtocol.cpp
+index 1641be31..07f106da 100644
+--- a/src/webrtc/WebRtcDataProtocol.cpp
++++ b/src/webrtc/WebRtcDataProtocol.cpp
+@@ -283,7 +283,11 @@ void WebRtcDataProtocol::run()
+             return;
+         }
+     }
+-    int full_packet_size = mJackTrip->getReceivePacketSizeInBytes();
++    // The sender's packets carry the input channels, the receiver's the output
++    // channels (as in UdpDataProtocol). Using the receive size for both overflows
++    // mFullPacket whenever a client sends fewer channels than it receives.
++    int full_packet_size = (mRunMode == RECEIVER) ? mJackTrip->getReceivePacketSizeInBytes()
++                                                  : mJackTrip->getSendPacketSizeInBytes();
+     mFullPacket.reset(new int8_t[full_packet_size]);
+     std::memset(mFullPacket.get(), 0, full_packet_size);
+     mJackTrip->putHeaderInIncomingPacket(mFullPacket.get(), mAudioPacket.get());

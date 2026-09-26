@@ -1,0 +1,20 @@
+# SoundStudio audio hub. On the VM:  docker compose up -d --build
+# Settings come from .env next to this file (copy .env.example; never commit it).
+services:
+  hub:
+    build: .
+    image: soundstudio-hub
+    restart: unless-stopped
+    # Host networking: the hub hands out one UDP port per WebRTC client
+    # (UDP_BASE_PORT + slot), and QUIC/WebTransport shares the TCP port number.
+    network_mode: host
+    env_file: .env
+    volumes:
+      - ./certs:/certs:ro
+    # Lets JACK and the hub use realtime scheduling (less audio dropout).
+    cap_add: [SYS_NICE]
+    ulimits:
+      rtprio: 95
+      memlock: -1
+    shm_size: 256m
+    ipc: shareable

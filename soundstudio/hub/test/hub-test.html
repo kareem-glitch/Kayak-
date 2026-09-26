@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub audio test</title>
+<style>
+  body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:24px auto;padding:0 16px;background:#121c1f;color:#e6eee8}
+  input,button,select{font:inherit}
+  input{width:100%;padding:8px;border-radius:8px;border:1px solid #2f4247;background:#1f2f34;color:inherit}
+  button{padding:10px 16px;border:0;border-radius:10px;background:#f0a238;color:#1b1206;font-weight:600;cursor:pointer;margin-top:12px}
+  label{display:block;margin-top:10px;color:#9aaba7;font-size:.9rem}
+  pre{background:#182529;border:1px solid #2f4247;border-radius:10px;padding:12px;white-space:pre-wrap;font-size:.85rem}
+  .stat{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<h1>Hub audio test</h1>
+<p>Connects to the audio hub over a WebRTC data channel, sends a test tone (or your mic), and plays what the hub sends back. Open it in two tabs with different names in the same room: each should hear the other's tone.</p>
+<label>Hub host <input id="host" value="localhost"></label>
+<label>Hub port <input id="port" value="4464"></label>
+<label>Signed name (from /api/token) <input id="name"></label>
+<label>Send <select id="source"><option value="tone">Test tone</option><option value="mic">Microphone</option></select></label>
+<label>Tone frequency (Hz) <input id="freq" value="440"></label>
+<button id="go">Connect</button>
+<pre id="stats" class="stat">Not connected</pre>
+<pre id="log"></pre>
+<script type="module">
+import { encodePacket, decodePacket, packetBytes, seqDelta } from '../../audio/hub-protocol.js';
+
+const $ = id => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+for (const k of ['host', 'port', 'name', 'freq', 'source']) if (q.get(k)) $(k).value = q.get(k);
+const log = m => { $('log').textContent += new Date().toISOString().slice(11, 23) + ' ' + m + '\n'; };
+
+const FRAMES = 128, RATE = 48000, SEND_CH = 1, RECV_CH = 2;
+
+// Capture: forwards each 128-frame input block. Playback: a small FIFO of
+// received stereo blocks; plays silence when empty, drops the oldest when
+// more than `maxQueue` blocks are waiting (bounds latency).
+const worklet = `
+class HubIO extends AudioWorkletProcessor {
+  constructor(){ super(); this.q=[]; this.maxQueue=8; this.under=0;
+    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.q.push(d.planes); while(this.q.length>this.maxQueue) this.q.shift(); } else if(d.maxQueue) this.maxQueue=d.maxQueue; }; }
+  process(inputs, outputs){
+    const inp=inputs[0]; if(inp&&inp[0]) this.port.postMessage(inp[0].slice(0));
+    const out=outputs[0], b=this.q.shift();
+    for(let c=0;c<out.length;c++){ const src=b&&(b[c]||b[0]); if(src) out[c].set(src); else out[c].fill(0); }
+    if(!b) this.under++;
+    if(currentFrame % 48000 < 128) this.port.postMessage({queue:this.q.length, under:this.under});
+    return true;
+  }
+}
+registerProcessor('hub-io', HubIO);`;
+
+const st = { chans: 0, sent: 0, recv: 0, lost: 0, lastSeq: null, queue: 0, under: 0, recvPeak: 0, recvFreq: 0 };
+let recent = new Float32Array(4096), recentPos = 0;
+
+// Estimate the loudest frequency of received audio, to prove we hear the other tab.
+function dominantFreq(buf) {
+  let best = 0, bestF = 0;
+  for (let f = 200; f <= 1200; f += 10) {
+    const k = 2 * Math.cos(2 * Math.PI * f / RATE); let s1 = 0, s2 = 0;
+    for (let i = 0; i < buf.length; i++) { const s = buf[i] + k * s1 - s2; s2 = s1; s1 = s; }
+    const p = s1 * s1 + s2 * s2 - k * s1 * s2; if (p > best) { best = p; bestF = f; }
+  }
+  return bestF;
+}
+
+$('go').onclick = async () => {
+  $('go').disabled = true;
+  const ctx = new AudioContext({ sampleRate: RATE, latencyHint: 'interactive' });
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([worklet], { type: 'text/javascript' })));
+  const node = new AudioWorkletNode(ctx, 'hub-io', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+  node.connect(ctx.destination);
+  if ($('source').value === 'mic') {
+    const ms = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+    ctx.createMediaStreamSource(ms).connect(node);
+  } else {
+    const osc = new OscillatorNode(ctx, { frequency: +$('freq').value || 440 });
+    const g = new GainNode(ctx, { gain: 0.3 }); osc.connect(g).connect(node); osc.start();
+  }
+  await ctx.resume();
+  log('audio running at ' + ctx.sampleRate + ' Hz, base latency ' + (ctx.baseLatency * 1000).toFixed(1) + ' ms');
+
+  const base = `${$('host').value}:${$('port').value}`;
+  try { const r = await fetch(`https://${base}/ping`); log('hub /ping: ' + r.status); }
+  catch (err) { log('hub unreachable over HTTPS (' + err + ')'); $('go').disabled = false; return; }
+  const ws = new WebSocket(`wss://${base}/webrtc?name=${encodeURIComponent($('name').value)}`);
+  const pc = new RTCPeerConnection({ iceServers: [] });
+  const dc = pc.createDataChannel('audio', { ordered: false, maxRetransmits: 0 });
+  dc.binaryType = 'arraybuffer';
+  pc.onicecandidate = e => { if (e.candidate && ws.readyState === 1) ws.send(JSON.stringify({ type: 'ice', candidate: e.candidate.candidate, sdpMid: e.candidate.sdpMid, sdpMLineIndex: e.candidate.sdpMLineIndex })); };
+  pc.onconnectionstatechange = () => log('peer connection: ' + pc.connectionState);
+  ws.onerror = () => log('signalling socket error (certificate? hub down?)');
+  ws.onclose = e => log('signalling closed ' + e.code);
+  ws.onmessage = async e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'answer') { await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }); log('got answer'); }
+    else if (m.type === 'ice' && m.candidate) await pc.addIceCandidate({ candidate: m.candidate, sdpMid: m.sdpMid, sdpMLineIndex: m.sdpMLineIndex }).catch(err => log('bad candidate ' + err));
+    else if (m.type === 'error') log('hub error: ' + m.message);
+  };
+  ws.onopen = async () => {
+    log('signalling connected');
+    ws.send(JSON.stringify({ protocol: 'webrtc', version: 1 }));
+    await pc.setLocalDescription(await pc.createOffer());
+    ws.send(JSON.stringify({ type: 'offer', sdp: pc.localDescription.sdp }));
+  };
+
+  let seq = 0; const pkt = new Uint8Array(packetBytes(FRAMES, SEND_CH));
+  dc.onopen = () => log('data channel open');
+  node.port.onmessage = e => {
+    if (e.data.queue !== undefined) { st.queue = e.data.queue; st.under = e.data.under; return; }
+    if (dc.readyState !== 'open') return;
+    const n = encodePacket(pkt, { seq: seq++, timeUs: (performance.timeOrigin + performance.now()) * 1000, sampleRate: RATE, frames: FRAMES, wantChannels: RECV_CH, planes: [e.data] });
+    dc.send(pkt.subarray(0, n)); st.sent++;
+  };
+  dc.onmessage = e => {
+    const p = decodePacket(new Uint8Array(e.data)); if (!p) return;
+    if (st.lastSeq !== null) { const d = seqDelta(st.lastSeq, p.seq); if (d > 1) st.lost += d - 1; if (d <= 0) return; }
+    st.lastSeq = p.seq; st.recv++; st.chans = p.planes.length;
+    node.port.postMessage({ planes: p.planes });
+    const ch0 = p.planes[0];
+    for (let i = 0; i < ch0.length; i++) { st.recvPeak = Math.max(st.recvPeak * 0.9999, Math.abs(ch0[i])); recent[recentPos++ % recent.length] = ch0[i]; }
+  };
+  setInterval(() => {
+    st.recvFreq = st.recvPeak > 0.01 ? dominantFreq(recent) : 0;
+    $('stats').textContent = `sent ${st.sent}  received ${st.recv}  lost ${st.lost}  queue ${st.queue}  underruns ${st.under}\n` +
+      `received channels ${st.chans}  peak ${st.recvPeak.toFixed(3)}  received tone ≈ ${st.recvFreq || '-'} Hz`;
+    window.hubStats = { ...st, dc: dc.readyState };
+  }, 500);
+};
+</script>
+</body>
+</html>
