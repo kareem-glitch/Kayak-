@@ -1,0 +1,8 @@
+{
+  "name": "soundstudio-live",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "livekit-server-sdk": "^2.9.0"
+  }
+}
