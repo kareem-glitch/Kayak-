@@ -102,14 +102,14 @@ if (joinId) $('lead').textContent = 'Your friend invited you. Press Start to joi
 
 const worklet = `
 class IO extends AudioWorkletProcessor {
-  constructor(){ super(); this.q=[]; this.max=4; this.under=0; this.peak=0;
-    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.q.push(d.planes); while(this.q.length>this.max) this.q.shift(); } else if(d.max) this.max=d.max; }; }
+  constructor(){ super(); this.q=[]; this.max=4; this.under=0; this.peak=0; this.started=false;
+    this.port.onmessage=e=>{ const d=e.data; if(d.planes){ this.started=true; this.q.push(d.planes); while(this.q.length>this.max) this.q.shift(); } else if(d.max) this.max=d.max; }; }
   process(inputs, outputs){
     const inp=inputs[0];
     if(inp&&inp[0]){ const b=inp[0]; for(let i=0;i<b.length;i++){ const a=Math.abs(b[i]); if(a>this.peak) this.peak=a; } this.port.postMessage(b.slice(0)); }
     const out=outputs[0], blk=this.q.shift();
     for(let c=0;c<out.length;c++){ const src=blk&&(blk[c]||blk[0]); if(src) out[c].set(src); else out[c].fill(0); }
-    if(!blk) this.under++;
+    if(!blk && this.started) this.under++;
     if(currentFrame % 4800 < 128){ this.port.postMessage({queue:this.q.length, under:this.under, peak:this.peak}); this.peak=0; }
     return true;
   }
@@ -198,7 +198,7 @@ async function start() {
     const out = Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000);
     const net = st.rtt === null ? '–' : Math.round(st.rtt / 2) + ' ms';
     const lossPct = st.recv ? (100 * st.lost / (st.recv + st.lost)).toFixed(1) : '0.0';
-    $('stats').innerHTML = `<span>Network one-way ≈ ${net}</span><span>Buffer ${Math.round($('buffer').value * blockMs)} ms</span><span>Your output ${out} ms</span><span>Lost ${lossPct}%</span><span>Gaps ${st.under}</span>`;
+    $('stats').innerHTML = `<span>Network one-way ≈ ${net}</span><span>Buffer ${Math.round($('buffer').value * blockMs)} ms</span><span>Your output ${out} ms</span><span>Lost ${lossPct}%</span><span>Dropouts ${st.under}</span>`;
   }, 100);
 }
 $('go').onclick = start;
