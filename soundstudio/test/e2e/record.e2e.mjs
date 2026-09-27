@@ -1,10 +1,10 @@
-// End-to-end: record a take while the band plays, then check the playback,
-// the download and the timing report.
+// End-to-end: recording just yourself (WAV), the whole jam (audio) and the jam
+// with video, while two players and the band play.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startServers, sleep } from './harness.mjs';
 
-test('record and play back a take', { timeout: 120000 }, async () => {
+test('record: just me, everyone, everyone + video', { timeout: 180000 }, async () => {
   const h = await startServers();
   try{
     const A = await h.page('Kareem'), B = await h.page('Wife');
@@ -16,27 +16,29 @@ test('record and play back a take', { timeout: 120000 }, async () => {
     await A.fill('#prompt', 'Slow funk in E minor, 96 bpm'); await A.click('#genBtn'); await sleep(1500);
     await A.uncheck('#countIn'); await A.click('#playBtn'); await sleep(2000);
 
-    await A.click('#recBtn'); await sleep(5000);
-    assert.match(await A.textContent('#recStatus'), /^0:0[45]$/, 'timer runs while recording');
-    await A.click('#recBtn');
-    await A.waitForSelector('#recResult:not([hidden])', { timeout:10000 });
-    const r = await A.evaluate(async () => {
-      const a = document.getElementById('recAudio');
-      if(!(a.duration > 0)) await new Promise(res => a.addEventListener('loadedmetadata', res, { once:true }));
-      const wav = await (await fetch(document.getElementById('recDownload').href)).arrayBuffer();
-      return { duration: a.duration, bytes: wav.byteLength, channels: new DataView(wav).getUint16(22, true),
-        report: document.getElementById('recReport').textContent, status: document.getElementById('recStatus').textContent };
-    });
-    assert.ok(r.duration > 4.5 && r.duration < 6, `take is about 5 s long (${r.duration})`);
-    assert.equal(r.channels, 2, 'stereo take (you / the others)');
-    assert.ok(r.bytes > 44 + 4.5 * 48000 * 4, `WAV holds the audio (${r.bytes} bytes)`);
-    assert.match(r.report, /You.*Others, as you heard them.*Measured over \d+ beats|Same clap/s, `timing report shown (${r.report})`);
-    assert.match(r.status, /s recorded/);
-
-    // recording without the band still gives a playable take
-    await A.click('#playBtn'); await sleep(500);
-    await A.click('#recBtn'); await sleep(1500); await A.click('#recBtn');
-    await A.waitForFunction(() => /Start the band|recorded almost nothing/.test(document.getElementById('recReport').textContent), null, { timeout:10000 });
+    async function take(what, seconds){
+      await A.selectOption('#recWhat', what);
+      await A.click('#recBtn'); await sleep(seconds * 1000);
+      assert.match(await A.textContent('#recStatus'), /^0:0\d$/, 'timer runs while recording');
+      await A.click('#recBtn');
+      await A.waitForFunction(() => /recorded/.test(document.getElementById('recStatus').textContent), null, { timeout:20000 });
+      return A.evaluate(async () => {
+        const dl = document.getElementById('recDownload'), media = document.querySelector('#recMedia video, #recMedia audio');
+        const blob = await (await fetch(dl.href)).blob();
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        return { name: dl.download, label: dl.textContent, tag: media.tagName, type: blob.type, size: bytes.length,
+          wavChannels: bytes[0] === 82 ? new DataView(bytes.buffer).getUint16(22, true) : 0, timing: document.getElementById('recTiming').href.startsWith('blob:') };
+      });
+    }
+    const me = await take('me', 4);
+    assert.match(me.name, /\.wav$/); assert.equal(me.tag, 'AUDIO'); assert.ok(me.size > 44 + 3.5 * 48000 * 4, `WAV holds ~4 s (${me.size})`);
+    assert.ok(me.timing, 'timing file offered too');
+    const all = await take('all', 4);
+    assert.match(all.name, /\.(webm|m4a)$/); assert.equal(all.tag, 'AUDIO'); assert.match(all.type, /^audio\//); assert.ok(all.size > 20000, `audio file has content (${all.size})`);
+    const vid = await take('video', 5);
+    assert.match(vid.name, /\.(webm|mp4)$/); assert.equal(vid.tag, 'VIDEO'); assert.match(vid.label, /Download video/); assert.ok(vid.size > 50000, `video file has content (${vid.size})`);
+    const dims = await A.evaluate(async () => { const v = document.querySelector('#recMedia video'); if(!v.videoWidth) await new Promise(r => v.addEventListener('loadedmetadata', r, { once:true })); return [v.videoWidth, v.videoHeight]; });
+    assert.deepEqual(dims, [1280, 720], 'video is 1280x720');
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });

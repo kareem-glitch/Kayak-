@@ -186,36 +186,42 @@ const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + 
 if(store.get('ss.bandVol') !== null) $('#bandVol').value = store.get('ss.bandVol');
 $('#bandVol').oninput = () => { bandVol(+$('#bandVol').value); store.set('ss.bandVol', $('#bandVol').value); };
 bandVol(+$('#bandVol').value);
-// ---- record & check timing ----
-let recTimer = null, recUrl = null;
+// ---- record: just you, the whole jam, or the jam with video; plus the timing check ----
+let recTimer = null, recUrls = [];
 const signed = ms => (ms > 0 ? '+' : ms < 0 ? '−' : '±') + Math.abs(Math.round(ms)) + ' ms';
 const timing = ms => ms == null ? 'no claps found' : Math.abs(ms) < 5 ? 'on the beat' : ms > 0 ? 'behind the beat' : 'ahead of the beat';
+const clock = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+if(store.get('ss.recWhat')) $('#recWhat').value = store.get('ss.recWhat');
+$('#recWhat').onchange = () => store.set('ss.recWhat', $('#recWhat').value);
 async function toggleRecording(){
   const btn = $('#recBtn');
   if(!recTimer){
-    try{ recording.start(); }catch(e){ $('#recStatus').textContent = 'Recording needs working audio on this device.'; return; }
-    btn.setAttribute('aria-pressed', 'true'); $('#recLabel').textContent = 'Stop';
-    $('#recStatus').textContent = '0:00';
-    recTimer = setInterval(() => { const t = recording.seconds(); $('#recStatus').textContent = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); if(t >= recording.MAX_SECONDS) toggleRecording(); }, 250);
+    btn.disabled = true;
+    try{ await recording.start($('#recWhat').value); }catch(e){ btn.disabled = false; $('#recStatus').textContent = 'Recording needs working audio on this device.'; return; }
+    btn.disabled = false; $('#recWhat').disabled = true;
+    btn.setAttribute('aria-pressed', 'true'); $('#recLabel').textContent = 'Stop'; $('#recStatus').textContent = '0:00';
+    recTimer = setInterval(() => { const t = recording.seconds(); $('#recStatus').textContent = clock(t); if(t >= recording.MAX_SECONDS) toggleRecording(); }, 250);
     return;
   }
-  clearInterval(recTimer); recTimer = null; btn.disabled = true; $('#recStatus').textContent = 'Measuring…';
+  clearInterval(recTimer); recTimer = null; btn.disabled = true; $('#recStatus').textContent = 'Finishing…';
   try{
     const r = await recording.stop();
-    if(recUrl) URL.revokeObjectURL(recUrl); recUrl = r.url;
-    $('#recAudio').src = r.url; $('#recDownload').href = r.url; $('#recResult').hidden = false;
-    const row = (who, ms) => `<div class="stat"><span>${who}</span><span><b>${ms == null ? '—' : signed(ms)}</b> <span class="muted">${timing(ms)}</span></span></div>`;
+    recUrls.forEach(u => URL.revokeObjectURL(u)); recUrls = [r.take.url, r.timingUrl];
+    const el = document.createElement(r.take.video ? 'video' : 'audio'); el.controls = true; el.src = r.take.url; if(r.take.video) el.playsInline = true;
+    $('#recMedia').replaceChildren(el);
+    $('#recDownload').href = r.take.url; $('#recDownload').download = 'soundstudio-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.' + r.take.ext;
+    $('#recDownload').textContent = r.take.video ? 'Download video' : 'Download audio';
+    $('#recTiming').href = r.timingUrl; $('#recResult').hidden = false;
     const q = r.report, notes = [];
-    if(q.micSilent) notes.push('Your mic recorded almost nothing. Check the input under Audio devices, and on a Mac set Control Centre → Mic Mode to Standard (Voice Isolation removes claps).');
-    if(q.othersSilent) notes.push('Nothing came in from the others during this take.');
-    if(!r.beats) notes.push('Start the band before recording to measure against the beat.');
+    const row = (who, ms) => `<div class="stat"><span>${who}</span><span><b>${ms == null ? '—' : signed(ms)}</b> <span class="muted">${timing(ms)}</span></span></div>`;
+    if(q.micSilent) notes.push('Your input recorded almost nothing. Check the input under Audio devices, and on a Mac set Control Centre → Mic Mode to Standard.');
     $('#recReport').innerHTML =
       (q.gap != null ? `<div class="stat"><span>Same clap: your mic → theirs → your ears</span><span><b>${Math.round(q.gap)} ms</b> <span class="muted">${q.pairs} claps</span></span></div>` : '')
-      + (r.beats ? row('You', q.you) + row('Others, as you heard them', q.them) : '')
-      + `<p class="muted small">${notes.length ? notes.join(' ') : `Measured over ${r.beats} beats. Your device’s own delay (${Math.round(r.correctedMs)} ms) is already taken out of “You”. With both devices side by side, “Same clap” is the full delay between players.`}</p>`;
-    $('#recStatus').textContent = r.seconds.toFixed(1) + ' s recorded';
+      + (r.beats >= 4 && (q.you != null || q.them != null) ? row('You', q.you) + row('Others, as you heard them', q.them) : '')
+      + (notes.length ? `<p class="muted small">${notes.join(' ')}</p>` : '');
+    $('#recStatus').textContent = clock(r.seconds) + ' recorded';
   }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
-  btn.disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Record';
+  btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Record';
 }
 $('#recBtn').onclick = toggleRecording;
 

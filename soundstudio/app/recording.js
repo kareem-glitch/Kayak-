@@ -9,12 +9,20 @@ import { S } from './state.js';
 import * as audio from './audio/io.js';
 import * as band from './band/engine.js';
 import { onsets, beatOffsets, pairGaps, peak, median, wav } from './audio/analysis.js';
+import * as mixrec from './mixrec.js';
 
-export const MAX_SECONDS = 120;
-export const start = () => audio.startRecording();
+export const MAX_SECONDS = 300;   // 5 minutes (the raw capture for the timing check is held in memory)
+// what: 'me' (your instrument, WAV), 'all' (everyone + band, audio file), 'video' (everyone + band + cameras)
+let what = 'me';
+export async function start(kind){
+  what = kind; audio.startRecording();   // always: the exact capture behind the timing check
+  if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video' }); }catch(e){ console.warn('mix recording unavailable', e); what = 'me'; } }
+  return what;
+}
 export const seconds = () => audio.recordedSeconds();
 
 export async function stop(){
+  const mix = what === 'me' ? null : mixrec.stop();
   const inMs = audio.inputLatencyMs(), outMs = audio.outputLatencyMs();
   const { mic, out, sampleRate: sr, heardAt } = await audio.stopRecording();
   const n = out.length, you = new Float32Array(n);
@@ -37,6 +45,8 @@ export async function stop(){
     gap: gaps.length >= 3 ? median(gaps) : null, pairs: gaps.length,
     micSilent: peak(mic) < 0.01, othersSilent: peak(out) < 0.01,
   };
-  const url = URL.createObjectURL(new Blob([wav(left, right, sr)], { type: 'audio/wav' }));
-  return { url, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
+  const timingUrl = URL.createObjectURL(new Blob([wav(left, right, sr)], { type: 'audio/wav' }));
+  const mixed = mix && await mix;
+  const take = mixed || { url: URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false };
+  return { take, timingUrl, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
 }

@@ -114,13 +114,19 @@ window.__audioContexts = [];
       </section>
 
       <section class="conn">
-        <h2>Record &amp; check timing</h2>
-        <p class="muted small">Start the band, press Record, and everyone claps (or plays short muted notes) on every beat for about 10 seconds. Then play it back. To measure the delay between two devices, put them side by side and clap.</p>
+        <h2>Record</h2>
+        <label class="muted small" for="recWhat">What to record</label>
+        <select id="recWhat" class="devsel">
+          <option value="me">Just me (my instrument, WAV)</option>
+          <option value="all">Everyone’s audio (the whole jam)</option>
+          <option value="video">Everyone’s audio + video</option>
+        </select>
         <div class="rec-row"><button class="btn btn-quiet" id="recBtn" aria-pressed="false"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel">Record</span></button><span class="muted small" id="recStatus"></span></div>
         <div class="rec-result" id="recResult" hidden>
+          <div class="rec-media" id="recMedia"></div>
+          <a class="btn btn-primary rec-dl" id="recDownload" href="#" download>Download</a>
           <div class="rec-report" id="recReport"></div>
-          <audio id="recAudio" controls preload="auto"></audio>
-          <p class="muted small">Left ear: you. Right ear: the others, as you heard them. Clicks: the band’s beat. <a id="recDownload" download="soundstudio-take.wav" href="#">Download the take</a></p>
+          <p class="muted small">Timing check: start the band and clap on the beat. <a id="recTiming" href="#" download="soundstudio-timing.wav">Timing file</a> (left: you, right: the others, clicks: the beat). To measure the delay between two devices, put them side by side and clap.</p>
         </div>
       </section>
 

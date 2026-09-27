@@ -44,7 +44,10 @@ export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id)
 // Your instrument: one packet per 128-frame block ([mono] or [left, right]), sent to every open audio channel.
 // capturedAt: wall-clock ms the block was captured, so receivers can measure
 // how long it really took to arrive (phone audio stacks, send queues, network).
+// Recording taps (mixrec.js): every block you send and every block you receive.
+export const taps = { local: null, remote: null };
 export function sendBlock(planes, capturedAt){
+  if(taps.local) taps.local(planes);
   let n = 0;
   for(const p of peers.values()){
     if(!p.audio || p.audio.readyState !== 'open') continue;
@@ -100,7 +103,7 @@ function wireConn(c, newcomer){
       // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
       if(p.samples.length){ p.ages.push(clk() - (pk.timeUs / 1000 - p.offset)); if(p.ages.length > 375) p.ages.shift(); }
       p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
-      audio.deliver(id, pk.planes);
+      audio.deliver(id, pk.planes); if(taps.remote) taps.remote(id, pk.planes);
     };
     const pc = c.peerConnection;
     pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') events.onStatus(BLOCKED); });

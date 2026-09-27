@@ -128,3 +128,6 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 #inDb.hot{color:#e0604a;font-weight:600}
 .app-note{margin-top:10px}
 .app-note a{color:var(--amber)}
+.rec-media video,.rec-media audio{width:100%;border-radius:12px;display:block}
+.rec-media video{background:#000;aspect-ratio:16/9}
+.rec-dl{text-align:center;text-decoration:none}
