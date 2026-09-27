@@ -48,9 +48,9 @@ export function render(){
   $('#arrTitle').textContent = a ? a.title : 'No band yet';
   $('#arrNotes').textContent = a ? a.notes : ''; $('#arrNotes').hidden = !(a && a.notes);
   const facts = $('#facts'); facts.innerHTML = '';
-  if(a) [STYLES[a.style].label, a.key, a.bpm + ' bpm', a.swing ? 'Swung' : 'Straight'].forEach(x => { const s = document.createElement('span'); s.textContent = x; facts.appendChild(s); });
+  if(a) [STYLES[a.style].label, a.key, a.bpm + ' bpm', a.engine === 'lyria' ? 'Google Lyria band' : (a.swing ? 'Swung' : 'Straight')].forEach(x => { const s = document.createElement('span'); s.textContent = x; facts.appendChild(s); });
   const ol = $('#chords'); ol.innerHTML = '';
-  if(a) a.chords.forEach(c => { const li = document.createElement('li'); li.textContent = c.name + (c.bars > 1 ? ' ×' + c.bars : ''); ol.appendChild(li); });
+  if(a && a.engine !== 'lyria') a.chords.forEach(c => { const li = document.createElement('li'); li.textContent = c.name + (c.bars > 1 ? ' ×' + c.bars : ''); ol.appendChild(li); });
   if(a && hostHere) $('#bpm').value = a.bpm;
   $('#playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
   $('#playBtn').setAttribute('aria-label', S.playing ? 'Stop' : 'Play');

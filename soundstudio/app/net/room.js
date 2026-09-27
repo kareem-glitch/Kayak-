@@ -35,6 +35,7 @@ export const format = { bits: 16 };
 const pkt = new Uint8Array(packetBytes(FRAMES, 2, 32));   // big enough for stereo 32-bit
 
 export const isOwner = () => !joinId;
+export const roomId = () => joinId || me.id;   // the room is named after its creator
 export const roomCount = () => 1 + [...peers.values()].filter(p => p.name).length;
 export const offsetTo = id => (peers.get(id) || {}).offset || 0;   // their clock - mine (ms)
 export const clockSynced = id => ((peers.get(id) || {}).samples || []).length >= 3;

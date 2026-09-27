@@ -10,7 +10,8 @@ import { chromium } from 'playwright';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TYPES = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.css':'text/css' };
 
-export async function startServers(){
+// internet: the test talks to real services (set E2E_PROXY if they're only reachable through a proxy).
+export async function startServers({ internet = false } = {}){
   const web = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
     if(u.pathname.startsWith('/api/')){ res.statusCode = 501; return res.end(); }   // arrangement API off: built-in interpreter
@@ -22,10 +23,12 @@ export async function startServers(){
   const brokerPort = 9000 + Math.floor(Math.random() * 900);
   const broker = await new Promise(r => { const s = PeerServer({ port:brokerPort, path:'/', host:'127.0.0.1' }, () => r(s)); });
   const base = `http://127.0.0.1:${web.address().port}/?broker=127.0.0.1:${brokerPort}`;
-  const browser = await chromium.launch({ args:['--no-proxy-server', '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+  const proxy = internet && process.env.E2E_PROXY ? [`--proxy-server=${process.env.E2E_PROXY}`] : ['--no-proxy-server'];
+  const browser = await chromium.launch({ args:[...proxy, '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
   const errors = [];
-  async function page(name){
-    const p = await (await browser.newContext({ permissions:['camera', 'microphone'], viewport:{ width:1400, height:900 } })).newPage();
+  async function page(name, { band = 'tone', relay = null } = {}){
+    const p = await (await browser.newContext({ permissions:['camera', 'microphone'], viewport:{ width:1400, height:900 }, ignoreHTTPSErrors:internet })).newPage();
+    await p.addInitScript(([b, r]) => { try{ localStorage.setItem('ss.band', b); if(r) localStorage.setItem('ss.relay', r); }catch(e){} }, [band, relay]);   // the built-in band unless a test asks for Lyria
     await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     p.on('pageerror', e => errors.push(`${name}: ${e.message}`));
     return p;

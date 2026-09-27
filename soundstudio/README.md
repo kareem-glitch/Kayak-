@@ -30,7 +30,7 @@ really adds.
 |---|---|
 | Audio between players | WebRTC data channels, unordered and never retransmitted, carrying raw 16-bit 48 kHz audio in the JackTrip packet format (`audio/hub-protocol.js`). No compression, no echo cancellation or other processing. |
 | Room | Everyone connects directly to everyone (max 4). The invite link names the room's creator, who introduces newcomers. A public PeerJS broker makes the introductions; a public TURN relay is a best-effort fallback when networks block direct connections. |
-| Backing band | Tone.js, running on **every** device, started on a shared clock (ping-based offset per player), so nobody hears the band through the network. Seats and part levels are shared state; band volume is personal. |
+| Backing band | **Google Lyria RealTime** (live AI music): one stream per room through our relay (`relay/`, a Cloudflare Worker that keeps the API key), played on every device at the same moment on the shared clock. Taking a seat mutes drums/bass in the model and drops the part from its prompt. Falls back to the built-in Tone.js band (also `?band=tone`). Band volume is personal. |
 | Video | Browser-to-browser WebRTC. |
 | Arrangements | `/api/arrange` (Claude, if `ANTHROPIC_API_KEY` is set), otherwise the built-in interpreter. |
 | Hosting | Static files and API functions on Vercel. |
@@ -43,7 +43,10 @@ app/state.js            shared room state, my identity, protocol version
 app/session.js          band host, synced start/stop, seats, arrangements
 app/ui.js               tiles, band panel, beat display, meters, pickers
 app/band/theory.js      chords, styles, built-in prompt interpreter
-app/band/engine.js      Tone.js band, synced start (playAt)
+app/band/engine.js      band start/stop on the shared clock; built-in Tone.js band
+app/band/lyria.js       Lyria band: relay connection, synced playback, steering
+relay/                  Cloudflare Worker relay for Lyria (deploy: node relay/deploy.mjs)
+desktop/                Mac/Windows app with native audio (built by GitHub Actions)
 app/audio/io.js         audio context, input/output devices, mixing
 app/audio/worklet.js    real-time audio processor (capture + per-player queues + recording tap)
 app/audio/analysis.js   onset detection, beat offsets, WAV writer

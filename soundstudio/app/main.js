@@ -7,6 +7,7 @@ import * as room from './net/room.js';
 import * as session from './session.js';
 import * as ui from './ui.js';
 import * as recording from './recording.js';
+import * as lyria from './band/lyria.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -24,6 +25,8 @@ const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ retu
 band.hooks.onBeat = ui.showBeat;
 band.hooks.onChange = ui.render;
 session.hooks.onChange = ui.render;
+session.hooks.onNote = t => { $('#genStatus').textContent = t; };
+if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
 room.events.onStatus = ui.status;
 room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); $('#bigInvite').hidden = !room.isOwner() || room.roomCount() >= room.MAX_ROOM; showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
@@ -219,4 +222,5 @@ window.getInvite = () => inviteLink;
 window.jamEngine = band.engine;
 window.jamStats = audio.stats;
 window.jamEchoCancelling = audio.echoCancelling;
+window.jamLyria = lyria;
 window.jamRecord = toggleRecording;

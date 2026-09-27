@@ -2,7 +2,8 @@
 // device in a room runs its own copy, started on the shared clock (playAt), so
 // nobody hears the band through the network. No DOM access: the UI listens via
 // hooks.onBeat (chord/beat display) and hooks.onChange (re-render).
-import { S } from '../state.js';
+import { S, me } from '../state.js';
+import * as lyria from './lyria.js';
 import { STYLES } from './theory.js';
 import { clk } from '../util.js';
 
@@ -89,17 +90,30 @@ export const engine = () => E;
 export function ensureEngine(){ if(!E) E = buildEngine(); return E; }
 
 // Personal band volume (dB relative to the default mix; -40 = off).
-export function applyBandVolume(){ const v = options.bandVolumeDb; if(E) E.master.volume.value = v <= -40 ? -Infinity : -3 + v; }
+export function applyBandVolume(){ const v = options.bandVolumeDb; if(E) E.master.volume.value = v <= -40 ? -Infinity : -3 + v; lyria.setVolume(v <= -40 ? -Infinity : v); }
 // Shared part levels and seats. A taken seat is silenced through its volume
 // (setting volume after Channel.mute would undo the mute).
-export function applyMutes(){ if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.volume.value = s.human ? -Infinity : dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
+export function applyMutes(){
+  // Lyria band: the host tells the music model which parts to leave out
+  if(isLyria() && me.isHost){ clearTimeout(applyMutes.t); applyMutes.t = setTimeout(lyria.update, 250); }
+  if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.volume.value = s.human ? -Infinity : dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
 
 // Start this device's band at wall-clock time atLocal (ms) with the 16th-note
 // counter at startCounter (-16 = one bar of count-in), early by the output
 // latency so the sound leaves the speakers on time.
 export let started = null;   // { atLocal, startCounter, outLat, zero }: zero = when bar 1 beat 1 would have sounded
+export const isLyria = () => !!(S.arr && S.arr.engine === 'lyria');
+let beatTimer = null;
 export async function playAt(atLocal, startCounter){
   await Tone.start();
+  if(isLyria()){   // the stream's first sample is bar 1 beat 1
+    if(E){ Tone.Transport.stop(); Tone.Transport.cancel(); }
+    lyria.playAt(atLocal);
+    started = { atLocal, startCounter: 0, outLat: 0, zero: atLocal }; window.jamStart = started;
+    const beatMs = 60000 / S.arr.bpm; let last = -1; clearInterval(beatTimer);
+    beatTimer = setInterval(() => { const b = Math.floor((clk() - atLocal) / beatMs); if(b >= 0 && b !== last){ last = b; hooks.onBeat({ beat: b % 4 }); } }, 20);
+    S.playing = true; hooks.onChange(); return;
+  }
   ensureEngine();
   applyMutes();
   const raw=Tone.getContext().rawContext, outLat=(raw.outputLatency||0)+(raw.baseLatency||0);
@@ -121,7 +135,8 @@ export async function playAt(atLocal, startCounter){
   S.playing=true; hooks.onChange();
 }
 export function stopLocal(){
-  if(!E) return;
+  clearInterval(beatTimer); lyria.stopLocal();
+  if(!E){ if(S.playing){ S.playing = false; hooks.onChange(); hooks.onBeat({}); } return; }
   Tone.Transport.stop(); Tone.Transport.cancel(); E.pad.releaseAll(); E.ep.releaseAll();
   S.playing=false; hooks.onChange(); hooks.onBeat({});
 }
