@@ -4,8 +4,8 @@
 // only deals in 128-frame blocks of Float32 samples.
 export const RATE = 48000, FRAMES = 128, BLOCK_MS = FRAMES / RATE * 1000;
 // Headphones (default): no processing at all, your instrument exactly as it is.
-// Speaker mode (loudspeaker, no headphones): the browser's echo cancellation and
-// noise handling stop the speaker feeding back into the mic, at some cost to quality.
+// Echo cancellation on (loudspeaker, no headphones): the browser's echo cancellation
+// and noise handling stop the speaker feeding back into the mic, at some cost to quality.
 export const micOptions = speaker => ({ echoCancellation:speaker, noiseSuppression:speaker, autoGainControl:speaker, channelCount:speaker ? 1 : { ideal:2 } });
 export const isPhone = () => matchMedia('(pointer:coarse)').matches;
 
