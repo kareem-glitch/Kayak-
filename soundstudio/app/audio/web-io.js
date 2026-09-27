@@ -11,7 +11,7 @@ export const micOptions = speaker => ({ echoCancellation:speaker, noiseSuppressi
 export const isPhone = () => matchMedia('(pointer:coarse)').matches;
 
 let ctx = null, node = null, micGain = null, micStream = null, micNodes = [], inputChannel = '1';
-export const stats = { under: 0, players: {} };   // players: id -> { bufferMs, rate, under }
+export const stats = { under: 0, players: {} };   // players: id -> { bufferMs, rate, under, late (far-apart mode) }
 let onBlock = () => {};   // called with each captured block: [mono] or [left, right]
 
 export const context = () => ctx;
@@ -56,8 +56,15 @@ function frameToEpoch(frame){
   return performance.timeOrigin + performance.now() + (frame / RATE - ctx.currentTime) * 1000 + outputLatencyMs();
 }
 
+// The audio frame that leaves your speakers at wall-clock ms t (inverse of frameToEpoch).
+function epochToFrame(t){
+  const ts = ctx.getOutputTimestamp && ctx.getOutputTimestamp();
+  if(ts && ts.performanceTime > 0) return (ts.contextTime + (t - performance.timeOrigin - ts.performanceTime) / 1000) * RATE;
+  return (ctx.currentTime + (t - performance.timeOrigin - performance.now() - outputLatencyMs()) / 1000) * RATE;
+}
 // Audio from another player: one block of planes ([mono] or [mono, L, R]).
-export function deliver(id, planes){ node && node.port.postMessage({ id, planes }); }
+// at (far-apart mode): wall-clock ms it should leave your speakers; otherwise as soon as it can.
+export function deliver(id, planes, at){ if(!node) return; if(at == null) node.port.postMessage({ id, planes }); else node.port.postMessage({ id, planes, at: epochToFrame(at) }); }
 export function forget(id){ node && node.port.postMessage({ gone:id }); }
 // Upper limit for each player's adaptive buffer, in 128-frame blocks.
 // Feel: 'tight' | 'balanced' | 'smooth' (see FEELS in worklet.js).

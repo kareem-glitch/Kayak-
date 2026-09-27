@@ -56,7 +56,20 @@ export async function start(stream, blockHandler){
   });
   await request({ t: 'start', input: store('ss.inDev') || '', output: store('ss.outDev') || '', channel });
 }
-export function deliver(id, planes){
+// Far-apart mode (at = wall-clock ms it should be heard): held here and handed
+// to the engine just before it's due, less the engine's own output delay.
+const held = []; let pump = null;
+function release(){
+  const due = performance.timeOrigin + performance.now() + 3 + outLat;
+  while(held.length && held[0].at <= due){ const h = held.shift(); send(h.id, h.planes); }
+  if(!held.length){ clearInterval(pump); pump = null; }
+}
+export function deliver(id, planes, at){
+  if(at == null) return send(id, planes);
+  let i = held.length; while(i && held[i - 1].at > at) i--; held.splice(i, 0, { id, planes, at });
+  if(!pump) pump = setInterval(release, 2);
+}
+function send(id, planes){
   if(!ws || ws.readyState !== 1) return;
   const idb = new TextEncoder().encode(id), n = planes[0].length, b = new Uint8Array(3 + idb.length + planes.length * n * 4);
   b[0] = 3; b[1] = idb.length; b[2] = planes.length; b.set(idb, 3);

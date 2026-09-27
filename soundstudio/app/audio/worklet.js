@@ -87,14 +87,44 @@ class Player {
   }
 }
 
+// Far-apart mode: each block carries the audio frame it must sound at (a beat
+// or a bar after it was played, on the shared clock), so the other players land
+// exactly one beat/bar late: in time with the band, just not simultaneous.
+// Blocks are written back to back; small clock drift is absorbed one sample at
+// a time, a big jump (or the first block) re-anchors.
+const DRING = 1 << 18;   // ~5.4 s at 48 kHz: room for a bar at 45 bpm
+class DelayPlayer {
+  constructor(){ this.l = new Float32Array(DRING); this.r = new Float32Array(DRING); this.e = null; this.drift = 0; this.late = 0; }
+  push(planes, at, now){
+    const L = planes[0], R = planes[1] || planes[0], n = L.length;
+    at = Math.round(at);
+    if(this.e === null || Math.abs(at - this.e) > 1200 || this.e < now){ this.e = at; this.drift = 0; }
+    else {
+      this.drift = this.drift * 0.98 + (at - this.e) * 0.02;
+      if(this.drift > 48){ const k = this.e & (DRING - 1); this.l[k] = L[0]; this.r[k] = R[0]; this.e++; this.drift--; }   // falling behind: repeat a sample
+      else if(this.drift < -48){ this.e--; this.drift++; }                                                          // ahead: overwrite one
+    }
+    if(this.e + n <= now || this.e - now > DRING - 2 * n){ this.late++; this.e += n; return; }   // too late (or too far ahead) to play
+    for(let i = 0; i < n; i++){ const k = (this.e + i) & (DRING - 1); this.l[k] = L[i]; this.r[k] = R[i]; }
+    this.e += n;
+  }
+  render(outL, outR, frame){
+    for(let i = 0; i < outL.length; i++){
+      const k = (frame + i) & (DRING - 1), vl = this.l[k], vr = this.r[k];
+      outL[i] += vl; outR[i] += vr; this.l[k] = 0; this.r[k] = 0;
+    }
+  }
+}
+
 class JamIO extends AudioWorkletProcessor {
   constructor(){
-    super(); this.players = new Map(); this.limit = 4 * 128; this.feel = FEELS.balanced; this.under = 0; this.t = 0; this.peak = 0;
+    super(); this.players = new Map(); this.delayed = new Map(); this.limit = 4 * 128; this.feel = FEELS.balanced; this.under = 0; this.t = 0; this.peak = 0;
     this.rec = null;   // recording: { frame, mic, out, n } batches of what you play and what you hear
     this.port.onmessage = e => {
       const d = e.data;
-      if(d.planes){ let p = this.players.get(d.id); if(!p){ p = new Player(this.limit, this.feel); this.players.set(d.id, p); } p.push(d.planes); }
-      else if(d.gone) this.players.delete(d.gone);
+      if(d.planes && d.at !== undefined){ let p = this.delayed.get(d.id); if(!p){ p = new DelayPlayer(); this.delayed.set(d.id, p); } p.push(d.planes, d.at, currentFrame); }
+      else if(d.planes){ let p = this.players.get(d.id); if(!p){ p = new Player(this.limit, this.feel); this.players.set(d.id, p); } p.push(d.planes); }
+      else if(d.gone){ this.players.delete(d.gone); this.delayed.delete(d.gone); }
       else if(d.rec === true) this.rec = { frame: -1, mic: new Float32Array(128 * 64), out: new Float32Array(128 * 64), n: 0 };
       else if(d.rec === false){ this.flushRec(); this.rec = null; this.port.postMessage({ recDone: true }); }
       else if(d.feel){ this.feel = FEELS[d.feel] || FEELS.balanced; for(const p of this.players.values()){ p.feel = this.feel; p.hold = Math.min(p.hold, this.feel.hold); } }
@@ -115,6 +145,7 @@ class JamIO extends AudioWorkletProcessor {
     const out = outputs[0], L = out[0], R = out[1] || out[0];
     L.fill(0); if(R !== L) R.fill(0);
     for(const p of this.players.values()) if(p.render(L, R)) this.under++;
+    for(const p of this.delayed.values()) p.render(L, R, currentFrame);
     if(this.rec){   // your input exactly as captured, and the mix exactly as sent to your speakers
       const r = this.rec; if(r.frame < 0) r.frame = currentFrame;
       const mic = inp && inp[0], o = r.n * 128;
@@ -124,10 +155,11 @@ class JamIO extends AudioWorkletProcessor {
     if(++this.t % 188 === 0){   // ~2x per second: stats for the page
       const players = {};
       for(const [id, p] of this.players) players[id] = { bufferMs: +(p.target / sampleRate * 1000).toFixed(1), rate: p.rate, under: p.under };
+      for(const [id, p] of this.delayed) players[id] = Object.assign(players[id] || { bufferMs: 0 }, { late: p.late });
       this.port.postMessage({ under: this.under, players, peak: this.peak }); this.peak = 0;
     }
     return true;
   }
 }
 if(typeof registerProcessor === 'function') registerProcessor('jam-io', JamIO);
-export { Player, JamIO };   // (FEELS is exported above)   // for unit tests (worklet scripts are ES modules, so this is allowed)
+export { Player, DelayPlayer, JamIO };   // (FEELS is exported above)   // for unit tests (worklet scripts are ES modules, so this is allowed)
