@@ -3,7 +3,11 @@
 // what the other players send. Packets are handled by net/room.js; this module
 // only deals in 128-frame blocks of Float32 samples.
 export const RATE = 48000, FRAMES = 128, BLOCK_MS = FRAMES / RATE * 1000;
-export const MIC_OPTS = { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:{ ideal:2 } };
+// Headphones (default): no processing at all, your instrument exactly as it is.
+// Speaker mode (loudspeaker, no headphones): the browser's echo cancellation and
+// noise handling stop the speaker feeding back into the mic, at some cost to quality.
+export const micOptions = speaker => ({ echoCancellation:speaker, noiseSuppression:speaker, autoGainControl:speaker, channelCount:speaker ? 1 : { ideal:2 } });
+export const isPhone = () => matchMedia('(pointer:coarse)').matches;
 
 let ctx = null, node = null, micGain = null, micStream = null, micNodes = [], inputChannel = '1';
 export const stats = { under: 0, players: {} };   // players: id -> { bufferMs, rate, under }
@@ -14,8 +18,7 @@ export async function start(stream, blockHandler){
   onBlock = blockHandler;
   // Computers: ask for the smallest audio buffer the browser allows. Phones keep
   // the default, which is less prone to glitches on slower hardware.
-  const phone = matchMedia('(pointer:coarse)').matches;
-  ctx = new AudioContext({ sampleRate:RATE, latencyHint: phone ? 'interactive' : 0 });
+  ctx = new AudioContext({ sampleRate:RATE, latencyHint: isPhone() ? 'interactive' : 0 });
   await ctx.audioWorklet.addModule(new URL('./worklet.js', import.meta.url));
   node = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[2] });
   node.connect(ctx.destination);
@@ -45,8 +48,8 @@ export function connectMic(stream){
   return chans;
 }
 export function setInputChannel(ch){ inputChannel = ch; return micStream ? connectMic(micStream) : 1; }
-export async function useInput(deviceId){
-  const stream = await navigator.mediaDevices.getUserMedia({ audio:Object.assign({}, MIC_OPTS, deviceId ? { deviceId:{ exact:deviceId } } : {}) });
+export async function useInput(deviceId, speaker){
+  const stream = await navigator.mediaDevices.getUserMedia({ audio:Object.assign(micOptions(speaker), deviceId ? { deviceId:{ exact:deviceId } } : {}) });
   const old = micStream, chans = connectMic(stream);
   if(old && old !== stream) old.getAudioTracks().forEach(t => t.stop());
   return chans;
@@ -73,4 +76,5 @@ const track = () => micStream && micStream.getAudioTracks()[0];
 // gives the device latency; elsewhere we fall back to the context's base latency).
 export const inputLatencyMs = () => { const l = track() && track().getSettings().latency; return Math.round((l || (ctx ? ctx.baseLatency : 0)) * 1000); };
 export const inputSampleRate = () => track() && track().getSettings().sampleRate;
+export const echoCancelling = () => !!(track() && track().getSettings().echoCancellation);
 export const outputLatencyMs = () => ctx ? Math.round(((ctx.outputLatency || 0) + ctx.baseLatency) * 1000) : 0;

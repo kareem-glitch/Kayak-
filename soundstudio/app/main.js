@@ -37,7 +37,7 @@ async function join(){
   Tone.start();   // unlock audio inside the click so the band can start later without another tap
   try{
     const savedIn = store.get('ss.inDev') || '';
-    const audioReq = Object.assign({}, audio.MIC_OPTS, savedIn ? { deviceId:{ ideal:savedIn } } : {});
+    const audioReq = Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {});
     try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
     catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
     let audioProblem = null;
@@ -82,6 +82,8 @@ function showConnection(){
 function checkSetup(c){
   const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
   const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
+  if($('#speaker').checked) tips.push(['info', 'Speaker mode is on: echo is cancelled, but sound is less clean. Wired headphones give the best sound (then turn Speaker mode off).']);
+  else tips.push(['info', 'Using the loudspeaker without headphones? Turn on Speaker mode to stop echo.']);
   if(/bluetooth|airpods|buds|beats|headset \(|hands-free/i.test(names)) tips.push(['warn', 'Bluetooth detected: it adds 100+ ms. Use wired headphones or your interface.']);
   else tips.push(['ok', 'No Bluetooth audio detected.']);
   const sr = audio.inputSampleRate();
@@ -106,9 +108,12 @@ async function fillDevices(){
   if(canOut) ui.fillSelect($('#outDev'), outputs, store.get('ss.outDev') || '');
 }
 const showChannels = chans => { $('#inCh').disabled = chans < 2; };
-$('#inDev').onchange = () => audio.useInput($('#inDev').value).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.status('Couldn’t switch input: ' + (e.name || e)));
+$('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').checked).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.status('Couldn’t switch input: ' + (e.name || e)));
 $('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
 $('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audio.useOutput($('#outDev').value); };
+// Speaker mode: on by default for phones (often used on loudspeaker), off for computers.
+$('#speaker').checked = store.get('ss.speaker') !== null ? store.get('ss.speaker') === '1' : audio.isPhone();
+$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(media) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.status('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
 $('#studio').checked = store.get('ss.studio') === '1'; room.format.bits = $('#studio').checked ? 32 : 16;
 $('#studio').onchange = () => { room.format.bits = $('#studio').checked ? 32 : 16; store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
 if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
@@ -151,3 +156,4 @@ bandVol(+$('#bandVol').value);
 window.getInvite = () => inviteLink;
 window.jamEngine = band.engine;
 window.jamStats = audio.stats;
+window.jamEchoCancelling = audio.echoCancelling;

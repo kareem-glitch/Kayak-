@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startServers, sleep } from './harness.mjs';
 
-test('studio quality stereo reaches the other player; latency and tips are shown', { timeout: 120000 }, async () => {
+test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 }, async () => {
   const h = await startServers();
   try{
     const A = await h.page('Kareem'), B = await h.page('Wife');
@@ -27,6 +27,13 @@ test('studio quality stereo reaches the other player; latency and tips are shown
     assert.match(a.latency, /Wife → you\s*≈ \d+ ms/, `latency estimate shown (${a.latency})`);
     assert.ok(a.buffers.length === 1 && a.buffers[0] >= 5.6 && a.buffers[0] <= 32, `automatic buffer within limits (${a.buffers})`);
     assert.match(a.tips, /Bluetooth|48 kHz|direct monitoring/, 'setup check shown');
+    // Speaker mode: echo cancellation switches on and audio keeps flowing
+    assert.equal(await B.evaluate(() => window.jamEchoCancelling()), false, 'headphone mode: no echo cancellation');
+    await B.check('#speaker'); await sleep(2000);
+    assert.equal(await B.evaluate(() => window.jamEchoCancelling()), true, 'speaker mode: echo cancellation on');
+    const before = await A.evaluate(() => [...window.jamPeers.values()][0].recv); await sleep(1500);
+    const after = await A.evaluate(() => [...window.jamPeers.values()][0].recv);
+    assert.ok(after - before > 300, `audio still flows after switching (${after - before} packets in 1.5 s)`);
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });
