@@ -152,9 +152,9 @@ if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 // The desktop app loads this site, so only its native audio engine can be out of date.
 const APP_VERSION = '0.2.0';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
-const dl = () => /Mac/.test(navigator.userAgent) ? '/download/SoundStudio-Mac.zip' : '/download/SoundStudio-Windows-setup.exe';
+const dl = () => /Mac/.test(navigator.userAgent) ? `/download/SoundStudio-${APP_VERSION}-Mac.zip` : `/download/SoundStudio-${APP_VERSION}-Windows-setup.exe`;
 if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://soundstudio-wine.vercel.app${dl()}">Download it</a> and reinstall.`;
-if(!audio.NATIVE && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/SoundStudio-Mac.zip">Mac</a> · <a href="/download/SoundStudio-Windows-setup.exe">Windows</a>`;
+if(!audio.NATIVE && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/SoundStudio-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/SoundStudio-${APP_VERSION}-Windows-setup.exe">Windows</a>`;
 if(audio.NATIVE){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';
 $('#nameInput').value = store.get('ss.name') || '';
