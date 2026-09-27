@@ -4,5 +4,13 @@
   "type": "module",
   "dependencies": {
     "livekit-server-sdk": "^2.9.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js && cd hub/patcher && python3 -m unittest -q test_patcher",
+    "test:e2e": "node --test --test-force-exit test/e2e/*.e2e.mjs"
+  },
+  "devDependencies": {
+    "peer": "^1.0.2",
+    "playwright": "1.56.1"
   }
 }

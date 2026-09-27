@@ -1,33 +1,74 @@
-# SoundStudio live (MVP)
+# SoundStudio
 
-A browser jam room: video tiles, everyone's audio, and an AI backing band on the same screen.
-One person runs the band from their device; everyone else hears it and can take parts off the AI.
+A browser jam room for up to 4 players: video, uncompressed live audio, and an
+AI backing band that drops out of whichever part a human takes over. Built for
+**Live mode**: players within roughly 1,000 km of each other (for example
+Ireland, the UK and western Europe), where it can feel close to playing in the
+same room.
 
-## What you need
-- A LiveKit Cloud account (free tier is fine for testing): https://cloud.livekit.io
-- A Vercel account (free): https://vercel.com
-- Optional: an Anthropic API key, so Claude writes the arrangements. Without it, the built-in interpreter does.
+Live site: https://soundstudio-wine.vercel.app
 
-## Setup (about 20 minutes)
-1. In LiveKit Cloud, create a project. From its settings, copy the **WebSocket URL** (starts with `wss://`), the **API key** and the **API secret**.
-2. Put this folder in a GitHub repo, then in Vercel choose **Add New > Project** and import it.
-   (Or install the Vercel CLI and run `vercel` inside this folder.)
-3. In the Vercel project, open **Settings > Environment Variables** and add:
-   - `LIVEKIT_URL` = your wss:// URL
-   - `LIVEKIT_API_KEY` = your API key
-   - `LIVEKIT_API_SECRET` = your API secret
-   - `ANTHROPIC_API_KEY` = your Anthropic key (optional)
-4. Redeploy. Open the site. It creates a room link like `https://your-site.vercel.app/?room=jam-ab12c`. Send that link to the players.
+## Using it
+1. Open the site, type your name, press **Join the jam**. Wear wired headphones.
+2. Press **Copy invite link** (or copy the address bar) and send it to up to 3 people.
+3. Someone presses **Run the band from here**, picks a prompt, presses play.
+4. Players press **I'll play this** on a part; the AI stops playing it for everyone.
 
-## Running a session
-- Everyone opens the link, types a name, and joins. Wired headphones only.
-- One person presses **Run the band from here**, types a prompt, and presses play.
-- Players press **I'll play this** on a part to take it. The AI drops that part for everyone.
+Pick your audio interface, input channel and output in **Audio devices**.
+Use your interface's direct monitoring to hear yourself; the app never plays
+your own instrument back to you.
 
-## Known limits of this MVP
-- Audio travels over WebRTC, so it's looser than JackTrip. Fine for spotlight soloing, loose comping and testing the idea; tight rhythm locking needs the later JackTrip-based desktop app.
-- The band's sounds are synthesised in the host's browser (Tone.js), so they're sketches, not studio audio.
-- Rooms aren't private: anyone with the link can join.
+## How it works
+| Piece | What powers it |
+|---|---|
+| Audio between players | WebRTC data channels, unordered and never retransmitted, carrying raw 16-bit 48 kHz audio in the JackTrip packet format (`audio/hub-protocol.js`). No compression, no echo cancellation or other processing. |
+| Room | Everyone connects directly to everyone (max 4). The invite link names the room's creator, who introduces newcomers. A public PeerJS broker makes the introductions; a public TURN relay is a best-effort fallback when networks block direct connections. |
+| Backing band | Tone.js, running on **every** device, started on a shared clock (ping-based offset per player), so nobody hears the band through the network. Seats and part levels are shared state; band volume is personal. |
+| Video | Browser-to-browser WebRTC. |
+| Arrangements | `/api/arrange` (Claude, if `ANTHROPIC_API_KEY` is set), otherwise the built-in interpreter. |
+| Hosting | Static files and API functions on Vercel. |
 
-## Test locally
-`npm install`, then `npx vercel dev` with the same environment variables in a `.env` file.
+## Code layout
+```
+index.html              the app's markup
+app/main.js             join flow and wiring
+app/state.js            shared room state, my identity, protocol version
+app/session.js          band host, synced start/stop, seats, arrangements
+app/ui.js               tiles, band panel, beat display, meters, pickers
+app/band/theory.js      chords, styles, built-in prompt interpreter
+app/band/engine.js      Tone.js band, synced start (playAt)
+app/audio/io.js         audio context, input/output devices, mixing
+app/audio/worklet.js    real-time audio processor (capture + per-player queues)
+app/net/room.js         4-person mesh, clock sync, packets
+audio/hub-protocol.js   JackTrip packet format (shared with the hub)
+api/                    Vercel functions (arrangement, hub/LiveKit tokens)
+hub/                    self-hosted JackTrip hub server (for bigger rooms or a
+                        desktop app later; see hub/README.md)
+dev/                    developer pages for testing the hub
+vendor/                 self-hosted Tone.js and PeerJS
+test/                   unit tests and the end-to-end test
+```
+
+## Tests
+```
+npm install
+npm test            # packet format + hub patcher unit tests
+npm run test:e2e    # 4 players + a refused 5th in headless Chromium, with a local broker
+```
+The end-to-end test checks that everyone sees and hears everyone, bands start
+in step (including a player who joins mid-song), a taken seat mutes that part
+on every device, and a 5th player is turned away.
+
+## Deploying
+`vercel deploy --prod` from this folder (or connect the repo in Vercel).
+Environment variables (Vercel project settings):
+- `ANTHROPIC_API_KEY` (optional): Claude writes the arrangements.
+- `HUB_SECRET`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`: only for the hub
+  developer pages in `dev/`.
+
+## Known limits
+- 4 players per room; each uploads to the other 3 (fine on fibre, heavy on slow uplinks).
+- The room depends on its creator: if they leave, others stay connected but nobody new can join.
+- The introduction broker and TURN relay are free public services; a real launch should run its own.
+- Browser audio adds roughly 10–30 ms per device (less on Mac, more on Windows) compared with pro drivers.
+- Across continents, real-time tightness isn't physically possible; see "Worldwide mode" in the roadmap.
