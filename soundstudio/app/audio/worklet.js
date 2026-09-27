@@ -99,8 +99,8 @@ class JamIO extends AudioWorkletProcessor {
   }
   process(inputs, outputs){
     const inp = inputs[0];
-    if(inp && inp.length) this.port.postMessage(inp.map(c => c.slice(0)));
-    else this.port.postMessage([new Float32Array(128)]);
+    // each block with the frame it was captured at, so the page can time-stamp it
+    this.port.postMessage({ b: inp && inp.length ? inp.map(c => c.slice(0)) : [new Float32Array(128)], f: currentFrame });
     const out = outputs[0], L = out[0], R = out[1] || out[0];
     L.fill(0); if(R !== L) R.fill(0);
     for(const p of this.players.values()) if(p.render(L, R)) this.under++;

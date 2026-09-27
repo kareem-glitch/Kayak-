@@ -29,7 +29,7 @@ export async function start(stream, blockHandler){
     if(d.under !== undefined){ stats.under = d.under; stats.players = d.players; }
     else if(d.recChunk){ if(rec) rec.chunks.push(d.recChunk); }
     else if(d.recDone){ if(rec && rec.done) rec.done(finishRec()); }
-    else onBlock(d);
+    else if(d.b) onBlock(d.b, captureEpoch(d.f));
   };
   await ctx.resume();
 }
@@ -45,6 +45,9 @@ function finishRec(){
   const frame0 = rec.chunks.length ? rec.chunks[0].frame : 0; rec = null;
   return { mic, out, sampleRate: RATE, heardAt: frameToEpoch(frame0) };
 }
+// Wall-clock ms at which the block at `frame` was captured (processed by the
+// audio thread): when it would leave the speakers, minus the output delay.
+const captureEpoch = frame => frameToEpoch(frame) - outputLatencyMs();
 // Wall-clock ms at which the audio rendered at `frame` leaves your speakers.
 function frameToEpoch(frame){
   const ts = ctx.getOutputTimestamp && ctx.getOutputTimestamp();

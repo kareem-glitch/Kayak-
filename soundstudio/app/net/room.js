@@ -41,11 +41,15 @@ export const clockSynced = id => ((peers.get(id) || {}).samples || []).length >=
 export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id) && p.conn && p.conn.open) p.conn.send(msg); }
 
 // Your instrument: one packet per 128-frame block ([mono] or [left, right]), sent to every open audio channel.
-export function sendBlock(planes){
+// capturedAt: wall-clock ms the block was captured, so receivers can measure
+// how long it really took to arrive (phone audio stacks, send queues, network).
+export function sendBlock(planes, capturedAt){
   let n = 0;
   for(const p of peers.values()){
     if(!p.audio || p.audio.readyState !== 'open') continue;
-    if(!n) n = encodePacket(pkt, { seq:seq++, timeUs:clk()*1000, sampleRate:RATE, frames:FRAMES, wantChannels:1, planes, bits:format.bits });
+    // Never let audio queue up behind a slow connection: late audio is useless, drop it.
+    if(p.audio.bufferedAmount > 16 * 1100){ p.dropped = (p.dropped || 0) + 1; continue; }
+    if(!n) n = encodePacket(pkt, { seq:seq++, timeUs:(capturedAt || clk())*1000, sampleRate:RATE, frames:FRAMES, wantChannels:1, planes, bits:format.bits });
     p.audio.send(pkt.subarray(0, n));
   }
 }
@@ -84,7 +88,7 @@ function removePeer(id){
 function wireConn(c, newcomer){
   const id = c.peer, old = peers.get(id);
   if(old && old.conn !== c){ try{ old.conn.close(); }catch(e){} }
-  const p = { conn:c, audio:null, name:old && old.name, rtt:null, offset:0, samples:[], lastSeq:null, recv:0, lost:0, video:old && old.video };
+  const p = { conn:c, audio:null, name:old && old.name, rtt:null, offset:0, samples:[], ages:[], lastSeq:null, recv:0, lost:0, video:old && old.video };
   peers.set(id, p);
   c.on('open', () => {
     p.audio = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
@@ -92,6 +96,8 @@ function wireConn(c, newcomer){
     p.audio.onmessage = e => {
       const pk = decodePacket(new Uint8Array(e.data)); if(!pk) return;
       if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1) p.lost += d - 1; }
+      // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
+      if(p.samples.length){ p.ages.push(clk() - (pk.timeUs / 1000 - p.offset)); if(p.ages.length > 375) p.ages.shift(); }
       p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
       audio.deliver(id, pk.planes);
     };
@@ -153,7 +159,9 @@ export function connectionStats(){
     // + network + your buffer for them + your output.
     players: [...peers.entries()].filter(([, p]) => p.name && p.recv).map(([id, p]) => {
       const net = p.rtt === null ? 0 : p.rtt / 2, buf = (bufs[id] || {}).bufferMs || 0;
-      return { name: p.name, netMs: Math.round(net), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + FRAMES / RATE * 1000 + net + buf + myOut) };
+      // measured: their capture -> arrival here (typical of the last second), else the estimate
+      const age = p.ages.length > 50 ? [...p.ages].sort((a, b) => a - b)[p.ages.length >> 1] : FRAMES / RATE * 1000 + net;
+      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut) };
     }),
     lossPct: recv ? 100 * lost / (recv + lost) : 0,
     debug: [...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet',

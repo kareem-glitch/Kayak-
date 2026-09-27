@@ -76,7 +76,7 @@ function showConnection(){
   if(!c.live) return;
   $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
   // per player: estimated time from their instrument to your ears
-  $('#latList').innerHTML = c.players.map(p => `<li><span><b>${p.name.replace(/[<&]/g, '')}</b> → you</span><span>≈ ${p.totalMs} ms <span class="muted">(network ${p.netMs}, buffer ${p.bufferMs})</span></span></li>`).join('');
+  $('#latList').innerHTML = c.players.map(p => `<li><span><b>${p.name.replace(/[<&]/g, '')}</b> → you</span><span>≈ ${p.totalMs} ms <span class="muted">(arrives ${p.arriveMs} after they play, network ${p.netMs}, buffer ${p.bufferMs})</span></span></li>`).join('');
 }
 
 // ---- setup check: plain-language tips for the tightest feel ----

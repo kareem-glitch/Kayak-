@@ -25,6 +25,8 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     assert.match(a.formats[0], /^(1|2)ch\/32bit$/, `Kareem receives Wife's studio-quality audio (${a.formats})`);
     assert.equal(b[0], '1ch/16bit', 'Wife receives Kareem’s standard audio');
     assert.match(a.latency, /Wife → you\s*≈ \d+ ms/, `latency estimate shown (${a.latency})`);
+    const arrive = +(a.latency.match(/arrives (-?\d+)/) || [])[1];
+    assert.ok(arrive >= 0 && arrive < 60, `audio measured arriving soon after it's played (${a.latency})`);
     assert.ok(a.buffers.length === 1 && a.buffers[0] >= 5.6 && a.buffers[0] <= 32, `automatic buffer within limits (${a.buffers})`);
     assert.match(a.tips, /Bluetooth|48 kHz|direct monitoring/, 'setup check shown');
     // Speaker mode: echo cancellation switches on and audio keeps flowing
