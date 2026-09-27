@@ -26,7 +26,7 @@ export async function start(stream, blockHandler){
   if(stream.getAudioTracks().length) connectMic(new MediaStream(stream.getAudioTracks()));
   node.port.onmessage = e => {
     const d = e.data;
-    if(d.under !== undefined){ stats.under = d.under; stats.players = d.players; }
+    if(d.under !== undefined){ stats.under = d.under; stats.players = d.players; stats.inPeak = d.peak; }
     else if(d.recChunk){ if(rec) rec.chunks.push(d.recChunk); }
     else if(d.recDone){ if(rec && rec.done) rec.done(finishRec()); }
     else if(d.b) onBlock(d.b, captureEpoch(d.f));

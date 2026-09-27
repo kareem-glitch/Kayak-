@@ -119,3 +119,5 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .rec-report{display:grid;gap:6px}
 .rec-report .stat{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:12px;background:var(--raised);border:1px solid var(--line);font-size:.9rem;font-variant-numeric:tabular-nums}
 .rec-report .stat b{font:800 1.05rem/1.2 "Bricolage Grotesque",sans-serif}
+.inmeter{height:6px;border-radius:3px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden;margin:-2px 0 8px}
+.inmeter i{display:block;height:100%;width:0;background:#4cc38a;transition:width .1s}

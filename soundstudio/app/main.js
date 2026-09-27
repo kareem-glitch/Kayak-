@@ -71,6 +71,9 @@ async function join(){
 function showConnection(){
   const c = room.connectionStats();
   $('#connDebug').textContent = `me ${me.id.slice(0,6)} · ${room.isOwner() ? 'room creator' : 'joined'} · ${c.debug}`;
+  // input level: shows whether your mic or instrument is reaching the app
+  const pk = audio.stats.inPeak || 0, db = pk > 0 ? 20 * Math.log10(pk) : -Infinity;
+  $('#inLevel').style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
   showConnection.n = (showConnection.n || 0) + 1;
   if(showConnection.n % 8 === 1) checkSetup(c);   // every 2 s
   if(!c.live) return;

@@ -80,7 +80,7 @@ class Player {
 
 class JamIO extends AudioWorkletProcessor {
   constructor(){
-    super(); this.players = new Map(); this.limit = 4 * 128; this.under = 0; this.t = 0;
+    super(); this.players = new Map(); this.limit = 4 * 128; this.under = 0; this.t = 0; this.peak = 0;
     this.rec = null;   // recording: { frame, mic, out, n } batches of what you play and what you hear
     this.port.onmessage = e => {
       const d = e.data;
@@ -101,6 +101,7 @@ class JamIO extends AudioWorkletProcessor {
     const inp = inputs[0];
     // each block with the frame it was captured at, so the page can time-stamp it
     this.port.postMessage({ b: inp && inp.length ? inp.map(c => c.slice(0)) : [new Float32Array(128)], f: currentFrame });
+    if(inp && inp[0]) for(let i = 0; i < 128; i++){ const a = Math.abs(inp[0][i]); if(a > this.peak) this.peak = a; }
     const out = outputs[0], L = out[0], R = out[1] || out[0];
     L.fill(0); if(R !== L) R.fill(0);
     for(const p of this.players.values()) if(p.render(L, R)) this.under++;
@@ -113,7 +114,7 @@ class JamIO extends AudioWorkletProcessor {
     if(++this.t % 188 === 0){   // ~2x per second: stats for the page
       const players = {};
       for(const [id, p] of this.players) players[id] = { bufferMs: +(p.target / sampleRate * 1000).toFixed(1), rate: p.rate, under: p.under };
-      this.port.postMessage({ under: this.under, players });
+      this.port.postMessage({ under: this.under, players, peak: this.peak }); this.peak = 0;
     }
     return true;
   }
