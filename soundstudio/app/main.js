@@ -13,6 +13,11 @@ const params = new URLSearchParams(location.search);
 let joinId = params.get('join');
 try{ if(joinId && sessionStorage.getItem('ss.hostId') === joinId){ joinId = null; history.replaceState(null, '', location.pathname); } }catch(e){}
 let inviteLink = null, media = null;
+// Invite links always point at the website, which the desktop app's rooms share
+// (the app's own page address means nothing to anyone else).
+const SITE = audio.NATIVE ? 'https://soundstudio-wine.vercel.app/' : location.origin + location.pathname;
+// A pasted invite: a full link (?join=...) or just the room code.
+const inviteId = text => { const t = (text || '').trim(); if(!t) return null; const m = t.match(/[?&]join=([^&#\s]+)/); return m ? decodeURIComponent(m[1]) : (/^[\w-]{8,}$/.test(t) ? t : null); };
 const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ return null; } }, set: (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} } };
 
 // ---- module wiring ----
@@ -34,6 +39,10 @@ function showRoomStatus(){
 async function join(){
   const name = $('#nameInput').value.trim();
   if(!name){ $('#joinErr').textContent = 'Add your name so the band knows who you are.'; return; }
+  if(audio.NATIVE && $('#inviteInput').value.trim()){
+    joinId = inviteId($('#inviteInput').value);
+    if(!joinId){ $('#joinErr').textContent = 'That doesn’t look like an invite link. Paste the whole link, or leave it empty to start a new jam.'; return; }
+  }
   me.name = name; $('#joinBtn').disabled = true; $('#joinErr').textContent = '';
   Tone.start();   // unlock audio inside the click so the band can start later without another tap
   try{
@@ -52,10 +61,10 @@ async function join(){
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
     $('#joinView').hidden = true; $('#roomView').hidden = false; $('#roomTitle').textContent = 'SoundStudio jam';
     const t = ui.tileFor({ identity:me.id, name:me.name }); if(media.getVideoTracks().length) ui.showVideoIn(t, videoOnly);
-    if(joinId) inviteLink = location.href;
+    if(joinId) inviteLink = SITE + '?join=' + joinId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
     else {
-      inviteLink = location.origin + location.pathname + '?join=' + me.id + (params.get('broker') ? '&broker=' + params.get('broker') : '');
-      history.replaceState(null, '', inviteLink);   // copying the address bar works too
+      inviteLink = SITE + '?join=' + me.id + (params.get('broker') ? '&broker=' + params.get('broker') : '');
+      if(!audio.NATIVE) history.replaceState(null, '', inviteLink);   // copying the address bar works too
       try{ sessionStorage.setItem('ss.hostId', me.id); }catch(e){}
       showRoomStatus(); $('#bigInvite').hidden = false;
     }
@@ -137,6 +146,7 @@ $('#studio').onchange = () => { room.format.bits = $('#studio').checked ? 32 : 1
 if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 
 // ---- controls ----
+if(audio.NATIVE){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';
 $('#nameInput').value = store.get('ss.name') || '';
 $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInput').value));
