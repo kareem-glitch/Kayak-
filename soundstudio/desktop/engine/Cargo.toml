@@ -1,0 +1,8 @@
+[package]
+name = "ssengine"
+version = "0.1.0"
+edition = "2021"
+description = "SoundStudio's audio core: adaptive jitter buffers, mixing and take recording. No I/O, so it is unit-testable anywhere."
+publish = false
+
+[dependencies]

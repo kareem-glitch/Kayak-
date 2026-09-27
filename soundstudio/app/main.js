@@ -39,8 +39,12 @@ async function join(){
   try{
     const savedIn = store.get('ss.inDev') || '';
     const audioReq = Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {});
-    try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
-    catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
+    if(audio.NATIVE){   // the desktop app handles audio natively: the page only needs the camera
+      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); }
+    } else {
+      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
+      catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
+    }
     let audioProblem = null;
     try{ audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); }
     catch(e){ audioProblem = e; console.error('audio setup failed', e); }
@@ -91,7 +95,11 @@ function showConnection(){
 function checkSetup(c){
   const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
   const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
-  if($('#speaker').checked) tips.push(['info', 'Echo cancellation is on: no feedback from your speaker, but sound is less clean. With wired headphones, turn it off for the best sound.']);
+  if(audio.NATIVE){
+    tips.push(['ok', `Desktop app: native audio (input ${audio.inputLatencyMs()} ms, output ${audio.outputLatencyMs()} ms).`]);
+    tips.push(['info', 'The band plays through your computer’s default output. Set that to the same headphones or interface.']);
+  }
+  else if($('#speaker').checked) tips.push(['info', 'Echo cancellation is on: no feedback from your speaker, but sound is less clean. With wired headphones, turn it off for the best sound.']);
   else tips.push(['info', 'Using a loudspeaker without headphones? Turn on Echo cancellation.']);
   if(/bluetooth|airpods|buds|beats|headset \(|hands-free/i.test(names)) tips.push(['warn', 'Bluetooth detected: it adds 100+ ms. Use wired headphones or your interface.']);
   else tips.push(['ok', 'No Bluetooth audio detected.']);
@@ -101,8 +109,8 @@ function checkSetup(c){
   const far = c.players.filter(p => p.netMs > 30);
   if(far.length) tips.push(['warn', `${far.map(p => p.name).join(', ')} ${far.length > 1 ? 'are' : 'is'} far away on the network (${far.map(p => p.netMs + ' ms').join(', ')}). Tight rhythm works best under ~25 ms.`]);
   const ua = navigator.userAgent;
-  if(!/Chrome|Edg\//.test(ua) || /Firefox/.test(ua)) tips.push(['info', 'Chrome or Edge give the lowest audio delay.']);
-  if(/Windows/.test(ua)) tips.push(['info', 'Windows browsers add some audio delay; a Mac is tighter.']);
+  if(!audio.NATIVE && (!/Chrome|Edg\//.test(ua) || /Firefox/.test(ua))) tips.push(['info', 'Chrome or Edge give the lowest audio delay.']);
+  if(!audio.NATIVE && /Windows/.test(ua)) tips.push(['info', 'Windows browsers add some audio delay; a Mac is tighter.']);
   if(navigator.connection && navigator.connection.type === 'wifi') tips.push(['info', 'You’re on Wi-Fi. An Ethernet cable is steadier.']);
   tips.push(['info', 'Use your interface’s direct monitoring to hear yourself with no delay.']);
   $('#tips').innerHTML = tips.map(([k, t]) => `<li class="${k}">${t}</li>`).join('');
@@ -121,6 +129,7 @@ $('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').che
 $('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
 $('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audio.useOutput($('#outDev').value); };
 // Echo cancellation: on by default for phones (often used on loudspeaker), off for computers.
+if(audio.NATIVE) $('#speaker').closest('label').hidden = true;   // no browser echo cancellation in the app
 $('#speaker').checked = store.get('ss.speaker') !== null ? store.get('ss.speaker') === '1' : audio.isPhone();
 $('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(media) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.status('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
 $('#studio').checked = store.get('ss.studio') === '1'; room.format.bits = $('#studio').checked ? 32 : 16;

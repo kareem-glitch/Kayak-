@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>SoundStudio sends your instrument or voice to the other players in your jam.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>SoundStudio shows your video to the other players in your jam.</string>
+</dict>
+</plist>

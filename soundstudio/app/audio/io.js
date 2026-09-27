@@ -2,6 +2,7 @@
 // instrument/mic input (device + channel), the output device, and the mix of
 // what the other players send. Packets are handled by net/room.js; this module
 // only deals in 128-frame blocks of Float32 samples.
+export const NATIVE = false;   // the desktop app swaps in a native version of this module
 export const RATE = 48000, FRAMES = 128, BLOCK_MS = FRAMES / RATE * 1000;
 // Headphones (default): no processing at all, your instrument exactly as it is.
 // Echo cancellation on (loudspeaker, no headphones): the browser's echo cancellation

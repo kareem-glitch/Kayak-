@@ -1,0 +1,49 @@
+# Builds the SoundStudio desktop app (Mac and Windows) and runs the audio
+# engine's tests. Downloads appear on each run's page under "Artifacts".
+name: Desktop app
+on:
+  push:
+    paths:
+      - 'soundstudio/desktop/**'
+      - 'soundstudio/app/**'
+      - 'soundstudio/audio/**'
+      - 'soundstudio/vendor/**'
+      - 'soundstudio/index.html'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+
+jobs:
+  engine-tests:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: soundstudio/desktop/engine } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test
+
+  build:
+    needs: engine-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, name: SoundStudio-Mac, targets: 'aarch64-apple-darwin,x86_64-apple-darwin', args: '--target universal-apple-darwin --bundles dmg', files: 'soundstudio/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg' }
+          - { os: windows-latest, name: SoundStudio-Windows, targets: '', args: '--bundles nsis', files: 'soundstudio/desktop/src-tauri/target/release/bundle/nsis/*.exe' }
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { working-directory: soundstudio/desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: '${{ matrix.targets }}' }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: 'soundstudio/desktop/src-tauri -> target' }
+      - run: npm ci
+      - run: npm run web
+      - run: npx tauri build ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error

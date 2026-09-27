@@ -1,0 +1,13 @@
+{
+  "name": "soundstudio-desktop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "web": "node scripts/build-web.mjs",
+    "icons": "tauri icon app-icon.png",
+    "build": "npm run web && tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
