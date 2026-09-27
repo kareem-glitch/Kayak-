@@ -81,12 +81,21 @@ class Player {
 class JamIO extends AudioWorkletProcessor {
   constructor(){
     super(); this.players = new Map(); this.limit = 4 * 128; this.under = 0; this.t = 0;
+    this.rec = null;   // recording: { frame, mic, out, n } batches of what you play and what you hear
     this.port.onmessage = e => {
       const d = e.data;
       if(d.planes){ let p = this.players.get(d.id); if(!p){ p = new Player(this.limit); this.players.set(d.id, p); } p.push(d.planes); }
       else if(d.gone) this.players.delete(d.gone);
+      else if(d.rec === true) this.rec = { frame: -1, mic: new Float32Array(128 * 64), out: new Float32Array(128 * 64), n: 0 };
+      else if(d.rec === false){ this.flushRec(); this.rec = null; this.port.postMessage({ recDone: true }); }
       else if(d.limit){ this.limit = d.limit; for(const p of this.players.values()){ p.limit = d.limit; p.target = Math.min(p.target, d.limit); } }
     };
+  }
+  flushRec(){
+    const r = this.rec; if(!r || !r.n) return;
+    const mic = r.mic.slice(0, r.n * 128), out = r.out.slice(0, r.n * 128);
+    this.port.postMessage({ recChunk: { frame: r.frame, mic, out } }, [mic.buffer, out.buffer]);
+    r.frame += r.n * 128; r.n = 0;
   }
   process(inputs, outputs){
     const inp = inputs[0];
@@ -95,6 +104,12 @@ class JamIO extends AudioWorkletProcessor {
     const out = outputs[0], L = out[0], R = out[1] || out[0];
     L.fill(0); if(R !== L) R.fill(0);
     for(const p of this.players.values()) if(p.render(L, R)) this.under++;
+    if(this.rec){   // your input exactly as captured, and the mix exactly as sent to your speakers
+      const r = this.rec; if(r.frame < 0) r.frame = currentFrame;
+      const mic = inp && inp[0], o = r.n * 128;
+      for(let i = 0; i < 128; i++){ r.mic[o + i] = mic ? mic[i] : 0; r.out[o + i] = (L[i] + R[i]) / 2; }
+      if(++r.n === 64) this.flushRec();
+    }
     if(++this.t % 188 === 0){   // ~2x per second: stats for the page
       const players = {};
       for(const [id, p] of this.players) players[id] = { bufferMs: +(p.target / sampleRate * 1000).toFixed(1), rate: p.rate, under: p.under };

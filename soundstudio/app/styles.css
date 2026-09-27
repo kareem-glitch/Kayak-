@@ -106,3 +106,16 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .tips li.info::before{content:"i";color:var(--muted);font-style:italic;left:5px}
 .lat li{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
 .lat li b{font-weight:600}
+.rec-row{display:flex;gap:12px;align-items:center;margin-top:10px;font-variant-numeric:tabular-nums}
+.rec-row .btn{display:inline-flex;gap:8px;align-items:center}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:#e0806a}
+#recBtn[aria-pressed="true"]{border-color:#e0806a;color:#e0806a}
+#recBtn[aria-pressed="true"] .rec-dot{border-radius:2px;animation:recpulse 1s ease-in-out infinite}
+@keyframes recpulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){#recBtn[aria-pressed="true"] .rec-dot{animation:none}}
+.rec-result{margin-top:10px;display:grid;gap:8px}
+.rec-result audio{width:100%}
+.rec-result a{color:var(--amber)}
+.rec-report{display:grid;gap:6px}
+.rec-report .stat{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:12px;background:var(--raised);border:1px solid var(--line);font-size:.9rem;font-variant-numeric:tabular-nums}
+.rec-report .stat b{font:800 1.05rem/1.2 "Bricolage Grotesque",sans-serif}

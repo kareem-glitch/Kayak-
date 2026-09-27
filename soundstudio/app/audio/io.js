@@ -24,8 +24,32 @@ export async function start(stream, blockHandler){
   node.connect(ctx.destination);
   micGain = ctx.createGain(); micGain.channelCountMode = 'explicit'; micGain.connect(node, 0, 0);
   if(stream.getAudioTracks().length) connectMic(new MediaStream(stream.getAudioTracks()));
-  node.port.onmessage = e => { const d = e.data; if(d.under !== undefined){ stats.under = d.under; stats.players = d.players; } else onBlock(d); };
+  node.port.onmessage = e => {
+    const d = e.data;
+    if(d.under !== undefined){ stats.under = d.under; stats.players = d.players; }
+    else if(d.recChunk){ if(rec) rec.chunks.push(d.recChunk); }
+    else if(d.recDone){ if(rec && rec.done) rec.done(finishRec()); }
+    else onBlock(d);
+  };
   await ctx.resume();
+}
+
+// ---- recording: what you play and what you hear, sample-exact on one clock ----
+let rec = null;
+export function startRecording(){ if(!node) throw new Error('audio not started'); rec = { chunks: [], done: null }; node.port.postMessage({ rec: true }); }
+export function stopRecording(){ return new Promise(res => { rec.done = res; node.port.postMessage({ rec: false }); }); }
+export const recordedSeconds = () => rec ? rec.chunks.reduce((a, c) => a + c.out.length, 0) / RATE : 0;
+function finishRec(){
+  const len = rec.chunks.reduce((a, c) => a + c.out.length, 0), mic = new Float32Array(len), out = new Float32Array(len);
+  let o = 0; for(const c of rec.chunks){ mic.set(c.mic, o); out.set(c.out, o); o += c.out.length; }
+  const frame0 = rec.chunks.length ? rec.chunks[0].frame : 0; rec = null;
+  return { mic, out, sampleRate: RATE, heardAt: frameToEpoch(frame0) };
+}
+// Wall-clock ms at which the audio rendered at `frame` leaves your speakers.
+function frameToEpoch(frame){
+  const ts = ctx.getOutputTimestamp && ctx.getOutputTimestamp();
+  if(ts && ts.performanceTime > 0) return performance.timeOrigin + ts.performanceTime + (frame / RATE - ts.contextTime) * 1000;
+  return performance.timeOrigin + performance.now() + (frame / RATE - ctx.currentTime) * 1000 + outputLatencyMs();
 }
 
 // Audio from another player: one block of planes ([mono] or [mono, L, R]).

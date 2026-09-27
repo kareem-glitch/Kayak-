@@ -6,6 +6,7 @@ import * as band from './band/engine.js';
 import * as room from './net/room.js';
 import * as session from './session.js';
 import * as ui from './ui.js';
+import * as recording from './recording.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -148,6 +149,34 @@ const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + 
 if(store.get('ss.bandVol') !== null) $('#bandVol').value = store.get('ss.bandVol');
 $('#bandVol').oninput = () => { bandVol(+$('#bandVol').value); store.set('ss.bandVol', $('#bandVol').value); };
 bandVol(+$('#bandVol').value);
+// ---- record & check timing ----
+let recTimer = null, recUrl = null;
+const signed = ms => (ms > 0 ? '+' : ms < 0 ? '−' : '±') + Math.abs(Math.round(ms)) + ' ms';
+const timing = ms => ms == null ? 'no claps found' : Math.abs(ms) < 5 ? 'on the beat' : ms > 0 ? 'behind the beat' : 'ahead of the beat';
+async function toggleRecording(){
+  const btn = $('#recBtn');
+  if(!recTimer){
+    try{ recording.start(); }catch(e){ $('#recStatus').textContent = 'Recording needs working audio on this device.'; return; }
+    btn.setAttribute('aria-pressed', 'true'); $('#recLabel').textContent = 'Stop';
+    $('#recStatus').textContent = '0:00';
+    recTimer = setInterval(() => { const t = recording.seconds(); $('#recStatus').textContent = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); if(t >= recording.MAX_SECONDS) toggleRecording(); }, 250);
+    return;
+  }
+  clearInterval(recTimer); recTimer = null; btn.disabled = true; $('#recStatus').textContent = 'Measuring…';
+  try{
+    const r = await recording.stop();
+    if(recUrl) URL.revokeObjectURL(recUrl); recUrl = r.url;
+    $('#recAudio').src = r.url; $('#recDownload').href = r.url; $('#recResult').hidden = false;
+    const row = (who, ms) => `<div class="stat"><span>${who}</span><span><b>${ms == null ? '—' : signed(ms)}</b> <span class="muted">${timing(ms)}</span></span></div>`;
+    $('#recReport').innerHTML = r.report
+      ? row('You', r.report.you) + row('Others, as you heard them', r.report.them) + `<p class="muted small">Measured over ${r.beats} beats. Your device’s own delay (${Math.round(r.correctedMs)} ms) is already taken out of “You”.</p>`
+      : '<p class="muted small">Start the band before recording to measure timing against the beat. You can still listen back.</p>';
+    $('#recStatus').textContent = r.seconds.toFixed(1) + ' s recorded';
+  }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
+  btn.disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Record';
+}
+$('#recBtn').onclick = toggleRecording;
+
 ['Slow funk in E minor, 96 bpm','12-bar blues shuffle in A','Lo-fi hip hop for a rainy night','Reggae one drop in G','Up-tempo jazz ii-V-I in Bb','Driving indie rock in D'].forEach(t => {
   const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => { $('#prompt').value = t; generate(); }; $('#examples').appendChild(b);
 });
@@ -157,3 +186,4 @@ window.getInvite = () => inviteLink;
 window.jamEngine = band.engine;
 window.jamStats = audio.stats;
 window.jamEchoCancelling = audio.echoCancelling;
+window.jamRecord = toggleRecording;

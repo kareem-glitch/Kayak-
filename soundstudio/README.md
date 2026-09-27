@@ -18,6 +18,13 @@ Pick your audio interface, input channel and output in **Audio devices**.
 Use your interface's direct monitoring to hear yourself; the app never plays
 your own instrument back to you.
 
+**Record & check timing**: start the band, press **Record**, and everyone claps
+on every beat for ~10 s. You get a stereo take to play back or download (left:
+you, right: the others as you heard them, clicks on the band's beat) and a
+report of how far ahead or behind the beat each side landed. Your own device's
+input/output delay is removed from "you", so "others" shows what the room
+really adds.
+
 ## How it works
 | Piece | What powers it |
 |---|---|
@@ -38,7 +45,9 @@ app/ui.js               tiles, band panel, beat display, meters, pickers
 app/band/theory.js      chords, styles, built-in prompt interpreter
 app/band/engine.js      Tone.js band, synced start (playAt)
 app/audio/io.js         audio context, input/output devices, mixing
-app/audio/worklet.js    real-time audio processor (capture + per-player queues)
+app/audio/worklet.js    real-time audio processor (capture + per-player queues + recording tap)
+app/audio/analysis.js   onset detection, beat offsets, WAV writer
+app/recording.js        Record & check timing
 app/net/room.js         4-person mesh, clock sync, packets
 audio/hub-protocol.js   JackTrip packet format (shared with the hub)
 api/                    Vercel functions (arrangement, hub/LiveKit tokens)
@@ -53,7 +62,7 @@ test/                   unit tests and the end-to-end test
 ```
 npm install
 npm test            # packet format + hub patcher unit tests
-npm run test:e2e    # 4 players + a refused 5th in headless Chromium, with a local broker
+npm run test:e2e    # 4 players + a refused 5th, studio quality, recording; headless Chromium, local broker
 ```
 The end-to-end test checks that everyone sees and hears everyone, bands start
 in step (including a player who joins mid-song), a taken seat mutes that part
