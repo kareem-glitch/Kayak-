@@ -33,6 +33,16 @@ export function beatOffsets(onsetTimes, beatTimes){
   }
   return out;
 }
+// The same sounds picked up twice (your mic, and another player's mic heard
+// through the app): for each onset in `a`, the first onset in `b` that follows
+// within `maxGap` seconds. Returns the gaps in ms; their median is the delay.
+export function pairGaps(a, b, maxGap = 0.4){
+  const out = [];
+  for(const t of a){ const m = b.find(u => u >= t - 0.002 && u - t <= maxGap); if(m !== undefined) out.push((m - t) * 1000); }
+  return out;
+}
+// Loudest sample in a track (0..1), to tell a silent input from missed claps.
+export const peak = track => { let m = 0; for(let i = 0; i < track.length; i++){ const a = Math.abs(track[i]); if(a > m) m = a; } return m; };
 export const median = xs => { if(!xs.length) return null; const s = [...xs].sort((a, b) => a - b), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
 // 16-bit stereo WAV.

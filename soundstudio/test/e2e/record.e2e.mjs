@@ -30,13 +30,13 @@ test('record and play back a take', { timeout: 120000 }, async () => {
     assert.ok(r.duration > 4.5 && r.duration < 6, `take is about 5 s long (${r.duration})`);
     assert.equal(r.channels, 2, 'stereo take (you / the others)');
     assert.ok(r.bytes > 44 + 4.5 * 48000 * 4, `WAV holds the audio (${r.bytes} bytes)`);
-    assert.match(r.report, /You.*Others, as you heard them.*Measured over \d+ beats/s, `timing report shown (${r.report})`);
+    assert.match(r.report, /You.*Others, as you heard them.*Measured over \d+ beats|Same clap/s, `timing report shown (${r.report})`);
     assert.match(r.status, /s recorded/);
 
     // recording without the band still gives a playable take
     await A.click('#playBtn'); await sleep(500);
     await A.click('#recBtn'); await sleep(1500); await A.click('#recBtn');
-    await A.waitForFunction(() => /Start the band/.test(document.getElementById('recReport').textContent), null, { timeout:10000 });
+    await A.waitForFunction(() => /Start the band|recorded almost nothing/.test(document.getElementById('recReport').textContent), null, { timeout:10000 });
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });

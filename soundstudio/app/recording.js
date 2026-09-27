@@ -8,7 +8,7 @@
 import { S } from './state.js';
 import * as audio from './audio/io.js';
 import * as band from './band/engine.js';
-import { onsets, beatOffsets, median, wav } from './audio/analysis.js';
+import { onsets, beatOffsets, pairGaps, peak, median, wav } from './audio/analysis.js';
 
 export const MAX_SECONDS = 120;
 export const start = () => audio.startRecording();
@@ -29,10 +29,14 @@ export async function stop(){
   }
   const left = you.slice(), right = out.slice();
   for(const b of beats){ const s = Math.round(b * sr); for(let i = 0; i < 480 && s + i < n; i++){ const c = 0.2 * Math.sin(2 * Math.PI * 1500 * i / sr) * Math.exp(-i / 120); left[s + i] += c; right[s + i] += c; } }
-  const report = beats.length >= 4 ? {
-    you: median(beatOffsets(onsets(you, sr), beats)),
-    them: median(beatOffsets(onsets(out, sr), beats)),
-  } : null;
+  const youOn = onsets(you, sr), themOn = onsets(out, sr), gaps = pairGaps(youOn, themOn);
+  const report = {
+    you: beats.length >= 4 ? median(beatOffsets(youOn, beats)) : null,
+    them: beats.length >= 4 ? median(beatOffsets(themOn, beats)) : null,
+    // side-by-side test: one clap reaches your mic and theirs at once, so the gap is the delay
+    gap: gaps.length >= 3 ? median(gaps) : null, pairs: gaps.length,
+    micSilent: peak(mic) < 0.01, othersSilent: peak(out) < 0.01,
+  };
   const url = URL.createObjectURL(new Blob([wav(left, right, sr)], { type: 'audio/wav' }));
   return { url, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
 }

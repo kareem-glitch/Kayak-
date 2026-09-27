@@ -168,9 +168,14 @@ async function toggleRecording(){
     if(recUrl) URL.revokeObjectURL(recUrl); recUrl = r.url;
     $('#recAudio').src = r.url; $('#recDownload').href = r.url; $('#recResult').hidden = false;
     const row = (who, ms) => `<div class="stat"><span>${who}</span><span><b>${ms == null ? '—' : signed(ms)}</b> <span class="muted">${timing(ms)}</span></span></div>`;
-    $('#recReport').innerHTML = r.report
-      ? row('You', r.report.you) + row('Others, as you heard them', r.report.them) + `<p class="muted small">Measured over ${r.beats} beats. Your device’s own delay (${Math.round(r.correctedMs)} ms) is already taken out of “You”.</p>`
-      : '<p class="muted small">Start the band before recording to measure timing against the beat. You can still listen back.</p>';
+    const q = r.report, notes = [];
+    if(q.micSilent) notes.push('Your mic recorded almost nothing. Check the input under Audio devices, and on a Mac set Control Centre → Mic Mode to Standard (Voice Isolation removes claps).');
+    if(q.othersSilent) notes.push('Nothing came in from the others during this take.');
+    if(!r.beats) notes.push('Start the band before recording to measure against the beat.');
+    $('#recReport').innerHTML =
+      (q.gap != null ? `<div class="stat"><span>Same clap: your mic → theirs → your ears</span><span><b>${Math.round(q.gap)} ms</b> <span class="muted">${q.pairs} claps</span></span></div>` : '')
+      + (r.beats ? row('You', q.you) + row('Others, as you heard them', q.them) : '')
+      + `<p class="muted small">${notes.length ? notes.join(' ') : `Measured over ${r.beats} beats. Your device’s own delay (${Math.round(r.correctedMs)} ms) is already taken out of “You”. With both devices side by side, “Same clap” is the full delay between players.`}</p>`;
     $('#recStatus').textContent = r.seconds.toFixed(1) + ' s recorded';
   }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
   btn.disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Record';

@@ -40,3 +40,13 @@ test('wav header and length', () => {
   assert.equal(String.fromCharCode(...new Uint8Array(buf, 0, 4)), 'RIFF');
   assert.equal(dv.getUint32(24, true), SR); assert.equal(dv.getUint16(22, true), 2);
 });
+
+test('the same claps heard twice give the delay between them', async () => {
+  const { pairGaps, peak } = await import('../app/audio/analysis.js');
+  const times = [0.5, 1.1, 1.8, 2.4, 3.0];
+  const a = onsets(claps(times), SR), b = onsets(claps(times.map(t => t + 0.031)), SR);
+  const g = pairGaps(a, b);
+  assert.equal(g.length, 5);
+  assert.ok(Math.abs(median(g) - 31) < 1, `median ${median(g)}`);
+  assert.ok(peak(new Float32Array(100)) === 0);
+});
