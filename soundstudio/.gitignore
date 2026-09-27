@@ -8,3 +8,4 @@ hub/secrets/
 *.key
 __pycache__/
 .vercel
+download/
