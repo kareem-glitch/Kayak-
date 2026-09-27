@@ -42,7 +42,7 @@ async function join(){
     try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
     catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
     let audioProblem = null;
-    try{ audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(+$('#buffer').value); }
+    try{ audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); }
     catch(e){ audioProblem = e; console.error('audio setup failed', e); }
     const videoOnly = new MediaStream(media.getVideoTracks());
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
@@ -145,8 +145,9 @@ $('#genBtn').onclick = generate;
 $('#playBtn').onclick = () => S.playing ? session.stopBand() : session.startBand($('#countIn').checked);
 $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; };
 $('#bpm').addEventListener('change', () => session.setTempo(clamp(Math.round(+$('#bpm').value || S.arr.bpm), 50, 200)));
-const showBuffer = () => { $('#bufferMs').textContent = '(' + Math.round($('#buffer').value * audio.BLOCK_MS) + ' ms)'; };
-$('#buffer').oninput = () => { showBuffer(); audio.setBufferLimit(+$('#buffer').value); }; showBuffer();
+// Latency first, always: the smallest buffer that stays glitch-free to the ear.
+// Laptops get the tight setting; phones (jumpier audio timing) a little more room.
+const feel = audio.isPhone() ? 'balanced' : 'tight', BUFFER_LIMIT = audio.isPhone() ? 12 : 8;   // limit in 128-frame blocks
 const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeText(inviteLink); const t = btn.textContent; btn.textContent = done; setTimeout(() => btn.textContent = t, 2000); }catch(e){ prompt('Copy this invite link', inviteLink); } };
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
 $('#bigInvite').onclick = () => copy($('#bigInvite'), inviteLink, 'Link copied. Send it to your friends');

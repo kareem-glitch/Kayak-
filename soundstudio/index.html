@@ -103,8 +103,7 @@ window.__audioContexts = [];
 
       <section class="conn">
         <h2>Connection</h2>
-        <div class="slider"><label class="muted small" for="buffer">Buffer limit <span id="bufferMs"></span></label><input type="range" id="buffer" min="3" max="32" step="1" value="12" aria-label="Audio buffer limit"></div>
-        <p class="muted small">The buffer adjusts itself to each player’s connection, up to this limit.</p>
+        <p class="muted small">Tuned for the lowest delay: each player’s buffer shrinks to the smallest size their connection allows.</p>
         <ul class="lat" id="latList"></ul>
         <div class="stats" id="connStats">Waiting for others…</div>
         <button class="btn btn-primary" id="bigInvite" style="width:100%;margin-top:10px" hidden>Copy invite link</button>
@@ -113,7 +112,7 @@ window.__audioContexts = [];
 
       <section class="conn">
         <h2>Record &amp; check timing</h2>
-        <p class="muted small">Start the band, press Record, and everyone claps on every beat for about 10 seconds. Then play it back.</p>
+        <p class="muted small">Start the band, press Record, and everyone claps (or plays short muted notes) on every beat for about 10 seconds. Then play it back. To measure the delay between two devices, put them side by side and clap.</p>
         <div class="rec-row"><button class="btn btn-quiet" id="recBtn" aria-pressed="false"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel">Record</span></button><span class="muted small" id="recStatus"></span></div>
         <div class="rec-result" id="recResult" hidden>
           <div class="rec-report" id="recReport"></div>

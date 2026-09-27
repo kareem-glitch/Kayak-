@@ -14,19 +14,27 @@
 //  - A dropout (buffer empty) is concealed by fading out the last sound instead
 //    of a hard gap, and real audio fades back in.
 const RING = 16384;            // samples per channel (~340 ms at 48 kHz)
-const MARGIN = 48;             // samples of safety kept above the lowest fill
-const MIN_TARGET = 272;        // two blocks + margin (5.7 ms): the audio thread takes a block per
-                               // render, so surviving one late packet needs two buffered
 const MAX_RATE_DEV = 0.005;    // ±0.5 % playback speed
 const WINDOW = 375;            // render quanta per adaptation step (~1 s)
-const HOLD = 10;               // adaptation steps to hold the buffer size after a dropout (~10 s)
-const SHRINK = 16;             // max samples the target shrinks per step (grow fast, shrink slowly)
+// How the buffer trades delay for smoothness ("feel", chosen by each player):
+//  margin: samples of safety kept above the lowest fill
+//  min:    smallest target; the audio thread takes a block per render, so surviving
+//          one late packet needs two blocks buffered (256) plus the margin
+//  hold:   adaptation steps (~1 s each) to keep the size after a dropout
+//  shrink: max samples the target shrinks per step (grow fast, shrink slowly)
+// Laptops use tight, phones balanced (set by the page; not a user option).
+export const FEELS = {
+  tight:    { margin: 16,  min: 256, hold: 8,  shrink: 24 },
+  balanced: { margin: 48,  min: 272, hold: 10, shrink: 16 },
+  smooth:   { margin: 128, min: 512, hold: 30, shrink: 8 },
+};
 
 class Player {
-  constructor(limit){
+  constructor(limit, feel = FEELS.balanced){
+    this.feel = feel;
     this.l = new Float32Array(RING); this.r = new Float32Array(RING);
     this.w = 0; this.rd = 0;                 // write index (int), read position (float)
-    this.target = 256; this.limit = limit;   // samples (the target starts at ~5 ms)
+    this.target = Math.max(256, feel.min); this.limit = limit;   // samples (the target starts at ~5 ms)
     this.playing = false; this.low = Infinity; this.n = 0;
     this.fade = 0; this.lastL = 0; this.lastR = 0; this.gain = 1;
     this.under = 0; this.rate = 1; this.hold = 0;
@@ -51,7 +59,7 @@ class Player {
     this.rate = 1 + Math.max(-MAX_RATE_DEV, Math.min(MAX_RATE_DEV, err * 0.01));
     if(f < N * this.rate + 2){   // not enough audio: conceal, re-prime, aim higher
       this.under++; this.playing = false;
-      this.target = Math.min(this.limit, this.target + 128); this.hold = HOLD;
+      this.target = Math.min(this.limit, this.target + 128); this.hold = this.feel.hold;
       this.conceal(outL, outR); return true;
     }
     for(let i = 0; i < N; i++){
@@ -64,9 +72,10 @@ class Player {
     // adapt the target toward the lowest fill seen this window, plus a margin
     const after = this.fill(); if(after < this.low) this.low = after;
     if(++this.n >= WINDOW){
-      const spare = this.low - MARGIN;
+      const f = this.feel, spare = this.low - f.margin;
       if(this.hold > 0) this.hold--;
-      else if(spare > 8) this.target = Math.max(MIN_TARGET, this.target - Math.min(spare, SHRINK));
+      else if(spare > 8) this.target = Math.max(f.min, this.target - Math.min(spare, f.shrink));
+      else if(this.target < f.min) this.target = f.min;
       this.target = Math.min(this.target, this.limit);
       this.low = Infinity; this.n = 0;
     }
@@ -80,14 +89,15 @@ class Player {
 
 class JamIO extends AudioWorkletProcessor {
   constructor(){
-    super(); this.players = new Map(); this.limit = 4 * 128; this.under = 0; this.t = 0; this.peak = 0;
+    super(); this.players = new Map(); this.limit = 4 * 128; this.feel = FEELS.balanced; this.under = 0; this.t = 0; this.peak = 0;
     this.rec = null;   // recording: { frame, mic, out, n } batches of what you play and what you hear
     this.port.onmessage = e => {
       const d = e.data;
-      if(d.planes){ let p = this.players.get(d.id); if(!p){ p = new Player(this.limit); this.players.set(d.id, p); } p.push(d.planes); }
+      if(d.planes){ let p = this.players.get(d.id); if(!p){ p = new Player(this.limit, this.feel); this.players.set(d.id, p); } p.push(d.planes); }
       else if(d.gone) this.players.delete(d.gone);
       else if(d.rec === true) this.rec = { frame: -1, mic: new Float32Array(128 * 64), out: new Float32Array(128 * 64), n: 0 };
       else if(d.rec === false){ this.flushRec(); this.rec = null; this.port.postMessage({ recDone: true }); }
+      else if(d.feel){ this.feel = FEELS[d.feel] || FEELS.balanced; for(const p of this.players.values()){ p.feel = this.feel; p.hold = Math.min(p.hold, this.feel.hold); } }
       else if(d.limit){ this.limit = d.limit; for(const p of this.players.values()){ p.limit = d.limit; p.target = Math.min(p.target, d.limit); } }
     };
   }
@@ -120,4 +130,4 @@ class JamIO extends AudioWorkletProcessor {
   }
 }
 if(typeof registerProcessor === 'function') registerProcessor('jam-io', JamIO);
-export { Player, JamIO };   // for unit tests (worklet scripts are ES modules, so this is allowed)
+export { Player, JamIO };   // (FEELS is exported above)   // for unit tests (worklet scripts are ES modules, so this is allowed)

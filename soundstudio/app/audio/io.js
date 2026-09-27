@@ -59,6 +59,8 @@ function frameToEpoch(frame){
 export function deliver(id, planes){ node && node.port.postMessage({ id, planes }); }
 export function forget(id){ node && node.port.postMessage({ gone:id }); }
 // Upper limit for each player's adaptive buffer, in 128-frame blocks.
+// Feel: 'tight' | 'balanced' | 'smooth' (see FEELS in worklet.js).
+export function setFeel(name){ node && node.port.postMessage({ feel:name }); }
 export function setBufferLimit(blocks){ node && node.port.postMessage({ limit:blocks * FRAMES }); }
 
 // Input: which channel(s) of the device to send: '1', '2', 'mix' (1+2 as mono)

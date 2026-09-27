@@ -27,7 +27,7 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     assert.match(a.latency, /Wife → you\s*≈ \d+ ms/, `latency estimate shown (${a.latency})`);
     const arrive = +(a.latency.match(/arrives (-?\d+)/) || [])[1];
     assert.ok(arrive >= 0 && arrive < 60, `audio measured arriving soon after it's played (${a.latency})`);
-    assert.ok(a.buffers.length === 1 && a.buffers[0] >= 5.6 && a.buffers[0] <= 32, `automatic buffer within limits (${a.buffers})`);
+    assert.ok(a.buffers.length === 1 && a.buffers[0] >= 5.3 && a.buffers[0] <= 21.4, `automatic buffer within limits (${a.buffers})`);
     assert.match(a.tips, /Bluetooth|48 kHz|direct monitoring/, 'setup check shown');
     // Speaker mode: echo cancellation switches on and audio keeps flowing
     assert.equal(await B.evaluate(() => window.jamEchoCancelling()), false, 'headphone mode: no echo cancellation');
@@ -36,6 +36,7 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     const before = await A.evaluate(() => [...window.jamPeers.values()][0].recv); await sleep(1500);
     const after = await A.evaluate(() => [...window.jamPeers.values()][0].recv);
     assert.ok(after - before > 300, `audio still flows after switching (${after - before} packets in 1.5 s)`);
+    assert.ok(a.buffers[0] <= 21.4, `laptop buffer stays within the tight 21 ms limit (${a.buffers})`);
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });

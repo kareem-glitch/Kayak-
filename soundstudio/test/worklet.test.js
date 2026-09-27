@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 
 globalThis.AudioWorkletProcessor = class { constructor(){ this.port = { postMessage(){}, onmessage:null }; } };
 globalThis.sampleRate = 48000;
-const { Player } = await import('../app/audio/worklet.js');
+const { Player, FEELS } = await import('../app/audio/worklet.js');
 
 // Deliver 128-frame blocks of a 440 Hz tone. `arrive(i)` gives block i's arrival
 // time in render quanta (fractional); `clock` scales the sender's rate (drift).
-function simulate({ seconds = 20, arrive, limitBlocks = 16, drop = () => false }){
-  const p = new Player(limitBlocks * 128), quanta = Math.round(seconds * 375);
+function simulate({ seconds = 20, arrive, limitBlocks = 16, drop = () => false, feel }){
+  const p = new Player(limitBlocks * 128, feel), quanta = Math.round(seconds * 375);
   const pending = []; let sent = 0, dropouts = 0, clicks = 0, prev = 0, phase = 0;
   for(let q = 0; q < quanta; q++){
     while(arrive(sent) <= q){ const b = new Float32Array(128); for(let i = 0; i < 128; i++) b[i] = 0.5 * Math.sin(phase += 2 * Math.PI * 440 / 48000); if(!drop(sent)) pending.push(b); sent++; }
@@ -51,4 +51,12 @@ test('a lost packet is concealed with a fade, not a click', () => {
 test('the buffer never exceeds the user limit', () => {
   const r = simulate({ arrive: jitter(40), limitBlocks: 4, seconds: 10 });
   assert.ok(r.bufferMs <= 4 * 128 / 48 + 0.01, `buffer ${r.bufferMs} ms`);
+});
+
+test('feel: tight keeps less buffer than balanced, smooth keeps more and drops out least', () => {
+  const run = f => simulate({ arrive: jitter(6, 7), seconds: 40, feel: FEELS[f] });
+  const t = run('tight'), b = run('balanced'), s = run('smooth');
+  assert.ok(t.bufferMs < b.bufferMs && b.bufferMs < s.bufferMs, `buffers ${t.bufferMs} / ${b.bufferMs} / ${s.bufferMs} ms`);
+  assert.ok(s.dropouts <= b.dropouts && b.dropouts <= t.dropouts + 1, `dropouts ${t.dropouts} / ${b.dropouts} / ${s.dropouts}`);
+  assert.equal(s.clicks, 0);
 });
