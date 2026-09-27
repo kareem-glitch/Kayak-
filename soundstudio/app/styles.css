@@ -96,3 +96,13 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .devsel{width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font:inherit;font-size:.9rem;margin:4px 0 8px}
 .conn label{display:block}
 .conn .stats{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:.82rem;margin-top:8px;font-variant-numeric:tabular-nums}
+.check{display:flex;gap:8px;align-items:center;margin-top:6px;color:var(--muted)}
+.check input{accent-color:var(--amber)}
+.tips,.lat{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px;font-size:.85rem}
+.tips li{padding-left:22px;position:relative}
+.tips li::before{position:absolute;left:0;top:0}
+.tips li.ok::before{content:"✓";color:#4cc38a}
+.tips li.warn::before{content:"!";color:var(--amber);font-weight:800;left:5px}
+.tips li.info::before{content:"i";color:var(--muted);font-style:italic;left:5px}
+.lat li{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
+.lat li b{font-weight:600}

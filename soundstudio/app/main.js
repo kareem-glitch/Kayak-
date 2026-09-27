@@ -41,7 +41,7 @@ async function join(){
     try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
     catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
     let audioProblem = null;
-    try{ await audio.start(media, room.sendBlock); audio.setMaxQueue(+$('#buffer').value); }
+    try{ audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(+$('#buffer').value); }
     catch(e){ audioProblem = e; console.error('audio setup failed', e); }
     const videoOnly = new MediaStream(media.getVideoTracks());
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
@@ -70,9 +70,31 @@ async function join(){
 function showConnection(){
   const c = room.connectionStats();
   $('#connDebug').textContent = `me ${me.id.slice(0,6)} · ${room.isOwner() ? 'room creator' : 'joined'} · ${c.debug}`;
+  showConnection.n = (showConnection.n || 0) + 1;
+  if(showConnection.n % 8 === 1) checkSetup(c);   // every 2 s
   if(!c.live) return;
-  const net = c.oneWayMs.map(v => v === null ? '–' : v + ' ms').join(', ');
-  $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Network ≈ ${net}</span><span>Buffer ${Math.round($('#buffer').value * audio.BLOCK_MS)} ms</span><span>Your output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
+  $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
+  // per player: estimated time from their instrument to your ears
+  $('#latList').innerHTML = c.players.map(p => `<li><span><b>${p.name.replace(/[<&]/g, '')}</b> → you</span><span>≈ ${p.totalMs} ms <span class="muted">(network ${p.netMs}, buffer ${p.bufferMs})</span></span></li>`).join('');
+}
+
+// ---- setup check: plain-language tips for the tightest feel ----
+function checkSetup(c){
+  const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
+  const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
+  if(/bluetooth|airpods|buds|beats|headset \(|hands-free/i.test(names)) tips.push(['warn', 'Bluetooth detected: it adds 100+ ms. Use wired headphones or your interface.']);
+  else tips.push(['ok', 'No Bluetooth audio detected.']);
+  const sr = audio.inputSampleRate();
+  if(sr && sr !== 48000) tips.push(['warn', `Your input runs at ${sr / 1000} kHz. Set your interface to 48 kHz to avoid extra conversion.`]);
+  else if(sr) tips.push(['ok', 'Input at 48 kHz.']);
+  const far = c.players.filter(p => p.netMs > 30);
+  if(far.length) tips.push(['warn', `${far.map(p => p.name).join(', ')} ${far.length > 1 ? 'are' : 'is'} far away on the network (${far.map(p => p.netMs + ' ms').join(', ')}). Tight rhythm works best under ~25 ms.`]);
+  const ua = navigator.userAgent;
+  if(!/Chrome|Edg\//.test(ua) || /Firefox/.test(ua)) tips.push(['info', 'Chrome or Edge give the lowest audio delay.']);
+  if(/Windows/.test(ua)) tips.push(['info', 'Windows browsers add some audio delay; a Mac is tighter.']);
+  if(navigator.connection && navigator.connection.type === 'wifi') tips.push(['info', 'You’re on Wi-Fi. An Ethernet cable is steadier.']);
+  tips.push(['info', 'Use your interface’s direct monitoring to hear yourself with no delay.']);
+  $('#tips').innerHTML = tips.map(([k, t]) => `<li class="${k}">${t}</li>`).join('');
 }
 
 // ---- audio devices ----
@@ -85,8 +107,11 @@ async function fillDevices(){
 }
 const showChannels = chans => { $('#inCh').disabled = chans < 2; };
 $('#inDev').onchange = () => audio.useInput($('#inDev').value).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.status('Couldn’t switch input: ' + (e.name || e)));
-$('#inCh').onchange = () => showChannels(audio.setInputChannel($('#inCh').value));
+$('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
 $('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audio.useOutput($('#outDev').value); };
+$('#studio').checked = store.get('ss.studio') === '1'; room.format.bits = $('#studio').checked ? 32 : 16;
+$('#studio').onchange = () => { room.format.bits = $('#studio').checked ? 32 : 16; store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
+if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 
 // ---- controls ----
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';
@@ -106,8 +131,8 @@ $('#genBtn').onclick = generate;
 $('#playBtn').onclick = () => S.playing ? session.stopBand() : session.startBand($('#countIn').checked);
 $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; };
 $('#bpm').addEventListener('change', () => session.setTempo(clamp(Math.round(+$('#bpm').value || S.arr.bpm), 50, 200)));
-const showBuffer = () => { $('#bufferMs').textContent = '≈ ' + Math.round($('#buffer').value * audio.BLOCK_MS) + ' ms'; };
-$('#buffer').oninput = () => { showBuffer(); audio.setMaxQueue(+$('#buffer').value); }; showBuffer();
+const showBuffer = () => { $('#bufferMs').textContent = '(' + Math.round($('#buffer').value * audio.BLOCK_MS) + ' ms)'; };
+$('#buffer').oninput = () => { showBuffer(); audio.setBufferLimit(+$('#buffer').value); }; showBuffer();
 const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeText(inviteLink); const t = btn.textContent; btn.textContent = done; setTimeout(() => btn.textContent = t, 2000); }catch(e){ prompt('Copy this invite link', inviteLink); } };
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
 $('#bigInvite').onclick = () => copy($('#bigInvite'), inviteLink, 'Link copied. Send it to your friends');

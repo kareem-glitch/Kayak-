@@ -1,29 +1,107 @@
-// Runs on the audio thread. Input 0 is your instrument/mic (mono): every
-// 128-frame block is posted to the page, which sends it to the other players.
-// Each other player has a small queue of received blocks; the queues are mixed
-// to stereo. A queue that runs dry plays silence (counted as a dropout); a
-// queue that grows past `max` blocks drops its oldest to bound the delay.
+// Runs on the audio thread.
+//
+// Capture: input 0 is your instrument (1 or 2 channels). Every 128-frame block
+// is posted to the page, which sends it to the other players.
+//
+// Playback: one adaptive jitter buffer per other player, mixed to stereo.
+//  - Each buffer is a ring of samples read at a slightly variable rate (±0.5%,
+//    inaudible). The rate steers the fill level toward a target, which both
+//    absorbs the small clock difference between two devices (drift) and lets
+//    the target shrink without dropping chunks of audio.
+//  - The target adapts: every second it creeps down toward the smallest fill
+//    level seen (plus a safety margin); after a dropout it jumps up and holds
+//    for ~10 s. It never goes below 5.7 ms or above the user's buffer limit.
+//  - A dropout (buffer empty) is concealed by fading out the last sound instead
+//    of a hard gap, and real audio fades back in.
+const RING = 16384;            // samples per channel (~340 ms at 48 kHz)
+const MARGIN = 48;             // samples of safety kept above the lowest fill
+const MIN_TARGET = 272;        // two blocks + margin (5.7 ms): the audio thread takes a block per
+                               // render, so surviving one late packet needs two buffered
+const MAX_RATE_DEV = 0.005;    // ±0.5 % playback speed
+const WINDOW = 375;            // render quanta per adaptation step (~1 s)
+const HOLD = 10;               // adaptation steps to hold the buffer size after a dropout (~10 s)
+const SHRINK = 16;             // max samples the target shrinks per step (grow fast, shrink slowly)
+
+class Player {
+  constructor(limit){
+    this.l = new Float32Array(RING); this.r = new Float32Array(RING);
+    this.w = 0; this.rd = 0;                 // write index (int), read position (float)
+    this.target = 256; this.limit = limit;   // samples (the target starts at ~5 ms)
+    this.playing = false; this.low = Infinity; this.n = 0;
+    this.fade = 0; this.lastL = 0; this.lastR = 0; this.gain = 1;
+    this.under = 0; this.rate = 1; this.hold = 0;
+  }
+  fill(){ return this.w - this.rd; }
+  push(planes){
+    const L = planes[0], R = planes[1] || planes[0];
+    if(this.fill() + L.length > RING - 1) this.rd = this.w + L.length - (RING - 1);   // overflow: drop oldest
+    for(let i = 0; i < L.length; i++){ const k = (this.w + i) & (RING - 1); this.l[k] = L[i]; this.r[k] = R[i]; }
+    this.w += L.length;
+  }
+  // Mix 128 frames into outL/outR. Returns true if this player dropped out.
+  render(outL, outR){
+    const N = outL.length;
+    if(!this.playing){
+      if(this.fill() >= this.target){ this.playing = true; this.gain = 0; }   // primed: start with a fade-in
+      else { this.conceal(outL, outR); return false; }
+    }
+    const f = this.fill();
+    // steer the fill level toward the target by playing slightly faster or slower
+    const err = (f - this.target) / Math.max(this.target, 128);
+    this.rate = 1 + Math.max(-MAX_RATE_DEV, Math.min(MAX_RATE_DEV, err * 0.01));
+    if(f < N * this.rate + 2){   // not enough audio: conceal, re-prime, aim higher
+      this.under++; this.playing = false;
+      this.target = Math.min(this.limit, this.target + 128); this.hold = HOLD;
+      this.conceal(outL, outR); return true;
+    }
+    for(let i = 0; i < N; i++){
+      const p = this.rd, i0 = Math.floor(p), t = p - i0, a = i0 & (RING - 1), b = (i0 + 1) & (RING - 1);
+      if(this.gain < 1) this.gain = Math.min(1, this.gain + 1 / 64);
+      const vl = (this.l[a] + (this.l[b] - this.l[a]) * t) * this.gain, vr = (this.r[a] + (this.r[b] - this.r[a]) * t) * this.gain;
+      outL[i] += vl; outR[i] += vr; this.rd += this.rate;
+    }
+    const k = (Math.floor(this.rd) - 1) & (RING - 1); this.lastL = this.l[k]; this.lastR = this.r[k]; this.fade = 1;
+    // adapt the target toward the lowest fill seen this window, plus a margin
+    const after = this.fill(); if(after < this.low) this.low = after;
+    if(++this.n >= WINDOW){
+      const spare = this.low - MARGIN;
+      if(this.hold > 0) this.hold--;
+      else if(spare > 8) this.target = Math.max(MIN_TARGET, this.target - Math.min(spare, SHRINK));
+      this.target = Math.min(this.target, this.limit);
+      this.low = Infinity; this.n = 0;
+    }
+    return false;
+  }
+  // Fade the last sample value out over a few milliseconds instead of a click.
+  conceal(outL, outR){
+    for(let i = 0; i < outL.length && this.fade > 0.0005; i++){ this.fade *= 0.985; outL[i] += this.lastL * this.fade; outR[i] += this.lastR * this.fade; }
+  }
+}
+
 class JamIO extends AudioWorkletProcessor {
   constructor(){
-    super(); this.q = new Map(); this.max = 4; this.under = 0;
+    super(); this.players = new Map(); this.limit = 4 * 128; this.under = 0; this.t = 0;
     this.port.onmessage = e => {
       const d = e.data;
-      if(d.planes){ let q = this.q.get(d.id); if(!q){ q = []; this.q.set(d.id, q); } q.push(d.planes); while(q.length > this.max) q.shift(); }
-      else if(d.gone) this.q.delete(d.gone);
-      else if(d.max) this.max = d.max;
+      if(d.planes){ let p = this.players.get(d.id); if(!p){ p = new Player(this.limit); this.players.set(d.id, p); } p.push(d.planes); }
+      else if(d.gone) this.players.delete(d.gone);
+      else if(d.limit){ this.limit = d.limit; for(const p of this.players.values()){ p.limit = d.limit; p.target = Math.min(p.target, d.limit); } }
     };
   }
   process(inputs, outputs){
-    const mic = inputs[0][0];
-    this.port.postMessage(mic ? mic.slice(0) : new Float32Array(128));
-    const out = outputs[0]; out.forEach(c => c.fill(0));
-    for(const q of this.q.values()){
-      const blk = q.shift(); if(!blk){ this.under++; continue; }
-      const m = blk[0], l = blk[1], r = blk[2] || blk[1];
-      for(let i = 0; i < 128; i++){ out[0][i] += m[i] + (l ? l[i] : 0); if(out[1]) out[1][i] += m[i] + (r ? r[i] : 0); }
+    const inp = inputs[0];
+    if(inp && inp.length) this.port.postMessage(inp.map(c => c.slice(0)));
+    else this.port.postMessage([new Float32Array(128)]);
+    const out = outputs[0], L = out[0], R = out[1] || out[0];
+    L.fill(0); if(R !== L) R.fill(0);
+    for(const p of this.players.values()) if(p.render(L, R)) this.under++;
+    if(++this.t % 188 === 0){   // ~2x per second: stats for the page
+      const players = {};
+      for(const [id, p] of this.players) players[id] = { bufferMs: +(p.target / sampleRate * 1000).toFixed(1), rate: p.rate, under: p.under };
+      this.port.postMessage({ under: this.under, players });
     }
-    if(currentFrame % 4800 < 128) this.port.postMessage({ under: this.under });
     return true;
   }
 }
-registerProcessor('jam-io', JamIO);
+if(typeof registerProcessor === 'function') registerProcessor('jam-io', JamIO);
+export { Player, JamIO };   // for unit tests (worklet scripts are ES modules, so this is allowed)

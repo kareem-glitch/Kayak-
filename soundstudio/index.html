@@ -87,15 +87,23 @@ window.__audioContexts = [];
         <label class="muted small" for="inDev">Input (mic or audio interface)</label>
         <select id="inDev" class="devsel"></select>
         <label class="muted small" for="inCh">Input channel</label>
-        <select id="inCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2</option></select>
+        <select id="inCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2 (mono)</option><option value="stereo">Inputs 1 + 2 as stereo</option></select>
         <label class="muted small" for="outDev">Output (headphones or interface)</label>
         <select id="outDev" class="devsel"></select>
         <p class="muted small" id="outNote" hidden>This browser uses your computer’s sound output. To choose here, use Chrome or Edge.</p>
+        <label class="check small"><input type="checkbox" id="studio"> Studio quality (32-bit audio, about twice the bandwidth)</label>
+      </section>
+
+      <section class="conn">
+        <h2>Setup check</h2>
+        <ul class="tips" id="tips"><li class="muted">Join to check your setup.</li></ul>
       </section>
 
       <section class="conn">
         <h2>Connection</h2>
-        <div class="slider"><label class="muted small" for="buffer">Buffer <span id="bufferMs"></span></label><input type="range" id="buffer" min="2" max="16" step="1" value="4" aria-label="Audio buffer"></div>
+        <div class="slider"><label class="muted small" for="buffer">Buffer limit <span id="bufferMs"></span></label><input type="range" id="buffer" min="3" max="32" step="1" value="12" aria-label="Audio buffer limit"></div>
+        <p class="muted small">The buffer adjusts itself to each player’s connection, up to this limit.</p>
+        <ul class="lat" id="latList"></ul>
         <div class="stats" id="connStats">Waiting for others…</div>
         <button class="btn btn-primary" id="bigInvite" style="width:100%;margin-top:10px" hidden>Copy invite link</button>
         <div class="stats" id="connDebug" style="opacity:.7"></div>

@@ -44,3 +44,13 @@ test('sequence distance handles wraparound', () => {
   assert.equal(seqDelta(0, 65535), -1);
   assert.equal(seqDelta(100, 103), 3);
 });
+
+test('32-bit float stereo round-trips exactly', () => {
+  const L = Float32Array.from([0.1234567, -0.75, 1.5, -2]), R = Float32Array.from([1e-6, 0, 0.5, -0.5]);
+  const out = new Uint8Array(packetBytes(4, 2, 32));
+  const n = encodePacket(out, { seq: 9, timeUs: 1, sampleRate: 48000, frames: 4, wantChannels: 1, planes: [L, R], bits: 32 });
+  assert.equal(n, HEADER_BYTES + 4 * 2 * 4); assert.equal(out[13], 32); assert.equal(out[15], 2);
+  const p = decodePacket(out);
+  assert.equal(p.planes.length, 2);
+  assert.deepEqual([...p.planes[0]], [...L]); assert.deepEqual([...p.planes[1]], [...R]);
+});

@@ -29,7 +29,10 @@ export const events = {
 export const peers = new Map();   // id -> { conn, audio, name, rtt, offset, samples, lastSeq, recv, lost, video }
 window.jamPeers = peers;          // for automated tests
 let peer = null, video = null, joinId = null, seq = 0, roomFull = false;
-const pkt = new Uint8Array(packetBytes(FRAMES, 1));
+// What you send: 16-bit is CD quality; 32-bit float ("Studio quality") has more
+// headroom and doubles the bandwidth. Channels follow the input (mono or stereo).
+export const format = { bits: 16 };
+const pkt = new Uint8Array(packetBytes(FRAMES, 2, 32));   // big enough for stereo 32-bit
 
 export const isOwner = () => !joinId;
 export const roomCount = () => 1 + [...peers.values()].filter(p => p.name).length;
@@ -37,12 +40,12 @@ export const offsetTo = id => (peers.get(id) || {}).offset || 0;   // their cloc
 export const clockSynced = id => ((peers.get(id) || {}).samples || []).length >= 3;
 export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id) && p.conn && p.conn.open) p.conn.send(msg); }
 
-// Your instrument: one packet per 128-frame block, sent to every open audio channel.
-export function sendBlock(block){
+// Your instrument: one packet per 128-frame block ([mono] or [left, right]), sent to every open audio channel.
+export function sendBlock(planes){
   let n = 0;
   for(const p of peers.values()){
     if(!p.audio || p.audio.readyState !== 'open') continue;
-    if(!n) n = encodePacket(pkt, { seq:seq++, timeUs:clk()*1000, sampleRate:RATE, frames:FRAMES, wantChannels:1, planes:[block] });
+    if(!n) n = encodePacket(pkt, { seq:seq++, timeUs:clk()*1000, sampleRate:RATE, frames:FRAMES, wantChannels:1, planes, bits:format.bits });
     p.audio.send(pkt.subarray(0, n));
   }
 }
@@ -59,13 +62,14 @@ function onData(m, id){
   if(m.ping !== undefined){ send({ pong:m.ping, at:clk() }, id); return; }
   if(m.pong !== undefined){ clockSample(p, m.pong, m.at); return; }
   if(m.t === 'hello'){
-    p.name = m.name; p.version = m.v;
+    p.name = m.name; p.version = m.v; p.inMs = m.inMs; p.outMs = m.outMs;
     events.onMember(id, m.name);
     if(p.video) events.onVideo(id, p.video);
     // the owner introduces a newcomer to everyone else already here
     if(isOwner() && m.newcomer) send({ t:'members', ids:[...peers.keys()].filter(x => x !== id && peers.get(x).name) }, id);
   }
   else if(m.t === 'members'){ m.ids.forEach(x => { if(x !== me.id && !peers.has(x)) dial(x, false); }); return; }
+  else if(m.t === 'lat'){ p.inMs = m.inMs; p.outMs = m.outMs; return; }
   else if(m.t === 'full'){ roomFull = true; events.onStatus('This room is full (4 players max). Ask the others to make space, or start a new room.'); return; }
   events.onMessage(m, id);
 }
@@ -88,12 +92,12 @@ function wireConn(c, newcomer){
     p.audio.onmessage = e => {
       const pk = decodePacket(new Uint8Array(e.data)); if(!pk) return;
       if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1) p.lost += d - 1; }
-      p.lastSeq = pk.seq; p.recv++;
+      p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
       audio.deliver(id, pk.planes);
     };
     const pc = c.peerConnection;
     pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') events.onStatus(BLOCKED); });
-    send({ t:'hello', v:PROTOCOL_VERSION, id:me.id, name:me.name, newcomer }, id);
+    send({ t:'hello', v:PROTOCOL_VERSION, id:me.id, name:me.name, newcomer, inMs:audio.inputLatencyMs(), outMs:audio.outputLatencyMs() }, id);
     for(let i = 0; i < 8; i++) setTimeout(() => send({ ping:clk() }, id), 150 * i);   // quick initial clock sync
   });
   c.on('data', m => onData(m, id));
@@ -132,6 +136,7 @@ export async function open({ join, broker, videoStream }){
     }, 8000);
   }
   setInterval(() => send({ ping:clk() }), 1000);
+  setInterval(() => send({ t:'lat', inMs:audio.inputLatencyMs(), outMs:audio.outputLatencyMs() }), 5000);   // devices can change
   return me.id;
 }
 export function leave(){ try{ peers.forEach(p => p.conn.close()); peer && peer.destroy(); }catch(e){} }
@@ -140,9 +145,16 @@ export function leave(){ try{ peers.forEach(p => p.conn.close()); peer && peer.d
 export function connectionStats(){
   const live = [...peers.values()].filter(p => p.name && p.recv);
   const recv = live.reduce((a, p) => a + p.recv, 0), lost = live.reduce((a, p) => a + p.lost, 0);
+  const myOut = audio.outputLatencyMs(), bufs = audio.stats.players || {};
   return {
     live: live.length,
     oneWayMs: live.map(p => p.rtt === null ? null : Math.round(p.rtt / 2)),
+    // Estimated time from their instrument to your ears: their input + one packet
+    // + network + your buffer for them + your output.
+    players: [...peers.entries()].filter(([, p]) => p.name && p.recv).map(([id, p]) => {
+      const net = p.rtt === null ? 0 : p.rtt / 2, buf = (bufs[id] || {}).bufferMs || 0;
+      return { name: p.name, netMs: Math.round(net), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + FRAMES / RATE * 1000 + net + buf + myOut) };
+    }),
     lossPct: recv ? 100 * lost / (recv + lost) : 0,
     debug: [...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet',
   };

@@ -7,7 +7,7 @@
 //   8     2    sequence number (wraps at 65536)
 //  10     2    frames per packet (N)
 //  12     1    sample-rate code (48000 Hz = 3)
-//  13     1    bits per sample (16 here: signed little-endian integers)
+//  13     1    bits per sample: 16 (signed little-endian integers) or 32 (little-endian floats)
 //  14     1    channels the sender wants back from the hub
 //  15     1    channels in this payload: 0 = same as byte 14, 255 = no audio
 //
@@ -28,18 +28,19 @@ export function packetBytes(frames, channels, bits = 16) {
 
 // Writes one packet into `out` (a Uint8Array at least packetBytes() long).
 // `planes` is an array of Float32Array, one per channel, each `frames` long.
-export function encodePacket(out, { seq, timeUs, sampleRate, frames, wantChannels, planes }) {
+export function encodePacket(out, { seq, timeUs, sampleRate, frames, wantChannels, planes, bits = 16 }) {
   const dv = new DataView(out.buffer, out.byteOffset, out.byteLength);
   const sending = planes.length;
   dv.setBigUint64(0, BigInt(Math.floor(timeUs)), true);
   dv.setUint16(8, seq & 0xffff, true);
   dv.setUint16(10, frames, true);
   dv.setUint8(12, rateCode(sampleRate));
-  dv.setUint8(13, 16);
+  dv.setUint8(13, bits);
   dv.setUint8(14, wantChannels);
   dv.setUint8(15, sending === wantChannels ? 0 : sending);
   let o = HEADER_BYTES;
   for (const plane of planes) {
+    if (bits === 32) { for (let i = 0; i < frames; i++, o += 4) dv.setFloat32(o, plane[i], true); continue; }
     for (let i = 0; i < frames; i++, o += 2) {
       const s = plane[i];
       dv.setInt16(o, s >= 1 ? 32767 : s <= -1 ? -32768 : Math.round(s * 32767), true);
@@ -56,21 +57,23 @@ export function decodePacket(bytes) {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const frames = dv.getUint16(10, true);
   const bits = dv.getUint8(13);
-  if (!frames || bits !== 16) return null;
-  const payload = bytes.byteLength - HEADER_BYTES;
-  const channels = payload / (frames * 2);
+  if (!frames || (bits !== 16 && bits !== 32)) return null;
+  const bytesPer = bits / 8, payload = bytes.byteLength - HEADER_BYTES;
+  const channels = payload / (frames * bytesPer);
   if (!Number.isInteger(channels) || channels < 1 || channels > 16) return null;
   const planes = [];
   let o = HEADER_BYTES;
   for (let c = 0; c < channels; c++) {
     const plane = new Float32Array(frames);
-    for (let i = 0; i < frames; i++, o += 2) plane[i] = dv.getInt16(o, true) / 32768;
+    if (bits === 32) for (let i = 0; i < frames; i++, o += 4) plane[i] = dv.getFloat32(o, true);
+    else for (let i = 0; i < frames; i++, o += 2) plane[i] = dv.getInt16(o, true) / 32768;
     planes.push(plane);
   }
   return {
     timeUs: Number(dv.getBigUint64(0, true)),
     seq: dv.getUint16(8, true),
     frames,
+    bits,
     sampleRate: RATE_CODES[dv.getUint8(12)] || 0,
     planes,
   };
