@@ -1,0 +1,14 @@
+{
+ "id": "funk-em-96",
+ "title": "Slow funk",
+ "style": "funk",
+ "key": "E minor",
+ "bpm": 96,
+ "stems": {
+  "guitar": 1.7,
+  "bass": 31.5,
+  "drums": 41.0,
+  "piano": 11.1
+ },
+ "seconds": 30.04
+}

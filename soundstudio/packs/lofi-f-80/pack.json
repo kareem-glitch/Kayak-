@@ -1,0 +1,13 @@
+{
+ "id": "lofi-f-80",
+ "title": "Lo-fi hip hop",
+ "style": "lofi",
+ "key": "F major",
+ "bpm": 80,
+ "stems": {
+  "bass": 49.5,
+  "drums": 22.7,
+  "piano": 14.7
+ },
+ "seconds": 30.04
+}

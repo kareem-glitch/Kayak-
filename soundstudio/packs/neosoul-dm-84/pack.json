@@ -1,0 +1,13 @@
+{
+ "id": "neosoul-dm-84",
+ "title": "Neo-soul",
+ "style": "neo-soul",
+ "key": "D minor",
+ "bpm": 84,
+ "stems": {
+  "piano": 24.8,
+  "drums": 22.5,
+  "bass": 38.5
+ },
+ "seconds": 30.04
+}

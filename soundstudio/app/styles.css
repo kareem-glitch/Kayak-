@@ -131,3 +131,11 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .rec-media video,.rec-media audio{width:100%;border-radius:12px;display:block}
 .rec-media video{background:#000;aspect-ratio:16/9}
 .rec-dl{text-align:center;text-decoration:none}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--raised);border:1px solid var(--line);margin-bottom:10px}
+.modes button{border:0;border-radius:10px;padding:9px 6px;background:transparent;color:var(--muted);font:600 .82rem/1.1 inherit;cursor:pointer}
+.modes button[aria-selected="true"]{background:var(--amber);color:var(--amber-ink)}
+.stock{display:grid;gap:6px;margin-top:6px}
+.stock button{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--raised);color:var(--ink);border-radius:12px;padding:11px 12px;cursor:pointer;font:inherit}
+.stock button b{font:800 1.02rem/1.1 "Bricolage Grotesque",sans-serif}
+.stock button span{font-size:.8rem;color:var(--muted)}
+.stock button[aria-pressed="true"]{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}

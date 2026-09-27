@@ -8,6 +8,7 @@ import * as session from './session.js';
 import * as ui from './ui.js';
 import * as recording from './recording.js';
 import * as lyria from './band/lyria.js';
+import * as stems from './band/stems.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -166,10 +167,41 @@ $('#claimBtn').onclick = async () => { if(!await session.claimBand()) $('#claimS
 async function generate(){
   const prompt = $('#prompt').value.trim();
   if(!prompt){ $('#genStatus').textContent = 'Describe the jam first, for example “slow funk in E minor”.'; return; }
-  $('#genBtn').disabled = true; $('#genStatus').textContent = 'Writing the arrangement…';
-  $('#genStatus').textContent = await session.generate(prompt);
+  const stemsMode = session.mode === 'prompt';
+  $('#genBtn').disabled = true;
+  $('#genStatus').textContent = stemsMode ? 'Making your track and splitting it into parts (about 15 seconds)…' : 'Writing the arrangement…';
+  const r = await session.generate(prompt, { code: $('#stemsCode').value.trim() || store.get('ss.stemsCode') || '' });
+  if(r && r.error === 'code'){ $('#codeRow').hidden = false; $('#genStatus').textContent = 'Enter the access code to make tracks while we’re testing.'; }
+  else { if($('#stemsCode').value.trim()) store.set('ss.stemsCode', $('#stemsCode').value.trim()); $('#genStatus').textContent = typeof r === 'string' ? r : (r.error || r.note); }
   $('#genBtn').disabled = false;
 }
+// Where the band comes from: stock tracks, a prompt made into parts, or Google's live band.
+const MODE_NOTES = {
+  stock: 'Ready-made tracks, each split into parts. Taking a seat mutes that part completely.',
+  prompt: 'Describe any track. It’s made and split into parts in about 15 seconds.',
+  live: 'Google’s live AI band: endless and steerable. Taking drums or bass tells it to play less of that part.',
+};
+function showMode(m){
+  session.setMode(m); store.set('ss.mode', m);
+  document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)));
+  $('#modeNote').textContent = MODE_NOTES[m] || '';
+  $('#stockList').hidden = m !== 'stock'; $('#promptBox').hidden = m === 'stock';
+  $('#genBtn').textContent = m === 'prompt' ? 'Make it with parts' : 'Start the live band';
+  $('#codeRow').hidden = !(m === 'prompt' && !store.get('ss.stemsCode'));
+}
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => showMode(b.dataset.mode));
+if(session.mode === 'tone') $('.modes').hidden = true;   // tests / built-in band only
+else showMode(['stock', 'prompt', 'live'].includes(store.get('ss.mode')) ? store.get('ss.mode') : 'stock');
+Promise.all(session.STOCK.map(id => fetch(`/packs/${id}/pack.json`).then(r => r.json()).catch(() => null))).then(list => list.filter(Boolean).forEach(meta => {
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'stock-' + meta.id; b.setAttribute('aria-pressed', 'false');
+  b.innerHTML = `<b></b><span></span>`; b.querySelector('b').textContent = meta.title; b.querySelector('span').textContent = `${meta.key} · ${meta.bpm} bpm`;
+  b.onclick = async () => {
+    document.querySelectorAll('#stockList button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    $('#genStatus').textContent = 'Loading ' + meta.title + '…';
+    try{ $('#genStatus').textContent = await session.chooseStock(meta.id); }catch(e){ $('#genStatus').textContent = 'Couldn’t load that track.'; }
+  };
+  $('#stockList').appendChild(b);
+}));
 $('#genBtn').onclick = generate;
 $('#playBtn').onclick = () => S.playing ? session.stopBand() : session.startBand($('#countIn').checked);
 $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; };
@@ -236,4 +268,5 @@ window.jamEngine = band.engine;
 window.jamStats = audio.stats;
 window.jamEchoCancelling = audio.echoCancelling;
 window.jamLyria = lyria;
+window.jamStems = stems;
 window.jamRecord = toggleRecording;

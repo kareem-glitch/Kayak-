@@ -30,9 +30,12 @@ export function showBeat(m){
   document.querySelectorAll('#chords li').forEach((el, i) => el.classList.toggle('now', i === idx));
   $('#nowChord').textContent = (idx !== undefined && S.arr && S.arr.chords[idx]) ? S.arr.chords[idx].name : '';
 }
+const styleLabel = st => (STYLES[st] && STYLES[st].label) || String(st || '').replace(/^\w/, c => c.toUpperCase());
+const STEM_OF = { drums:'drums', bass:'bass', keys:'piano', guitar:'guitar' };
 function partDesc(id){
   if(!S.arr) return null;
-  if(id === 'drums') return STYLES[S.arr.style].label + ' groove';
+  if(S.arr.engine === 'stems') return S.arr.pack.parts.includes(STEM_OF[id]) ? 'Recorded part' : null;   // absent parts show as not in this track
+  if(id === 'drums') return styleLabel(S.arr.style) + ' groove';
   const t = S.arr[id]; return t === 'off' ? null : DESC[t];
 }
 
@@ -48,10 +51,12 @@ export function render(){
   $('#arrTitle').textContent = a ? a.title : 'No band yet';
   $('#arrNotes').textContent = a ? a.notes : ''; $('#arrNotes').hidden = !(a && a.notes);
   const facts = $('#facts'); facts.innerHTML = '';
-  if(a) [STYLES[a.style].label, a.key, a.bpm + ' bpm', a.engine === 'lyria' ? 'Google Lyria band' : (a.swing ? 'Swung' : 'Straight')].forEach(x => { const s = document.createElement('span'); s.textContent = x; facts.appendChild(s); });
+  if(a) [styleLabel(a.style), a.key, a.bpm + ' bpm', a.engine === 'lyria' ? 'Google Lyria band' : a.engine === 'stems' ? (a.pack.source === 'stock' ? 'Stock track' : 'Your track') : (a.swing ? 'Swung' : 'Straight')].forEach(x => { const s = document.createElement('span'); s.textContent = x; facts.appendChild(s); });
   const ol = $('#chords'); ol.innerHTML = '';
-  if(a && a.engine !== 'lyria') a.chords.forEach(c => { const li = document.createElement('li'); li.textContent = c.name + (c.bars > 1 ? ' ×' + c.bars : ''); ol.appendChild(li); });
+  if(a && (!a.engine || a.engine === 'tone')) a.chords.forEach(c => { const li = document.createElement('li'); li.textContent = c.name + (c.bars > 1 ? ' ×' + c.bars : ''); ol.appendChild(li); });
   if(a && hostHere) $('#bpm').value = a.bpm;
+  $('#bpm').disabled = !!(a && a.engine === 'stems');   // recorded parts keep their tempo
+  $('#countIn').closest('label').hidden = !!(a && a.engine && a.engine !== 'tone');
   $('#playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
   $('#playBtn').setAttribute('aria-label', S.playing ? 'Stop' : 'Play');
   const box = $('#strips'); box.innerHTML = '';

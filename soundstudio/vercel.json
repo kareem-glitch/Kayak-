@@ -1,3 +1,8 @@
 {
-  "installCommand": "npm install --omit=dev"
+  "installCommand": "npm install --omit=dev",
+  "functions": {
+    "api/stems.js": {
+      "maxDuration": 60
+    }
+  }
 }

@@ -1,0 +1,14 @@
+{
+ "id": "blues-a-92",
+ "title": "Blues shuffle",
+ "style": "blues",
+ "key": "A",
+ "bpm": 92,
+ "stems": {
+  "piano": 11.7,
+  "drums": 26.6,
+  "guitar": 10.6,
+  "bass": 23.7
+ },
+ "seconds": 30.04
+}

@@ -62,10 +62,20 @@ window.__audioContexts = [];
           <p class="status" id="claimStatus"></p>
         </div>
         <div id="hostControls" hidden>
-          <label class="muted small" for="prompt">What are we playing?</label>
-          <textarea id="prompt" placeholder="Slow funk in E minor, 96 bpm"></textarea>
-          <div class="row"><button class="btn btn-primary" id="genBtn">Generate backing band</button></div>
-          <div class="chips" id="examples"></div>
+          <div class="modes" role="tablist" aria-label="Where the band comes from">
+            <button role="tab" id="mode-stock" data-mode="stock" aria-selected="true">Stock tracks</button>
+            <button role="tab" id="mode-prompt" data-mode="prompt" aria-selected="false">Prompt → stems</button>
+            <button role="tab" id="mode-live" data-mode="live" aria-selected="false">Live band</button>
+          </div>
+          <p class="muted small" id="modeNote"></p>
+          <div class="stock" id="stockList"></div>
+          <div id="promptBox">
+            <label class="muted small" for="prompt">What are we playing?</label>
+            <textarea id="prompt" placeholder="Slow funk in E minor, 96 bpm"></textarea>
+            <div id="codeRow" hidden><label class="muted small" for="stemsCode">Access code (while we're testing)</label><input id="stemsCode" class="devsel" autocomplete="off"></div>
+            <div class="row"><button class="btn btn-primary" id="genBtn">Generate backing band</button></div>
+            <div class="chips" id="examples"></div>
+          </div>
           <p class="status" id="genStatus" role="status"></p>
         </div>
       </section>

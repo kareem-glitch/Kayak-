@@ -30,7 +30,7 @@ async function fakeRelay(){
     });
   });
   await new Promise(r => wss.address() ? r() : wss.once('listening', r));
-  return { url: `ws://127.0.0.1:${wss.address().port}`, log, close: () => { clearInterval(timer); wss.close(); } };
+  return { url: `ws://127.0.0.1:${wss.address().port}`, log, close: () => { clearInterval(timer); wss.clients.forEach(c => c.terminate()); wss.close(); } };
 }
 
 test('Lyria band: same stream in step on two devices, seats steer it', { timeout: 120000 }, async () => {

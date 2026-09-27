@@ -1,0 +1,13 @@
+{
+ "id": "rock-d-120",
+ "title": "Indie rock",
+ "style": "rock",
+ "key": "D",
+ "bpm": 120,
+ "stems": {
+  "guitar": 27.9,
+  "drums": 26.0,
+  "bass": 29.5
+ },
+ "seconds": 30.04
+}
