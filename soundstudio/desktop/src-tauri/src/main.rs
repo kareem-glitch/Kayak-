@@ -1,22 +1,22 @@
 // SoundStudio desktop. The window loads the live website, so the app and the
 // browser version are always the same code and can share rooms; audio in and
 // out is native (Core Audio on Mac, WASAPI on Windows) for the lowest delay.
-// The page finds the native audio through window.__SS_NATIVE and talks to it
-// over a private local WebSocket (native.rs, app/audio/native-io.js).
+// The page is served through the app's local server and finds the native audio
+// through window.__SS_NATIVE (native.rs, app/audio/native-io.js).
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod audio;
 mod native;
 
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 
-const SITE: &str = "https://soundstudio-wine.vercel.app/";
+pub const SITE: &str = "https://soundstudio-wine.vercel.app/";
 
 fn main() {
     let (port, token) = native::serve().expect("couldn't start the local audio link");
     tauri::Builder::default()
         .setup(move |app| {
-            let site = std::env::var("SOUNDSTUDIO_URL").unwrap_or_else(|_| SITE.to_string());
-            let url = WebviewUrl::External(site.parse().expect("bad site URL"));
+            // the live site, served through the app's local server (see native.rs)
+            let url = WebviewUrl::External(format!("http://127.0.0.1:{port}/").parse().expect("bad local URL"));
             WebviewWindowBuilder::new(app, "main", url)
                 .title("SoundStudio")
                 .inner_size(1280.0, 840.0)

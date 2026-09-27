@@ -13,7 +13,7 @@ const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
 let joinId = params.get('join');
 try{ if(joinId && sessionStorage.getItem('ss.hostId') === joinId){ joinId = null; history.replaceState(null, '', location.pathname); } }catch(e){}
-let inviteLink = null, media = null;
+let inviteLink = null, media = null, cameraProblem = null;
 // Invite links always point at the website, which the desktop app's rooms share
 // (the app's own page address means nothing to anyone else).
 const SITE = audio.NATIVE ? 'https://soundstudio-wine.vercel.app/' : location.origin + location.pathname;
@@ -46,13 +46,13 @@ async function join(){
     joinId = inviteId($('#inviteInput').value);
     if(!joinId){ $('#joinErr').textContent = 'That doesn’t look like an invite link. Paste the whole link, or leave it empty to start a new jam.'; return; }
   }
-  me.name = name; $('#joinBtn').disabled = true; $('#joinErr').textContent = '';
+  me.name = name; $('#joinBtn').disabled = true; $('#joinErr').textContent = ''; cameraProblem = null;
   Tone.start();   // unlock audio inside the click so the band can start later without another tap
   try{
     const savedIn = store.get('ss.inDev') || '';
     const audioReq = Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {});
     if(audio.NATIVE){   // the desktop app handles audio natively: the page only needs the camera
-      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); }
+      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); cameraProblem = e; }
     } else {
       try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
       catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
@@ -77,7 +77,8 @@ async function join(){
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
     ui.render();
-    if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.name || audioProblem) + '). Video still works.');
+    if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
+    else if(cameraProblem) ui.status('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
     setInterval(showConnection, 250);
   }catch(e){
     $('#joinErr').textContent = 'Couldn’t start: ' + (e.message || e.type || e) + '. Allow camera and microphone, then try again.'; $('#joinBtn').disabled = false;
@@ -150,7 +151,7 @@ if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 
 // ---- controls ----
 // The desktop app loads this site, so only its native audio engine can be out of date.
-const APP_VERSION = '0.2.0';
+const APP_VERSION = '0.3.0';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/SoundStudio-${APP_VERSION}-Mac.zip` : `/download/SoundStudio-${APP_VERSION}-Windows-setup.exe`;
 if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://soundstudio-wine.vercel.app${dl()}">Download it</a> and reinstall.`;
