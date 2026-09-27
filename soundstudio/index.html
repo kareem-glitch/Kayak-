@@ -41,6 +41,7 @@ window.__audioContexts = [];
     <div class="topbar-actions">
       <button class="btn btn-quiet btn-toggle" id="micBtn" aria-pressed="true">Mic on</button>
       <button class="btn btn-quiet btn-toggle" id="camBtn" aria-pressed="true">Camera on</button>
+      <button class="btn btn-quiet" id="avatarBtn" aria-pressed="false" title="Show a pixel character instead of your camera">Avatar</button>
       <button class="btn btn-quiet" id="inviteBtn">Copy invite link</button>
       <button class="btn btn-quiet" id="leaveBtn">Leave</button>
     </div>
@@ -49,7 +50,8 @@ window.__audioContexts = [];
     <div class="grid" id="grid">
       <div class="band-tile" id="bandTile">
         <div class="facts" id="bandTileTitle">The band is waiting for someone to run it</div>
-        <div><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span></div>
+        <div class="turn-line" id="turnLine" hidden></div>
+        <div><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span><span class="count" id="turnCount" aria-live="polite"></span></div>
         <div class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
       </div>
     </div>
@@ -91,6 +93,17 @@ window.__audioContexts = [];
             <label><input type="checkbox" id="countIn" checked> Count in</label>
             <label><input type="checkbox" id="clickAll"> Click</label>
             <label>BPM <input type="number" id="bpm" min="50" max="200"></label>
+          </div>
+          <div class="game" id="gameBox">
+            <span class="muted small">Game</span>
+            <div class="modes" role="radiogroup" aria-label="Game">
+              <button type="button" role="radio" data-game="free" aria-checked="true">Free jam</button>
+              <button type="button" role="radio" data-game="4" aria-checked="false">Trade 4</button>
+              <button type="button" role="radio" data-game="8" aria-checked="false">8</button>
+              <button type="button" role="radio" data-game="16" aria-checked="false">16</button>
+              <button type="button" role="radio" data-game="32" aria-checked="false">32</button>
+            </div>
+            <p class="muted small" id="gameNote"></p>
           </div>
         </div>
       </section>

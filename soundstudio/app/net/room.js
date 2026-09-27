@@ -46,8 +46,27 @@ export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id)
 // how long it really took to arrive (phone audio stacks, send queues, network).
 // Recording taps (mixrec.js): every block you send and every block you receive.
 export const taps = { local: null, remote: null };
+// Trade bars (trade.js) decides what happens to each incoming block: undefined =
+// play now (free jam), null = drop (not their turn), a time = play then (wall-clock ms).
+export let route = () => undefined;
+export const setRoute = fn => { route = fn; };
+// How loud each player sounds, when you hear it (avatars): id -> [[at, peak], ...]; 'me' = you.
+export const levels = new Map();
+const peakOf = a => { let m = 0; for(let i = 0; i < a.length; i += 2){ const v = a[i] < 0 ? -a[i] : a[i]; if(v > m) m = v; } return m; };
+function noteLevel(id, at, v){
+  let q = levels.get(id); if(!q){ q = []; levels.set(id, q); }
+  const last = q[q.length - 1];
+  if(last && at - last[0] < 20){ if(v > last[1]) last[1] = v; return; }   // one entry per ~20 ms
+  q.push([at, v]); if(q.length > 400) q.splice(0, q.length - 400);
+}
+export function levelNow(id){
+  const q = levels.get(id), now = clk(); if(!q) return 0;
+  while(q.length > 1 && q[1][0] <= now) q.shift();
+  return q[0] && q[0][0] <= now && now - q[0][0] < 150 ? q[0][1] : 0;
+}
 export function sendBlock(planes, capturedAt){
   if(taps.local) taps.local(planes);
+  noteLevel('me', clk(), peakOf(planes[0]));
   let n = 0;
   for(const p of peers.values()){
     if(!p.audio || p.audio.readyState !== 'open') continue;
@@ -103,7 +122,10 @@ function wireConn(c, newcomer){
       // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
       if(p.samples.length){ p.ages.push(clk() - (pk.timeUs / 1000 - p.offset)); if(p.ages.length > 375) p.ages.shift(); }
       p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
-      audio.deliver(id, pk.planes); if(taps.remote) taps.remote(id, pk.planes);
+      const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p);
+      if(at === null){ p.muted = (p.muted || 0) + 1; return; }
+      audio.deliver(id, pk.planes, at); if(taps.remote) taps.remote(id, pk.planes);
+      noteLevel(id, at == null ? clk() : at, peakOf(pk.planes[0]));
     };
     const pc = c.peerConnection;
     pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') events.onStatus(BLOCKED); });

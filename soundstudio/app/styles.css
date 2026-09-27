@@ -142,3 +142,16 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .stock button b{font:800 1.02rem/1.1 "Bricolage Grotesque",sans-serif}
 .stock button span{font-size:.8rem;color:var(--muted)}
 .stock button[aria-pressed="true"]{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
+
+/* trade bars */
+.game{margin-top:12px;display:grid;gap:6px}
+.game .modes{grid-template-columns:auto auto repeat(3,1fr);margin-bottom:0}
+.game .modes button{white-space:nowrap;padding:9px 10px}
+#avatarBtn[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink)}
+.game .modes button[aria-checked="true"]{background:var(--amber);color:var(--amber-ink)}
+.turn-line{font-weight:700;font-size:1.05rem;color:var(--ai)}
+.tile.onmic{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber),0 0 28px rgba(240,162,56,.55);transition:box-shadow .2s}
+.tile.next{border:2px dashed var(--amber)}
+.tile .sprite{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;display:none}
+.tile.avatar .sprite{display:block}
+.tile.avatar .vid,.tile.avatar .initial{visibility:hidden}

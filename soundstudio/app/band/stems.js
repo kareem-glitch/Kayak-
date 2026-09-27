@@ -75,6 +75,23 @@ function schedule(){
   }
   applySeats();
 }
+// Re-align on the fly: the loop keeps its old timing until the song reaches
+// boundaryPos (ms), then continues from there on the new timing (start = newStart).
+// Moving later leaves a short breath; moving earlier skips the difference.
+export function shiftAt(boundaryPos, newStart){
+  if(!current || start === null){ start = newStart; return; }
+  const cx = ctx(), L = loopLength(), toAudio = wall => cx.currentTime + (wall - clk()) / 1000 - outLat();
+  const tOld = Math.max(cx.currentTime + 0.02, toAudio(start + boundaryPos)), tNew = Math.max(tOld, toAudio(newStart + boundaryPos));
+  const pos = (clk() + (tNew - cx.currentTime + outLat()) * 1000 - newStart) / 1000;   // where the new timing is at tNew
+  sources.forEach(s => { try{ s.stop(tOld); }catch(e){} });
+  const old = sources; sources = [];
+  for(const [name, buf] of Object.entries(current.buffers)){
+    const src = cx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = L;
+    src.connect(gains[name]); src.start(tNew, ((pos % L) + L) % L); sources.push(src);
+  }
+  setTimeout(() => old.forEach(s => { try{ s.disconnect(); }catch(e){} }), Math.max(0, (tOld - cx.currentTime) * 1000 + 200));
+  start = newStart;
+}
 function stopSources(){ sources.forEach(s => { try{ s.stop(); }catch(e){} }); sources = []; }
 
 // Start: position 0 of the loop sounds at wall-clock atLocal (ms) on this device.

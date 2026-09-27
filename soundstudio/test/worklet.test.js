@@ -60,3 +60,23 @@ test('feel: tight keeps less buffer than balanced, smooth keeps more and drops o
   assert.ok(s.dropouts <= b.dropouts && b.dropouts <= t.dropouts + 1, `dropouts ${t.dropouts} / ${b.dropouts} / ${s.dropouts}`);
   assert.equal(s.clicks, 0);
 });
+
+// Far-apart playback (Trade bars): blocks play at the exact frame they're scheduled for.
+const { DelayPlayer } = await import('../app/audio/worklet.js');
+test('scheduled player: plays each block at its frame, smooth through drift, drops the too-late', () => {
+  const p = new DelayPlayer(), out = [], lead = 4800;   // heard 100 ms after it's sent
+  let phase = 0, frame = 0, clicks = 0, prev = 0;
+  const block = () => { const b = new Float32Array(128); for(let i = 0; i < 128; i++) b[i] = 0.5 * Math.sin(phase += 2 * Math.PI * 440 / 48000); return b; };
+  for(let q = 0; q < 3000; q++){   // 8 s; the sender's clock runs 0.02 % fast, and arrival jitters
+    const at = frame + lead + q * 128 * 0.0002 + (q % 7) * 3;
+    p.push([block()], at, frame);
+    const L = new Float32Array(128), R = new Float32Array(128); p.render(L, R, frame); frame += 128;
+    for(const v of L){ if(q > 40 && Math.abs(v - prev) > 0.2) clicks++; prev = v; }
+    out.push(L[0]);
+  }
+  assert.equal(out.slice(0, 37).every(v => v === 0), true, 'silent until the first block is due (4800 frames = 37.5 blocks)');
+  assert.ok(out.slice(40).every(v => v !== 0), 'then continuous sound');
+  assert.equal(clicks, 0, 'no clicks from drift corrections');
+  assert.equal(p.late, 0);
+  p.push([block()], frame - 500, frame); assert.equal(p.late, 1, 'a block that is already overdue is dropped');
+});

@@ -4,7 +4,8 @@ export const PROTOCOL_VERSION = 1;   // bump when control messages change shape
 
 export const S = {
   arr: null, playing: false, hostId: null, hostName: '',
-  levels: { drums:0, bass:0, keys:0, guitar:0 },   // part levels in dB, set by the host, applied on every device
+  levels: { drums:0, bass:0, keys:0, guitar:0 },
+  game: { mode:'free', bars:8 },   // 'free' jam, or 'trade': take turns of `bars` bars each (trade.js)   // part levels in dB, set by the host, applied on every device
   seats: [
     { id:'drums', label:'Drums', human:false, who:'' },
     { id:'bass', label:'Bass', human:false, who:'' },

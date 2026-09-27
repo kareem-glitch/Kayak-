@@ -9,6 +9,8 @@ import * as ui from './ui.js';
 import * as recording from './recording.js';
 import * as lyria from './band/lyria.js';
 import * as stems from './band/stems.js';
+import * as trade from './trade.js';
+import * as avatar from './avatar.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -23,16 +25,17 @@ const inviteId = text => { const t = (text || '').trim(); if(!t) return null; co
 const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ return null; } }, set: (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} } };
 
 // ---- module wiring ----
-band.hooks.onBeat = ui.showBeat;
+band.hooks.onBeat = m => { ui.showBeat(m); if(m.beat !== undefined) avatar.beat(); };
 band.hooks.onChange = ui.render;
 session.hooks.onChange = ui.render;
 session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
 room.events.onStatus = ui.status;
-room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); $('#bigInvite').hidden = !room.isOwner() || room.roomCount() >= room.MAX_ROOM; showRoomStatus(); ui.render(); };
+room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); $('#bigInvite').hidden = !room.isOwner() || room.roomCount() >= room.MAX_ROOM; showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
 room.events.onLeave = id => { ui.removeTile(id); session.peerLeft(id); $('#bigInvite').hidden = !room.isOwner() || room.roomCount() >= room.MAX_ROOM; showRoomStatus(); ui.render(); };
-room.events.onMessage = session.handleMessage;
+room.events.onMessage = (m, id) => trade.handle(m, id) || avatar.handle(m, id) || session.handleMessage(m, id);
+trade.hooks.onTurn = ui.showTurn; trade.start();
 
 function showRoomStatus(){
   const names = [...room.peers.values()].filter(p => p.name).map(p => p.name);
@@ -77,6 +80,7 @@ async function join(){
       const o = store.get('ss.outDev'); if(o) await audio.useOutput(o);
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
+    if(store.get('ss.avatar') === '1') setAvatar(true);
     ui.render();
     if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
     else if(cameraProblem) ui.status('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
@@ -189,14 +193,14 @@ const MODE_NOTES = {
 };
 function showMode(m){
   session.setMode(m); store.set('ss.mode', m);
-  document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)));
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.mode === m)));
   $('#modeNote').textContent = MODE_NOTES[m] || '';
   $('#stockList').hidden = m !== 'stock'; $('#promptBox').hidden = m === 'stock';
   $('#genBtn').textContent = m === 'prompt' ? 'Make it with parts' : 'Start the live band';
   $('#codeRow').hidden = !(m === 'prompt' && !store.get('ss.stemsCode'));
 }
-document.querySelectorAll('.modes button').forEach(b => b.onclick = () => showMode(b.dataset.mode));
-if(session.mode === 'tone') $('.modes').hidden = true;   // tests / built-in band only
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => showMode(b.dataset.mode));
+if(session.mode === 'tone') $('#hostControls .modes').hidden = true;   // tests / built-in band only
 else showMode(['stock', 'prompt', 'live'].includes(store.get('ss.mode')) ? store.get('ss.mode') : 'stock');
 Promise.all(session.STOCK.map(id => fetch(`/packs/${id}/pack.json`).then(r => r.json()).catch(() => null))).then(list => list.filter(Boolean).forEach(meta => {
   const b = document.createElement('button'); b.type = 'button'; b.id = 'stock-' + meta.id; b.setAttribute('aria-pressed', 'false');
@@ -209,6 +213,8 @@ Promise.all(session.STOCK.map(id => fetch(`/packs/${id}/pack.json`).then(r => r.
   $('#stockList').appendChild(b);
 }));
 $('#genBtn').onclick = generate;
+// The game: everyone at once (free jam) or trading N bars each.
+document.querySelectorAll('[data-game]').forEach(b => b.onclick = () => { if(!me.isHost) return; const g = b.dataset.game; session.setGame(g === 'free' ? { mode:'free' } : { mode:'trade', bars:+g }); });
 $('#playBtn').onclick = () => S.playing ? session.stopBand() : session.startBand($('#countIn').checked);
 $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; };
 $('#bpm').addEventListener('change', () => session.setTempo(clamp(Math.round(+$('#bpm').value || S.arr.bpm), 50, 200)));
@@ -221,6 +227,13 @@ $('#bigInvite').onclick = () => copy($('#bigInvite'), inviteLink, 'Link copied. 
 $('#leaveBtn').onclick = () => { room.leave(); location.href = location.pathname; };
 $('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); $('#micBtn').textContent = on ? 'Mic on' : 'Mic off'; $('#micBtn').setAttribute('aria-pressed', String(on)); };
 $('#camBtn').onclick = () => { const v = media && media.getVideoTracks()[0]; if(!v) return; v.enabled = !v.enabled; $('#camBtn').textContent = v.enabled ? 'Camera on' : 'Camera off'; $('#camBtn').setAttribute('aria-pressed', String(v.enabled)); };
+// Avatar instead of camera: your camera is switched off for everyone while it's on.
+function setAvatar(on){
+  avatar.setMine(on); store.set('ss.avatar', on ? '1' : '0');
+  const v = media && media.getVideoTracks()[0]; if(v) v.enabled = !on && $('#camBtn').getAttribute('aria-pressed') !== 'false';
+  $('#avatarBtn').setAttribute('aria-pressed', String(on)); $('#avatarBtn').textContent = on ? 'Avatar on' : 'Avatar'; $('#camBtn').disabled = on;
+}
+$('#avatarBtn').onclick = () => setAvatar(!avatar.isOn());
 const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + (v > 0 ? '+' : '') + v + ' dB)'; band.options.bandVolumeDb = v; band.applyBandVolume(); };
 if(store.get('ss.bandVol') !== null) $('#bandVol').value = store.get('ss.bandVol');
 $('#bandVol').oninput = () => { bandVol(+$('#bandVol').value); store.set('ss.bandVol', $('#bandVol').value); };
@@ -275,4 +288,5 @@ window.jamStats = audio.stats;
 window.jamEchoCancelling = audio.echoCancelling;
 window.jamLyria = lyria;
 window.jamStems = stems;
+window.jamTrade = trade;
 window.jamRecord = toggleRecording;

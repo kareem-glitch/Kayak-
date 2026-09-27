@@ -75,7 +75,7 @@ function gotStemData(m){
 }
 let bandT0 = 0, bandCounter0 = 0;   // band host only: when and where the band started
 
-export function broadcastState(to){ if(!me.isHost) return; room.send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, levels:S.levels, hostId:S.hostId, hostName:S.hostName }, to); }
+export function broadcastState(to){ if(!me.isHost) return; room.send({ t:'state', arr:S.arr, playing:S.playing, seats:S.seats, levels:S.levels, game:S.game, hostId:S.hostId, hostName:S.hostName }, to); }
 
 export async function claimBand(){
   if(S.hostId && S.hostId !== me.id) return false;
@@ -145,6 +145,7 @@ export function toggleSeat(id){
   else if(S.hostId) room.send({ t:'seat', id, human, who }, S.hostId);
 }
 export function setLevel(id, db){ S.levels[id] = db; band.applyMutes(); clearTimeout(setLevel.t); setLevel.t = setTimeout(broadcastState, 150); }
+export function setGame(game){ S.game = Object.assign({}, S.game, game); broadcastState(); hooks.onChange(); }
 export async function setTempo(bpm){ S.arr.bpm = bpm; broadcastState(); hooks.onChange(); if(S.playing) await startBand(false); }
 
 // Arrangement from a prompt: Claude via /api/arrange if configured, else the
@@ -168,7 +169,7 @@ export async function generate(prompt, opts = {}){
 export function handleMessage(m, id){
   if(m.t === 'hello'){ if(me.isHost){ broadcastState(id); if(S.arr && S.arr.engine === 'stems' && S.arr.pack.source === 'prompt') shareStems(id); sendCatchUp(id); } return; }
   if(m.t === 'stemdata' && !me.isHost){ gotStemData(m); return; }
-  if(m.t === 'state' && !me.isHost){ const playing = S.playing; Object.assign(S, { arr:m.arr, seats:m.seats, levels:m.levels || S.levels, hostId:m.hostId, hostName:m.hostName }); listen(); band.applyMutes(); hooks.onChange(); S.playing = playing; }
+  if(m.t === 'state' && !me.isHost){ const playing = S.playing; Object.assign(S, { arr:m.arr, seats:m.seats, levels:m.levels || S.levels, game:m.game || S.game, hostId:m.hostId, hostName:m.hostName }); listen(); band.applyMutes(); hooks.onChange(); S.playing = playing; }
   else if(m.t === 'start' && !me.isHost){ const go = () => band.playAt(m.at - room.offsetTo(id), m.counter); if(room.clockSynced(id)) go(); else setTimeout(go, 1300); }   // wait for the clocks to sync
   else if(m.t === 'stop' && !me.isHost){ band.stopLocal(); }
   else if(m.t === 'seat' && me.isHost){ setSeat(m.id, m.human, m.who); }

@@ -112,9 +112,9 @@ export async function playAt(atLocal, startCounter){
   if(isLyria() || isStems()){   // the stream's / loop's first sample is bar 1 beat 1
     if(E){ Tone.Transport.stop(); Tone.Transport.cancel(); }
     if(isLyria()) lyria.playAt(atLocal); else stems.playAt(atLocal);
-    started = { atLocal, startCounter: 0, outLat: 0, zero: atLocal }; window.jamStart = started;
+    started = { atLocal, startCounter: 0, outLat: 0, zero: atLocal, base: atLocal }; window.jamStart = started;
     const beatMs = 60000 / S.arr.bpm; let last = -1; clearInterval(beatTimer);
-    beatTimer = setInterval(() => { const b = Math.floor((clk() - atLocal) / beatMs); if(b >= 0 && b !== last){ last = b; hooks.onBeat({ beat: b % 4 }); } }, 20);
+    beatTimer = setInterval(() => { const b = Math.floor((clk() - started.zero) / beatMs); if(b >= 0 && b !== last){ last = b; hooks.onBeat({ beat: b % 4 }); } }, 20);
     S.playing = true; hooks.onChange(); return;
   }
   ensureEngine();
@@ -136,6 +136,15 @@ export async function playAt(atLocal, startCounter){
   started = { atLocal, startCounter, outLat, zero: atLocal - startCounter * 15000 / S.arr.bpm };
   window.jamStart = started;   // for automated tests
   S.playing=true; hooks.onChange();
+}
+// Trade bars: move this device's band so position p sounds at newStart + p
+// instead, switching over where the song reaches boundaryPos (ms). base keeps
+// the room's original start time.
+export function shiftStart(boundaryPos, newStart){
+  if(!started || !S.playing) return;
+  if(isStems()) stems.shiftAt(boundaryPos, newStart);
+  else if(isLyria()) lyria.playAt(newStart);
+  started.zero = started.atLocal = newStart;
 }
 export function stopLocal(){
   clearInterval(beatTimer); lyria.stopLocal(); stems.stop();

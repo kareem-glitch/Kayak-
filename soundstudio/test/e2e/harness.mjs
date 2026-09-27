@@ -6,6 +6,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PeerServer } from 'peer';
 import { chromium } from 'playwright';
+import { after } from 'node:test';
+
+// The PeerJS broker keeps internal timers running after it closes, so end the
+// test process once this file's tests have all reported.
+after(() => { setTimeout(() => process.exit(), 200).unref(); });
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const TYPES = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.css':'text/css' };
