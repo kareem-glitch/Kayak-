@@ -119,5 +119,10 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .rec-report{display:grid;gap:6px}
 .rec-report .stat{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:12px;background:var(--raised);border:1px solid var(--line);font-size:.9rem;font-variant-numeric:tabular-nums}
 .rec-report .stat b{font:800 1.05rem/1.2 "Bricolage Grotesque",sans-serif}
-.inmeter{height:6px;border-radius:3px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden;margin:-2px 0 8px}
-.inmeter i{display:block;height:100%;width:0;background:#4cc38a;transition:width .1s}
+.inmeter-row{display:flex;gap:10px;align-items:center;margin:-2px 0 8px}
+/* -60..0 dBFS: green to -18, yellow to -6, red above (lit part shows through the cover) */
+.inmeter{position:relative;flex:1;height:8px;border-radius:4px;overflow:hidden;background:linear-gradient(90deg,#3fb67d 0 70%,#e5c33b 70% 90%,#e0604a 90%)}
+.inmeter i{position:absolute;top:0;right:0;bottom:0;width:100%;background:color-mix(in srgb,var(--ink) 12%,var(--surface));transition:width .08s linear}
+.inmeter b{position:absolute;top:0;bottom:0;width:2px;left:0;background:var(--ink);opacity:.8}
+#inDb{min-width:4.6em;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+#inDb.hot{color:#e0604a;font-weight:600}

@@ -86,7 +86,7 @@ window.__audioContexts = [];
         <h2>Audio devices</h2>
         <label class="muted small" for="inDev">Input (mic or audio interface)</label>
         <select id="inDev" class="devsel"></select>
-        <div class="inmeter" aria-label="Input level"><i id="inLevel"></i></div>
+        <div class="inmeter-row"><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div><span class="small" id="inDb">– dB</span></div>
         <label class="muted small" for="inCh">Input channel</label>
         <select id="inCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2 (mono)</option><option value="stereo">Inputs 1 + 2 as stereo</option></select>
         <label class="muted small" for="outDev">Output (headphones or interface)</label>

@@ -72,8 +72,13 @@ function showConnection(){
   const c = room.connectionStats();
   $('#connDebug').textContent = `me ${me.id.slice(0,6)} · ${room.isOwner() ? 'room creator' : 'joined'} · ${c.debug}`;
   // input level: shows whether your mic or instrument is reaching the app
-  const pk = audio.stats.inPeak || 0, db = pk > 0 ? 20 * Math.log10(pk) : -Infinity;
-  $('#inLevel').style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
+  const pk = audio.stats.inPeak || 0, db = pk > 0 ? 20 * Math.log10(pk) : -Infinity, pct = d => Math.max(0, Math.min(100, (d + 60) / 60 * 100));
+  const hold = showConnection.hold || { db: -Infinity, t: 0 }, now = Date.now();
+  if(db >= hold.db || now - hold.t > 1500){ hold.db = db; hold.t = now; } showConnection.hold = hold;   // peak hold for 1.5 s
+  $('#inLevel').style.width = (100 - pct(db)) + '%'; $('#inHold').style.left = 'calc(' + pct(hold.db) + '% - 2px)';
+  $('#inMeter').setAttribute('aria-valuenow', isFinite(db) ? Math.round(db) : -60);
+  $('#inDb').textContent = isFinite(hold.db) && hold.db > -60 ? (hold.db >= -0.1 ? 'CLIP' : Math.round(hold.db) + ' dB') : '– dB';
+  $('#inDb').classList.toggle('hot', hold.db > -6);
   showConnection.n = (showConnection.n || 0) + 1;
   if(showConnection.n % 8 === 1) checkSetup(c);   // every 2 s
   if(!c.live) return;
