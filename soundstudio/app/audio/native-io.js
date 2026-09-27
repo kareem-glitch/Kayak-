@@ -1,7 +1,7 @@
-// Desktop app version of app/audio/io.js (same exports). Audio in and out is
+// Desktop app version of web-io.js (same exports). Audio in and out is
 // native (see src-tauri); this module talks to it over the app's private local
-// WebSocket. The build copies it over app/audio/io.js, so the rest of the page
-// is identical to the website.
+// WebSocket; io.js picks this module when the page runs inside the app, so the
+// rest of the page is the same code as the website.
 export const NATIVE = true;
 export const RATE = 48000, FRAMES = 128, BLOCK_MS = FRAMES / RATE * 1000;
 export const micOptions = () => ({});

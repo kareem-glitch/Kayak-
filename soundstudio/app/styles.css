@@ -126,3 +126,5 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .inmeter b{position:absolute;top:0;bottom:0;width:2px;left:0;background:var(--ink);opacity:.8}
 #inDb{min-width:4.6em;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
 #inDb.hot{color:#e0604a;font-weight:600}
+.app-note{margin-top:10px}
+.app-note a{color:var(--amber)}

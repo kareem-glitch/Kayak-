@@ -1,14 +1,11 @@
 # Builds the SoundStudio desktop app (Mac and Windows) and runs the audio
-# engine's tests. Downloads appear on each run's page under "Artifacts".
+# engine's tests. The app loads the live website, so only changes to the
+# native side (desktop/) need a new build. Downloads appear on each run's page under "Artifacts".
 name: Desktop app
 on:
   push:
     paths:
       - 'soundstudio/desktop/**'
-      - 'soundstudio/app/**'
-      - 'soundstudio/audio/**'
-      - 'soundstudio/vendor/**'
-      - 'soundstudio/index.html'
       - '.github/workflows/desktop.yml'
   workflow_dispatch:
 
