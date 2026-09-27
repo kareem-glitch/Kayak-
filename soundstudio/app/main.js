@@ -159,7 +159,13 @@ if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote')
 if(!audio.NATIVE && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/SoundStudio-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/SoundStudio-${APP_VERSION}-Windows-setup.exe">Windows</a>`;
 if(audio.NATIVE){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';
-$('#nameInput').value = store.get('ss.name') || '';
+// A ready-made name for first-timers (keep it or roll another), like Discord or Reddit.
+const ADJ = ['Gentle','Soapy','Funky','Velvet','Cosmic','Sleepy','Brassy','Mellow','Rusty','Groovy','Lucky','Salty','Dusty','Electric','Golden','Midnight','Smooth','Wild','Humble','Fuzzy','Swinging','Bouncy','Quiet','Loud','Crispy','Neon','Lazy','Brave','Silver','Sunny'];
+const NOUN = ['Warrior','Bird','Otter','Groove','Drummer','Fox','Comet','Walrus','Tiger','Busker','Llama','Echo','Pickle','Rhino','Falcon','Mango','Owl','Riff','Panda','Heron','Koala','Crow','Moth','Badger','Pigeon','Lynx','Whale','Beetle','Toucan','Yeti'];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const randomName = () => pick(ADJ) + ' ' + pick(NOUN);
+$('#nameInput').value = store.get('ss.name') || randomName();
+$('#nameDice').onclick = () => { $('#nameInput').value = randomName(); store.set('ss.name', $('#nameInput').value); };
 $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInput').value));
 $('#nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#joinBtn').onclick = join;

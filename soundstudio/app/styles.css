@@ -32,6 +32,9 @@ button,input,textarea{font:inherit;color:inherit}
 .join-card h2{font-size:2rem;margin-bottom:6px}
 .join-card label{display:block;margin:18px 0 6px;color:var(--muted);font-size:.9rem}
 .join-card input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--raised)}
+.name-row{display:flex;gap:8px}
+.dice{flex:none;width:46px;border-radius:12px;border:1px solid var(--line);background:var(--raised);font-size:20px;cursor:pointer;transition:transform .2s}
+.dice:hover{transform:rotate(20deg)}
 .join-card .btn{width:100%;margin-top:20px}
 .err{color:#e0806a;margin-top:12px;font-size:.9rem;min-height:1.2em}
 

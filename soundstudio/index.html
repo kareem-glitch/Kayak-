@@ -25,7 +25,7 @@ window.__audioContexts = [];
     <h2>Jam room</h2>
     <p class="muted small" id="roomLine">Camera and live audio, straight from browser to browser.</p>
     <label for="nameInput">Your name</label>
-    <input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?">
+    <div class="name-row"><input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?"><button type="button" id="nameDice" class="dice" title="Another name" aria-label="Suggest another name">🎲</button></div>
     <div id="inviteField" hidden><label for="inviteInput">Invite link (leave empty to start a new jam)</label>
     <input id="inviteInput" autocomplete="off" placeholder="Paste the link someone sent you"></div>
     <p class="muted small" style="margin-top:14px">Use wired headphones. Bluetooth adds too much delay to play in time.</p>
