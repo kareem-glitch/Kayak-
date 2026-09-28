@@ -12,6 +12,7 @@ import { S, me } from './state.js';
 import { clk } from './util.js';
 import * as band from './band/engine.js';
 import * as room from './net/room.js';
+import * as stems from './band/stems.js';
 
 export const hooks = { onTurn: () => {} };   // UI, every tick: see info()
 const AHEAD = 700;             // prepare each handover this long before it (ms)
@@ -20,9 +21,24 @@ let prepared = null, lastStarted = null, bsTimer = null;
 
 export const trading = () => S.game.mode === 'trade';
 const active = () => trading() && S.playing && band.started && S.arr;
-// Turn order: everyone in the room, the same on every device.
-export const order = () => [me.id, ...[...room.peers.entries()].filter(([, p]) => p.name).map(([id]) => id)].sort();
-export const nameOf = id => id === me.id ? me.name : ((room.peers.get(id) || {}).name || '');
+// Turn order: everyone in the room, the same on every device, plus the AI band
+// when you'd otherwise have nobody to trade with (or the host keeps it in).
+export const AI = 'ai';
+export function order(){
+  const humans = [me.id, ...[...room.peers.entries()].filter(([, p]) => p.name).map(([id]) => id)].sort();
+  return humans.length < 2 || S.game.ai ? [...humans, AI] : humans;
+}
+export const nameOf = id => id === AI ? 'The band' : id === me.id ? me.name : ((room.peers.get(id) || {}).name || '');
+// On your turn the AI's version of your seat drops out; the rest of the time it covers for you.
+let current = null;
+stems.seatRule.playing = s => s.human && (!active() || current === null || nameOf(current) === s.who);
+function onLeader(lead){
+  if(lead === current) return;
+  current = lead;
+  const takenBy = n => S.seats.some(x => x.human && x.who && ({ piano:'keys' }[n] || n) === x.id);
+  const lead0 = lead === AI ? ['guitar', 'piano', 'other'].find(n => stems.parts().includes(n) && !takenBy(n)) : null;
+  stems.feature(lead0 || null); band.applyMutes();
+}
 const beatMs = () => 60000 / S.arr.bpm;
 const turnMs = () => 4 * beatMs() * S.game.bars;
 const leaderOf = k => { const o = order(); return o[((k % o.length) + o.length) % o.length]; };
@@ -50,12 +66,13 @@ room.setRoute((id, capturedAt, p) => {
 
 function tick(){
   const st = band.started;
-  if(!S.playing || !st || !S.arr){ prepared = null; follow.clear(); hooks.onTurn(null); return; }
+  if(!S.playing || !st || !S.arr){ prepared = null; follow.clear(); onLeader(null); hooks.onTurn(null); return; }
   if(st !== lastStarted){ lastStarted = st; prepared = null; follow.clear(); }   // a new song or restart
   const now = clk(), pos = now - st.zero, seg = trading() ? turnMs() : 4 * beatMs();
   const k = pos < 0 ? 0 : Math.floor(pos / seg) + 1, key = S.game.mode + S.game.bars + ':' + k;
   if(st.zero + k * seg - now < AHEAD && prepared !== key){ prepared = key; prepare(k, k * seg); }
-  hooks.onTurn(info());
+  const t = info(); onLeader(t.leader || null);
+  hooks.onTurn(t);
 }
 
 // Line this band up for the turn starting at boundary (ms into the song).
@@ -65,7 +82,7 @@ function prepare(k, boundary){
   if(!trading()) target = st.base;   // free jam: everyone on the room's shared timing
   else {
     const lead = leaderOf(k);
-    if(lead !== me.id){ const d = delayFor(lead); follow.set(lead, d); target = startOf(lead) + d; }
+    if(lead !== me.id && lead !== AI){ const d = delayFor(lead); follow.set(lead, d); target = startOf(lead) + d; }
   }
   if(Math.abs(target - st.zero) > 1){ band.shiftStart(boundary, target); tellStart(); }
 }

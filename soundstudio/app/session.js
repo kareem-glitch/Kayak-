@@ -82,6 +82,7 @@ export async function claimBand(){
   await Tone.start();
   band.ensureEngine();
   me.isHost = true; S.hostId = me.id; S.hostName = me.name;
+  if(mode === 'tone') S.game = { mode:'free', bars:8 };   // the built-in band can't trade
   if(!S.arr && mode !== 'tone'){ await chooseStock(STOCK[0]).catch(() => {}); }
   if(!S.arr) S.arr = withEngine(Object.assign(finalize(localArrangement('Slow funk in E minor, 96 bpm'), 'local'), { prompt:'Slow funk in E minor, 96 bpm' }));
   listen(); band.applyMutes(); broadcastState(); hooks.onChange();

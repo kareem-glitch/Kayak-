@@ -70,7 +70,7 @@ async function join(){
     const t = ui.tileFor({ identity:me.id, name:me.name }); if(media.getVideoTracks().length) ui.showVideoIn(t, videoOnly);
     if(joinId) inviteLink = SITE + '?join=' + joinId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
     else {
-      inviteLink = SITE + '?join=' + me.id + (params.get('broker') ? '&broker=' + params.get('broker') : '');
+      inviteLink = SITE + '?join=' + me.id + '&g=' + gamePick + (params.get('broker') ? '&broker=' + params.get('broker') : '');
       if(!audio.NATIVE) history.replaceState(null, '', inviteLink);   // copying the address bar works too
       try{ sessionStorage.setItem('ss.hostId', me.id); }catch(e){}
       showRoomStatus(); $('#bigInvite').hidden = false;
@@ -81,6 +81,7 @@ async function join(){
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
     if(store.get('ss.avatar') === '1') setAvatar(true);
+    if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
     if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
     else if(cameraProblem) ui.status('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
@@ -173,6 +174,18 @@ $('#nameDice').onclick = () => { $('#nameInput').value = randomName(); store.set
 $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInput').value));
 $('#nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#joinBtn').onclick = join;
+// The game, picked when you start a room: BARS (trade N bars each; the default) or Free jam.
+const gameLabel = g => g === 'free' ? 'Free jam' : `BARS ${g}`;
+let gamePick = ['free', '4', '8', '16', '32'].includes(store.get('ss.game')) ? store.get('ss.game') : '8';
+function showPick(){
+  document.querySelectorAll('[data-pick]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.pick === gamePick)));
+  $('#pickNote').textContent = gamePick === 'free' ? 'Everyone plays at once. Best when you’re all fairly close.' : `Take turns of ${gamePick} bars, anywhere in the world. Alone? You trade with the AI band.`;
+}
+document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { gamePick = b.dataset.pick; store.set('ss.game', gamePick); showPick(); });
+showPick();
+const invited = params.get('g');
+$('#inviteInput').addEventListener('input', () => { $('#gamePick').hidden = !!$('#inviteInput').value.trim(); });
+if(joinId){ $('#gamePick').hidden = true; if(invited) $('#roomLine').textContent = `You’ve been invited to a ${gameLabel(invited)} jam. Add your name and join.`; }
 $('#claimBtn').onclick = async () => { if(!await session.claimBand()) $('#claimStatus').textContent = S.hostName + ' is already running the band.'; };
 async function generate(){
   const prompt = $('#prompt').value.trim();
@@ -214,6 +227,7 @@ Promise.all(session.STOCK.map(id => fetch(`/packs/${id}/pack.json`).then(r => r.
 }));
 $('#genBtn').onclick = generate;
 // The game: everyone at once (free jam) or trading N bars each.
+$('#keepAI').onchange = () => { if(me.isHost) session.setGame({ ai: $('#keepAI').checked }); };
 document.querySelectorAll('[data-game]').forEach(b => b.onclick = () => { if(!me.isHost) return; const g = b.dataset.game; session.setGame(g === 'free' ? { mode:'free' } : { mode:'trade', bars:+g }); });
 $('#playBtn').onclick = () => S.playing ? session.stopBand() : session.startBand($('#countIn').checked);
 $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; };

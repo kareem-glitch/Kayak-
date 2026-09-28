@@ -16,7 +16,7 @@ test('trade bars: turns alternate, only the soloist is heard, on the beat', { ti
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
     await B.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
-    await A.click('#claimBtn'); await A.waitForSelector('#hostControls:not([hidden])');
+    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
     await A.waitForSelector('#stock-rock-d-120'); await A.click('#stock-rock-d-120');
     await A.waitForFunction(() => /Indie rock/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
     await A.click('[data-game="4"]');

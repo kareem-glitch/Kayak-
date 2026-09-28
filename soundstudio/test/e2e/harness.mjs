@@ -37,9 +37,9 @@ export async function startServers({ internet = false } = {}){
   const proxy = internet && process.env.E2E_PROXY ? [`--proxy-server=${process.env.E2E_PROXY}`] : ['--no-proxy-server'];
   const browser = await chromium.launch({ args:[...proxy, '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
   const errors = [];
-  async function page(name, { band = 'tone', relay = null } = {}){
+  async function page(name, { band = 'tone', relay = null, game = 'free' } = {}){
     const p = await (await browser.newContext({ permissions:['camera', 'microphone'], viewport:{ width:1400, height:900 }, ignoreHTTPSErrors:internet })).newPage();
-    await p.addInitScript(([b, r]) => { try{ localStorage.setItem('ss.band', b); if(b === 'lyria') localStorage.setItem('ss.mode', 'live'); if(r) localStorage.setItem('ss.relay', r); }catch(e){} }, [band, relay]);   // the built-in band unless a test asks for Lyria
+    await p.addInitScript(([b, r, g]) => { try{ localStorage.setItem('ss.game', g); localStorage.setItem('ss.band', b); if(b === 'lyria') localStorage.setItem('ss.mode', 'live'); if(r) localStorage.setItem('ss.relay', r); }catch(e){} }, [band, relay, game]);   // the built-in band unless a test asks for Lyria
     await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     p.on('pageerror', e => errors.push(`${name}: ${e.message}`));
     return p;

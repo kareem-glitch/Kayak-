@@ -41,7 +41,7 @@ test('Lyria band: same stream in step on two devices, seats steer it', { timeout
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
-    await A.click('#claimBtn'); await A.waitForSelector('#hostControls:not([hidden])');
+    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
     await A.fill('#prompt', 'Driving indie rock in D, 120 bpm'); await A.click('#genBtn'); await sleep(1000);
     await A.click('#playBtn');
     await A.waitForFunction(() => /Playing: Google Lyria/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });

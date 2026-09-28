@@ -12,6 +12,11 @@ import { clk } from '../util.js';
 // which seat each part belongs to ('other' = extras nobody can take over)
 export const SEAT_OF = { drums: 'drums', bass: 'bass', piano: 'keys', guitar: 'guitar', other: null };
 export const hooks = { onReady: () => {} };
+// Whether a seat's human is playing right now (so its AI part should be silent).
+// Free jam: whenever the seat is taken. BARS sets this to "only on their turn".
+export const seatRule = { playing: s => s.human };
+let featured = null;   // BARS: the AI band's turn puts this part up front
+export function feature(name){ featured = name; applySeats(); }
 
 let current = null;          // { id, bpm, buffers: {name: AudioBuffer}, data: {name: base64} (prompted only) }
 let loading = null, gains = {}, master = null, sources = [], start = null, volumeDb = 0;
@@ -105,7 +110,8 @@ export function applySeats(){
   for(const [name, g] of Object.entries(gains)){
     const seat = SEAT_OF[name], s = seat && S.seats.find(x => x.id === seat);
     const db = seat ? ((S.levels || {})[seat] || 0) : 0;
-    const v = s && s.human ? 0 : db <= -30 ? 0 : Math.pow(10, db / 20);
+    let v = s && seatRule.playing(s) ? 0 : db <= -30 ? 0 : Math.pow(10, db / 20);
+    if(featured) v *= name === featured ? 1.8 : 0.75;
     g.gain.setTargetAtTime(v, cx.currentTime, 0.015);
   }
 }

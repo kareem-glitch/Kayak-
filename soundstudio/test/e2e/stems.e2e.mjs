@@ -13,7 +13,7 @@ test('stems band: stock track, seats mute parts, prompted track shared', { timeo
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
-    await A.click('#claimBtn'); await A.waitForSelector('#hostControls:not([hidden])');
+    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
     await A.waitForSelector('#stock-blues-a-92'); await A.click('#stock-blues-a-92');
     await A.waitForFunction(() => /Blues shuffle in A/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
     await A.click('#playBtn');

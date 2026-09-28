@@ -145,7 +145,12 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 
 /* trade bars */
 .game{margin-top:12px;display:grid;gap:6px}
-.game .modes{grid-template-columns:auto auto repeat(3,1fr);margin-bottom:0}
+.game .modes,.game-pick .modes{grid-template-columns:auto repeat(4,1fr) auto;margin-bottom:0;align-items:center}
+.modes-label{font-weight:800;font-size:.8rem;letter-spacing:.08em;color:var(--amber);padding:0 6px 0 8px}
+.game-pick{display:grid;gap:6px;margin-top:14px}
+.game-pick .modes button{white-space:nowrap;padding:9px 10px}
+.game-pick .modes button[aria-checked="true"]{background:var(--amber);color:var(--amber-ink)}
+.band-tile.onmic{box-shadow:0 0 0 3px var(--amber),0 0 28px rgba(240,162,56,.55)}
 .game .modes button{white-space:nowrap;padding:9px 10px}
 #avatarBtn[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink)}
 .game .modes button[aria-checked="true"]{background:var(--amber);color:var(--amber-ink)}

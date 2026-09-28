@@ -60,7 +60,8 @@ export function render(){
   $('#playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
   $('#playBtn').setAttribute('aria-label', S.playing ? 'Stop' : 'Play');
   document.querySelectorAll('[data-game]').forEach(b => { b.setAttribute('aria-checked', String(S.game.mode === 'free' ? b.dataset.game === 'free' : b.dataset.game === String(S.game.bars))); if(b.dataset.game !== 'free') b.disabled = !(a && (a.engine === 'stems' || a.engine === 'lyria')); });
-  $('#gameNote').textContent = S.game.mode === 'trade' ? 'BARS: take turns, trading bars. Only whoever’s on is heard, and it lands on the beat at any distance.' : 'Everyone plays at once. Best when you’re all fairly close.';
+  $('#keepAI').checked = !!S.game.ai; $('#keepAI').closest('label').hidden = S.game.mode !== 'trade';
+  $('#gameNote').textContent = S.game.mode === 'trade' ? 'BARS: take turns trading bars. Only whoever’s on is heard, and it lands on the beat at any distance. Took a seat? The AI plays your part until it’s your turn.' : 'Everyone plays at once. Best when you’re all fairly close.';
   const box = $('#strips'); box.innerHTML = '';
   S.seats.forEach(s => {
     const d = partDesc(s.id), off = d === null && !s.human && !!a;
@@ -97,11 +98,12 @@ function meterLoop(){
 // Trade bars: who's on (glowing tile), who's next, and a countdown to your turn.
 export function showTurn(t){
   const line = $('#turnLine');
-  if(!t || t.mode !== 'trade'){ line.hidden = !(S.game.mode === 'trade'); line.textContent = S.game.mode === 'trade' ? `BARS: ${S.game.bars} each. Starts with the band.` : ''; tiles.forEach(el => el.classList.remove('onmic', 'next')); $('#turnCount').textContent = ''; return; }
+  if(!t || t.mode !== 'trade'){ line.hidden = !(S.game.mode === 'trade'); line.textContent = S.game.mode === 'trade' ? `BARS: ${S.game.bars} each. Starts with the band.` : ''; tiles.forEach(el => el.classList.remove('onmic', 'next')); $('#bandTile').classList.remove('onmic', 'next'); $('#turnCount').textContent = ''; return; }
   line.hidden = false;
   line.textContent = t.mine ? `Your ${t.bars} bars` : t.leader ? `${t.nameOf(t.leader)} is on` : `BARS: ${t.bars} each`;
   if(t.next && t.next !== t.leader) line.textContent += ` · next: ${t.next === me.id ? 'you' : t.nameOf(t.next)}`;
   tiles.forEach((el, id) => { el.classList.toggle('onmic', id === t.leader); el.classList.toggle('next', id === t.next && id !== t.leader); });
+  $('#bandTile').classList.toggle('onmic', t.leader === 'ai'); $('#bandTile').classList.toggle('next', t.next === 'ai' && t.leader !== 'ai');
   $('#turnCount').textContent = t.count ? String(t.count) : '';
 }
 export function status(text){ $('#connStats').textContent = text; }
