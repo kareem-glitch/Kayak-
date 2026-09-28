@@ -16,7 +16,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const TYPES = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.css':'text/css' };
 
 // internet: the test talks to real services (set E2E_PROXY if they're only reachable through a proxy).
-export async function startServers({ internet = false } = {}){
+// fakeAudio: a WAV file every page's microphone plays (looped) instead of Chromium's test beep.
+export async function startServers({ internet = false, fakeAudio = null } = {}){
   const web = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
     if(u.pathname === '/api/stems'){   // stand-in for the stems service: the funk stock track's parts, code 'test'
@@ -35,7 +36,7 @@ export async function startServers({ internet = false } = {}){
   const broker = await new Promise(r => { const s = PeerServer({ port:brokerPort, path:'/', host:'127.0.0.1' }, srv => r(srv)); });
   const base = `http://127.0.0.1:${web.address().port}/?broker=127.0.0.1:${brokerPort}`;
   const proxy = internet && process.env.E2E_PROXY ? [`--proxy-server=${process.env.E2E_PROXY}`] : ['--no-proxy-server'];
-  const browser = await chromium.launch({ args:[...proxy, '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+  const browser = await chromium.launch({ args:[...proxy, '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', ...(fakeAudio ? [`--use-file-for-fake-audio-capture=${fakeAudio}`] : [])] });
   const errors = [];
   async function page(name, { band = 'tone', relay = null, game = 'free' } = {}){
     const p = await (await browser.newContext({ permissions:['camera', 'microphone'], viewport:{ width:1400, height:900 }, ignoreHTTPSErrors:internet })).newPage();

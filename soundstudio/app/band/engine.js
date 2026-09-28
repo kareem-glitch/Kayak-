@@ -5,6 +5,7 @@
 import { S, me } from '../state.js';
 import * as lyria from './lyria.js';
 import * as stems from './stems.js';
+import * as soloist from './soloist.js';
 import { STYLES } from './theory.js';
 import { clk } from '../util.js';
 
@@ -91,7 +92,7 @@ export const engine = () => E;
 export function ensureEngine(){ if(!E) E = buildEngine(); return E; }
 
 // Personal band volume (dB relative to the default mix; -40 = off).
-export function applyBandVolume(){ const v = options.bandVolumeDb; if(E) E.master.volume.value = v <= -40 ? -Infinity : -3 + v; lyria.setVolume(v <= -40 ? -Infinity : v); stems.setVolume(v <= -40 ? -Infinity : v); }
+export function applyBandVolume(){ const v = options.bandVolumeDb; if(E) E.master.volume.value = v <= -40 ? -Infinity : -3 + v; lyria.setVolume(v <= -40 ? -Infinity : v); stems.setVolume(v <= -40 ? -Infinity : v); soloist.setVolume(v <= -40 ? -Infinity : v); }
 // Shared part levels and seats. A taken seat is silenced through its volume
 // (setting volume after Channel.mute would undo the mute).
 export function applyMutes(){

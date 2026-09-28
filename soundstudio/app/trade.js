@@ -13,12 +13,14 @@ import { clk } from './util.js';
 import * as band from './band/engine.js';
 import * as room from './net/room.js';
 import * as stems from './band/stems.js';
+import * as soloist from './band/soloist.js';
 
 export const hooks = { onTurn: () => {} };   // UI, every tick: see info()
 const AHEAD = 700;             // prepare each handover this long before it (ms)
 const follow = new Map();      // id -> delay (ms) from their playing to your hearing, while you follow them
 let prepared = null, lastStarted = null, bsTimer = null;
 
+export const soloistState = soloist.state;
 export const trading = () => S.game.mode === 'trade';
 const active = () => trading() && S.playing && band.started && S.arr;
 // Turn order: everyone in the room, the same on every device, plus the AI band
@@ -36,7 +38,7 @@ function onLeader(lead){
   if(lead === current) return;
   current = lead;
   const takenBy = n => S.seats.some(x => x.human && x.who && ({ piano:'keys' }[n] || n) === x.id);
-  const lead0 = lead === AI ? ['guitar', 'piano', 'other'].find(n => stems.parts().includes(n) && !takenBy(n)) : null;
+  const lead0 = lead === AI && !soloist.state.ready ? ['guitar', 'piano', 'other'].find(n => stems.parts().includes(n) && !takenBy(n)) : null;
   stems.feature(lead0 || null); band.applyMutes();
 }
 const beatMs = () => 60000 / S.arr.bpm;
@@ -64,9 +66,19 @@ room.setRoute((id, capturedAt, p) => {
   return theirs(startOf(id), true) || theirs(startOf(id, true), true) ? played + d : null;   // their last notes may ring a beat past the handover
 });
 
+// The AI soloist's ear: the audio of whoever's turn it is, placed on this band's 16th-note grid.
+room.taps.listen = (id, planes, when) => {
+  if(!active() || !order().includes(AI)) return;
+  const st = band.started, who = id === 'me' ? me.id : id, pos = when - st.zero;
+  if(pos < 0 || leaderOf(Math.floor(pos / turnMs())) !== who) return;
+  soloist.feed(who, planes, when, ms => (ms - st.zero) / (beatMs() / 4));
+};
+const seedOf = k => { let h = 2166136261; for(const c of String((S.arr.pack && S.arr.pack.id) || S.arr.title) + ':' + k) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
+
 function tick(){
   const st = band.started;
-  if(!S.playing || !st || !S.arr){ prepared = null; follow.clear(); onLeader(null); hooks.onTurn(null); return; }
+  if(!S.playing || !st || !S.arr){ prepared = null; follow.clear(); onLeader(null); soloist.stop(); hooks.onTurn(null); return; }
+  if(trading() && order().includes(AI)) soloist.prepare();   // load its amp before its first turn
   if(st !== lastStarted){ lastStarted = st; prepared = null; follow.clear(); }   // a new song or restart
   const now = clk(), pos = now - st.zero, seg = trading() ? turnMs() : 4 * beatMs();
   const k = pos < 0 ? 0 : Math.floor(pos / seg) + 1, key = S.game.mode + S.game.bars + ':' + k;
@@ -83,6 +95,8 @@ function prepare(k, boundary){
   else {
     const lead = leaderOf(k);
     if(lead !== me.id && lead !== AI){ const d = delayFor(lead); follow.set(lead, d); target = startOf(lead) + d; }
+    // the band's turn: the AI soloist answers, starting on the bar line
+    if(lead === AI) soloist.play({ startMs: st.zero + boundary, bars: S.game.bars, sixteenthMs: beatMs() / 4, seed: seedOf(k) });
   }
   if(Math.abs(target - st.zero) > 1){ band.shiftStart(boundary, target); tellStart(); }
 }
