@@ -47,7 +47,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: 'soundstudio/desktop/src-tauri -> target' }
       # the plugin first: it ships inside the app (src-tauri/plugin), which installs it on request
-      - name: Build the plugin (Mac: AU + VST3, Apple Silicon + Intel)
+      - name: 'Build the plugin (Mac: AU + VST3, Apple Silicon + Intel)'
         if: runner.os == 'macOS'
         run: |
           cmake -S ../plugin -B ../plugin/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
@@ -55,7 +55,7 @@ jobs:
           A=../plugin/build/AirBandSend_artefacts/Release
           codesign --force --deep -s - "$A/VST3/air.band Send.vst3" "$A/AU/air.band Send.component"
           cp -R "$A/VST3/air.band Send.vst3" "$A/AU/air.band Send.component" src-tauri/plugin/
-      - name: Build the plugin (Windows: VST3)
+      - name: 'Build the plugin (Windows: VST3)'
         if: runner.os == 'Windows'
         shell: bash
         run: |
