@@ -19,23 +19,28 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
 
     await B.click('#synthBtn');
     await B.waitForSelector('#synthPanel:not([hidden])');
-    const keys = await B.$$eval('.key', els => els.map(e => ({ nm: e.querySelector('.nm').textContent, black: e.classList.contains('black'), in: e.classList.contains('in'), root: e.classList.contains('root') })));
-    assert.equal(keys.length, 13, 'on a phone: one octave, C to C, every note side by side');
-    assert.equal(keys.filter(k => k.black).length, 5, 'with the black keys');
-    assert.deepEqual(keys.filter(k => k.in).map(k => k.nm), ['D', 'E', 'G', 'A', 'Bb', 'B'], 'the E minor blues notes are marked');
-    assert.deepEqual(keys.filter(k => k.root).map(k => k.nm), ['E'], 'the root stands out');
-    const w = await B.locator('.key.white').first().boundingBox();
-    assert.ok(w.width >= 38 && w.height >= 120, `keys big enough to hit with a thumb (${Math.round(w.width)} x ${Math.round(w.height)})`);
+    const read = () => B.$$eval('.key', els => els.map(e => ({ nm: e.querySelector('.nm').textContent, in: e.classList.contains('in'), root: e.classList.contains('root') })));
+    let keys = await read();
+    assert.deepEqual(keys.map(k => k.nm), ['E', 'G', 'A', 'Bb', 'B', 'D', 'E'], 'on a phone: one row of the E minor blues scale, root to root');
+    assert.deepEqual(keys.filter(k => k.root).length, 2, 'the roots stand out');
+    const cube = await B.locator('.key').first().boundingBox();
+    assert.ok(cube.width >= 40 && Math.abs(cube.width - cube.height) < 2, `square keys big enough for a thumb (${Math.round(cube.width)} x ${Math.round(cube.height)})`);
+    await B.click('[data-scale="all"]');
+    keys = await read();
+    assert.equal(keys.length, 13, 'All: every note, C to C, in one row');
+    assert.deepEqual(keys.filter(k => k.in).map(k => k.nm), ['D', 'E', 'G', 'A', 'Bb', 'B'], 'with the scale marked');
+    await B.click('[data-scale="key"]');
     await B.click('[data-oct="1"]'); assert.equal(await B.textContent('.synth-oct'), 'C5', 'octave up'); await B.click('[data-oct="-1"]');
     assert.equal(await B.isDisabled('#micBtn'), true, 'the mic is off while the synth is on');
     await sleep(1000);
     const quiet = await walker();
     // hold a pad (a real tap on the screen)
-    const box = await B.locator('.key.white.root').boundingBox();
+    const box = await B.locator('.key.root').first().boundingBox();
     await B.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await B.mouse.down();
     await sleep(400);
     assert.ok(await B.evaluate(() => document.querySelector('.key.on') !== null), 'the key lights up');
     const loud = await walker();
+    assert.match(await B.textContent('.synth-lat'), /^\d+ ms$/, 'the delay from finger to ears is shown');
     await B.mouse.up(); await sleep(600);
     const after = await walker();
     assert.ok(quiet < 0.02, `nothing sent before you play: the mic is muted (${quiet})`);
