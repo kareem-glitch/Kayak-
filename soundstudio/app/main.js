@@ -203,7 +203,7 @@ if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 
 // ---- controls ----
 // The desktop app loads this site, so only its native audio engine can be out of date.
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.4.0';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/SoundStudio-${APP_VERSION}-Mac.zip` : `/download/SoundStudio-${APP_VERSION}-Windows-setup.exe`;
 if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://soundstudio-wine.vercel.app${dl()}">Download it</a> and reinstall.`;
