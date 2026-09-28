@@ -26,6 +26,10 @@ window.__audioContexts = [];
     <p class="muted small" id="roomLine">Camera and live audio, straight from browser to browser.</p>
     <label for="nameInput">Your name</label>
     <div class="name-row"><input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?"><button type="button" id="nameDice" class="dice" title="Another name" aria-label="Suggest another name">🎲</button></div>
+    <div class="look-pick">
+      <span class="muted small">Pick your player</span>
+      <div id="lookPick" class="looks" role="radiogroup" aria-label="Your player"></div>
+    </div>
     <div id="gamePick" class="game-pick">
       <span class="muted small">Game (you can change it in the room)</span>
       <div class="modes" role="radiogroup" aria-label="Game">

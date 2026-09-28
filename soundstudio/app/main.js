@@ -84,7 +84,7 @@ async function join(){
       const o = store.get('ss.outDev'); if(o) await audio.useOutput(o);
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
-    if(store.get('ss.avatar') === '1') setAvatar(true);
+    if(look !== 'cam') setAvatar(true);
     if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
     if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
@@ -234,6 +234,23 @@ $('#nameDice').onclick = () => { $('#nameInput').value = randomName(); store.set
 $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInput').value));
 $('#nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#joinBtn').onclick = join;
+// Your player, picked on the start screen like an arcade game: one of four characters, or your camera.
+let look = store.get('ss.look') ?? (store.get('ss.avatar') === '0' ? 'cam' : '0');
+if(look !== 'cam') look = String(avatar.charOf(+look));
+const lookBtns = [...avatar.CHARS.map((c, i) => [String(i), c.name]), ['cam', 'Camera']].map(([id, name]) => {
+  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.look = id; b.setAttribute('aria-label', name);
+  b.innerHTML = '<canvas></canvas><span></span>'; b.querySelector('span').textContent = name;
+  b.onclick = () => { look = id; store.set('ss.look', id); lookBtns.forEach(x => x.setAttribute('aria-checked', String(x === b))); };
+  b.setAttribute('aria-checked', String(id === look)); $('#lookPick').appendChild(b); return b;
+});
+let lookFrame = 0;
+const lookTimer = setInterval(() => {
+  if($('#joinView').hidden) return clearInterval(lookTimer);
+  lookFrame++;
+  lookBtns.forEach((b, i) => { const on = b.dataset.look === look, cv = b.querySelector('canvas');
+    if(b.dataset.look === 'cam') avatar.cameraIcon(cv, on && lookFrame % 4 < 2);
+    else avatar.portrait(cv, i, on && lookFrame % 2 === 1, (lookFrame + i) % 4 < 2); });   // the picked one strums, the others bob
+}, 250);
 // The game, picked when you start a room: BARS (trade N bars each; the default) or Free jam.
 const gameLabel = g => g === 'free' ? 'Free jam' : `BARS ${g}`;
 let gamePick = ['free', '4', '8', '16', '32'].includes(store.get('ss.game')) ? store.get('ss.game') : '8';
@@ -303,9 +320,9 @@ $('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabl
 $('#camBtn').onclick = () => { const v = media && media.getVideoTracks()[0]; if(!v) return; v.enabled = !v.enabled; $('#camBtn').textContent = v.enabled ? 'Camera on' : 'Camera off'; $('#camBtn').setAttribute('aria-pressed', String(v.enabled)); };
 // Avatar instead of camera: your camera is switched off for everyone while it's on.
 function setAvatar(on){
-  avatar.setMine(on); store.set('ss.avatar', on ? '1' : '0');
+  avatar.setMine(on, avatar.charOf(+look)); store.set('ss.look', on ? String(avatar.charOf(+look)) : 'cam');
   const v = media && media.getVideoTracks()[0]; if(v) v.enabled = !on && $('#camBtn').getAttribute('aria-pressed') !== 'false';
-  $('#avatarBtn').setAttribute('aria-pressed', String(on)); $('#avatarBtn').textContent = on ? 'Avatar on' : 'Avatar'; $('#camBtn').disabled = on;
+  $('#avatarBtn').setAttribute('aria-pressed', String(on)); $('#avatarBtn').textContent = on ? avatar.CHARS[avatar.charOf(+look)].name : 'Avatar'; $('#camBtn').disabled = on;
 }
 $('#avatarBtn').onclick = () => setAvatar(!avatar.isOn());
 const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + (v > 0 ? '+' : '') + v + ' dB)'; band.options.bandVolumeDb = v; band.applyBandVolume(); };

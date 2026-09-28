@@ -157,6 +157,13 @@ button,input,textarea,select{font:inherit;color:inherit}
 .game-seg,.game-pick .modes{grid-template-columns:auto repeat(4,minmax(30px,1fr)) auto;align-items:center}
 .game-seg button,.game-pick .modes button{white-space:nowrap;padding:7px 9px}
 .game-pick{display:grid;gap:6px;margin-top:14px}
+.look-pick{display:grid;gap:6px;margin-top:14px}
+.looks{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.looks button{display:grid;gap:5px;justify-items:center;padding:5px 5px 6px;border-radius:12px;border:1px solid var(--line);background:var(--raised);cursor:pointer;color:var(--muted);font:600 .66rem/1 "Geist Mono",ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;transition:transform .12s}
+.looks canvas{width:100%;aspect-ratio:1;border-radius:8px;image-rendering:pixelated;filter:grayscale(.55) brightness(.9)}
+.looks button:hover canvas{filter:none}
+.looks button[aria-checked="true"]{background:var(--head);color:var(--head-ink);box-shadow:inset 0 0 0 2px var(--amber);transform:translateY(-2px)}
+.looks button[aria-checked="true"] canvas{filter:none}
 
 /* band drawer */
 .hostbox{padding:12px;border-radius:12px;border:1px dashed var(--line);display:grid;gap:10px}

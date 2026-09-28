@@ -40,7 +40,7 @@ export async function startServers({ internet = false, fakeAudio = null } = {}){
   const errors = [];
   async function page(name, { band = 'tone', relay = null, game = 'free' } = {}){
     const p = await (await browser.newContext({ permissions:['camera', 'microphone'], viewport:{ width:1400, height:900 }, ignoreHTTPSErrors:internet })).newPage();
-    await p.addInitScript(([b, r, g]) => { try{ localStorage.setItem('ss.game', g); localStorage.setItem('ss.band', b); if(b === 'lyria') localStorage.setItem('ss.mode', 'live'); if(r) localStorage.setItem('ss.relay', r); }catch(e){} }, [band, relay, game]);   // the built-in band unless a test asks for Lyria
+    await p.addInitScript(([b, r, g]) => { try{ localStorage.setItem('ss.game', g); if(!localStorage.getItem('ss.look')) localStorage.setItem('ss.look', 'cam'); localStorage.setItem('ss.band', b); if(b === 'lyria') localStorage.setItem('ss.mode', 'live'); if(r) localStorage.setItem('ss.relay', r); }catch(e){} }, [band, relay, game]);   // the built-in band unless a test asks for Lyria
     await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
     p.on('pageerror', e => errors.push(`${name}: ${e.message}`));
     return p;
