@@ -12,6 +12,7 @@ import * as stems from './band/stems.js';
 import * as trade from './trade.js';
 import * as avatar from './avatar.js';
 import { TONES } from './audio/tone.js';
+import * as toneIcons from './tone-icons.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -161,7 +162,11 @@ async function pickTone(id){
   catch(e){ $('#toneNote').textContent = 'Couldn’t load that tone: ' + (e.message || e); }
 }
 if(audio.canTone()){
-  TONES.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.tone = t.id; b.textContent = t.label; b.onclick = () => pickTone(t.id); $('#toneBox').appendChild(b); });
+  TONES.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.tone = t.id; b.title = toneIcons.SPRITES[t.id].name; b.onclick = () => pickTone(t.id);
+    const icon = document.createElement('span'); icon.className = 'tone-icon'; icon.setAttribute('aria-hidden', 'true');
+    icon.style.setProperty('--on', `url(${toneIcons.frame(t.id, true)})`); icon.style.setProperty('--off', `url(${toneIcons.frame(t.id, false)})`);
+    const label = document.createElement('span'); label.textContent = t.label;
+    b.append(icon, label); $('#toneBox').appendChild(b); });
   document.querySelectorAll('[data-eq]').forEach(r => { r.value = toneEq[r.dataset.eq]; r.oninput = () => { toneEq[r.dataset.eq] = +r.value; audio.setToneEq(toneEq); store.set('ss.eq', JSON.stringify(toneEq)); }; });
   showTone(TONES.some(t => t.id === store.get('ss.tone')) ? store.get('ss.tone') : 'off');
 } else $('#toneSection').hidden = true;   // the desktop app: coming soon
