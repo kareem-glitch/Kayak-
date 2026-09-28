@@ -11,7 +11,7 @@ import * as lyria from './band/lyria.js';
 import * as stems from './band/stems.js';
 import * as trade from './trade.js';
 import * as avatar from './avatar.js';
-import { TONES } from './audio/tone.js';
+import { TONES, defaults as toneDefaults } from './audio/tone.js';
 import * as toneIcons from './tone-icons.js';
 
 const params = new URLSearchParams(location.search);
@@ -166,8 +166,12 @@ async function fillDevices(){
   if(canOut) ui.fillSelect($('#outDev'), outputs, store.get('ss.outDev') || '');
 }
 // ---- built-in tone: amp + cab + EQ (browser), or your input as it is ----
-let toneEq = { bass: 0, mid: 0, treble: 0, level: 0 };
-try{ Object.assign(toneEq, JSON.parse(store.get('ss.eq') || '{}')); }catch(e){}
+// Each amp keeps your own settings (EQ, level, chorus, reverb), starting from its defaults.
+let toneSets = {};
+try{ toneSets = JSON.parse(store.get('ss.toneSets') || '{}') || {}; }catch(e){}
+const settingsFor = id => Object.assign(toneDefaults(id), toneSets[id] || {});
+let toneEq = settingsFor(store.get('ss.tone') || 'off');
+const showKnobs = () => document.querySelectorAll('[data-eq]').forEach(r => { r.value = toneEq[r.dataset.eq]; });
 const toneNotes = { off: 'Your input as it arrives, like a DI. Use this for vocals, keys, or a tone from your own amp or pedals.' };
 function showTone(id){
   document.querySelectorAll('[data-tone]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.tone === id)));
@@ -176,6 +180,7 @@ function showTone(id){
 }
 async function pickTone(id){
   showTone(id); store.set('ss.tone', id);
+  toneEq = settingsFor(id); showKnobs();
   if(!media) return;   // applied when you join
   try{ $('#toneNote').textContent = id === 'off' ? $('#toneNote').textContent : 'Loading the amp…'; await audio.setTone(id); audio.setToneEq(toneEq); showTone(id); }
   catch(e){ $('#toneNote').textContent = 'Couldn’t load that tone: ' + (e.message || e); }
@@ -186,7 +191,10 @@ if(audio.canTone()){
     icon.style.setProperty('--on', `url(${toneIcons.frame(t.id, true)})`); icon.style.setProperty('--off', `url(${toneIcons.frame(t.id, false)})`);
     const label = document.createElement('span'); label.textContent = t.label;
     b.append(icon, label); $('#toneBox').appendChild(b); });
-  document.querySelectorAll('[data-eq]').forEach(r => { r.value = toneEq[r.dataset.eq]; r.oninput = () => { toneEq[r.dataset.eq] = +r.value; audio.setToneEq(toneEq); store.set('ss.eq', JSON.stringify(toneEq)); }; });
+  const saveKnobs = () => { const id = store.get('ss.tone') || 'off'; toneSets[id] = toneEq; store.set('ss.toneSets', JSON.stringify(toneSets)); };
+  document.querySelectorAll('[data-eq]').forEach(r => { r.oninput = () => { toneEq[r.dataset.eq] = +r.value; audio.setToneEq(toneEq); saveKnobs(); }; });
+  $('#toneReset').onclick = () => { const id = store.get('ss.tone') || 'off'; delete toneSets[id]; store.set('ss.toneSets', JSON.stringify(toneSets)); toneEq = settingsFor(id); showKnobs(); audio.setToneEq(toneEq); };
+  showKnobs();
   showTone(TONES.some(t => t.id === store.get('ss.tone')) ? store.get('ss.tone') : 'off');
 } else $('#toneSection').hidden = true;   // the desktop app: coming soon
 const showChannels = chans => { $('#inCh').disabled = chans < 2; };

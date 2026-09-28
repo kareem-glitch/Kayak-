@@ -179,3 +179,5 @@ textarea{width:100%;min-height:74px;border:1px solid var(--line);border-radius:1
 .plugin-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;margin:4px 0 10px;border:1px solid var(--line);border-radius:12px;background:var(--raised)}
 .plugin-row.live{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}
 .plugin-text{display:grid;gap:2px}
+.eq label.fx{grid-column:span 2}
+.eq .linkbtn{grid-column:1/-1;justify-self:end;border:0;background:none;color:var(--muted);font-size:.78rem;text-decoration:underline;cursor:pointer;padding:0}
