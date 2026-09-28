@@ -74,16 +74,16 @@ function paint(g, c){
       if(t.classList.contains('me')){ g.translate(x + w, y); g.scale(-1, 1); g.drawImage(v, (w - vw) / 2, (h - vh) / 2, vw, vh); g.setTransform(1, 0, 0, 1, 0, 0); }
       else g.drawImage(v, x + (w - vw) / 2, y + (h - vh) / 2, vw, vh);
     } else {
-      g.fillStyle = '#9aaba7'; g.font = '800 64px "Bricolage Grotesque", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = '#9aaba7'; g.font = '800 64px "Geist", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText((t.querySelector('.initial') || {}).textContent || '', x + w / 2, y + h / 2);
     }
     g.restore();
     const name = (t.querySelector('.tname') || {}).textContent || '';
-    g.font = '600 22px "Instrument Sans", system-ui, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
+    g.font = '600 22px "Geist", system-ui, sans-serif'; g.textAlign = 'left'; g.textBaseline = 'middle';
     const tw = g.measureText(name).width + 28;
     g.fillStyle = 'rgba(0,0,0,.55)'; g.beginPath(); g.roundRect ? g.roundRect(x + 14, y + h - 50, tw, 36, 18) : g.rect(x + 14, y + h - 50, tw, 36); g.fill();
     g.fillStyle = '#fff'; g.fillText(name, x + 28, y + h - 32);
   });
-  g.font = '800 20px "Bricolage Grotesque", system-ui, sans-serif'; g.fillStyle = 'rgba(240,162,56,.9)'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
-  g.fillText('SoundStudio', c.width - 20, c.height - 16);
+  g.font = '800 20px "Geist", system-ui, sans-serif'; g.fillStyle = 'rgba(240,162,56,.9)'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
+  g.fillText('air.band', c.width - 20, c.height - 16);
 }

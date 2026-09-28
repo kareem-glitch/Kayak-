@@ -46,6 +46,9 @@ export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id)
 // how long it really took to arrive (phone audio stacks, send queues, network).
 // Recording taps (mixrec.js): every block you send and every block you receive.
 export const taps = { local: null, remote: null };
+// "Pretend we're far apart" (testing at home): every player's audio arrives this much later, as if across the world.
+let fakeDelay = 0;
+export const setFakeDelay = ms => { fakeDelay = ms; peers.forEach(p => { p.ages = []; }); };
 // Trade bars (trade.js) decides what happens to each incoming block: undefined =
 // play now (free jam), null = drop (not their turn), a time = play then (wall-clock ms).
 export let route = () => undefined;
@@ -116,8 +119,9 @@ function wireConn(c, newcomer){
   c.on('open', () => {
     p.audio = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
     p.audio.binaryType = 'arraybuffer';
-    p.audio.onmessage = e => {
-      const pk = decodePacket(new Uint8Array(e.data)); if(!pk) return;
+    p.audio.onmessage = e => { if(fakeDelay) setTimeout(() => onAudio(e), fakeDelay); else onAudio(e); };
+    const onAudio = e => {
+      const pk = decodePacket(new Uint8Array(e.data)); if(!pk || peers.get(id) !== p) return;
       if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1) p.lost += d - 1; }
       // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
       if(p.samples.length){ p.ages.push(clk() - (pk.timeUs / 1000 - p.offset)); if(p.ages.length > 375) p.ages.shift(); }

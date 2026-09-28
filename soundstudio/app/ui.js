@@ -28,8 +28,11 @@ export function showBeat(m){
   $('#countNum').textContent = m.count ? String(m.count) : '';
   const idx = m.chord;
   document.querySelectorAll('#chords li').forEach((el, i) => el.classList.toggle('now', i === idx));
-  $('#nowChord').textContent = (idx !== undefined && S.arr && S.arr.chords[idx]) ? S.arr.chords[idx].name : '';
+  $('#nowChord').textContent = (idx !== undefined && S.arr && S.arr.chords[idx]) ? S.arr.chords[idx].name : bandFace();
 }
+// Recorded tracks have no chord chart: the band tile shows the key and tempo instead.
+const shortKey = k => String(k || '').replace(/\s*major$/i, '').replace(/\s*minor$/i, 'm');
+const bandFace = () => S.arr && S.arr.engine !== 'tone' && (!S.arr.chords || !S.arr.chords.length) ? `${shortKey(S.arr.key)} · ${S.arr.bpm}` : '';
 const styleLabel = st => (STYLES[st] && STYLES[st].label) || String(st || '').replace(/^\w/, c => c.toUpperCase());
 const STEM_OF = { drums:'drums', bass:'bass', keys:'piano', guitar:'guitar' };
 function partDesc(id){
@@ -45,10 +48,16 @@ export function render(){
   $('#claimBox').hidden = hostHere;
   $('#hostControls').hidden = !hostHere;
   $('#transport').hidden = !hostHere || !a;
+  // the bottom bar: the track, play (the band's host only), the game
+  $('#playBtn').disabled = !hostHere || !a;
+  $('#dockTitle').textContent = a ? a.title : S.hostId ? S.hostName + ' is choosing a track' : 'No band yet';
+  $('#dockMeta').textContent = a ? [a.key, a.bpm + ' bpm', S.hostId && !hostHere ? 'run by ' + S.hostName : ''].filter(Boolean).join(' · ') : 'Pick a track in Band';
+  $('#gameBadge').textContent = S.game.mode === 'trade' ? `BARS ${S.game.bars}` : 'Free jam';
   $('#claimBtn').disabled = !!S.hostId && !hostHere;
   $('#claimStatus').textContent = S.hostId && !hostHere ? S.hostName + ' is running the band.' : '';
   $('#bandTileTitle').textContent = S.hostId ? (a ? a.title + (S.playing ? '' : ' (stopped)') : S.hostName + ' is setting up the band') : 'The band is waiting for someone to run it';
   $('#arrTitle').textContent = a ? a.title : 'No band yet';
+  if(!$('#nowChord').textContent || !S.playing) $('#nowChord').textContent = bandFace();
   $('#arrNotes').textContent = a ? a.notes : ''; $('#arrNotes').hidden = !(a && a.notes);
   const facts = $('#facts'); facts.innerHTML = '';
   if(a) [styleLabel(a.style), a.key, a.bpm + ' bpm', a.engine === 'lyria' ? 'Google Lyria band' : a.engine === 'stems' ? (a.pack.source === 'stock' ? 'Stock track' : 'Your track') : (a.swing ? 'Swung' : 'Straight')].forEach(x => { const s = document.createElement('span'); s.textContent = x; facts.appendChild(s); });
@@ -59,10 +68,24 @@ export function render(){
   $('#countIn').closest('label').hidden = !!(a && a.engine && a.engine !== 'tone');
   $('#playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
   $('#playBtn').setAttribute('aria-label', S.playing ? 'Stop' : 'Play');
-  document.querySelectorAll('[data-game]').forEach(b => { b.setAttribute('aria-checked', String(S.game.mode === 'free' ? b.dataset.game === 'free' : b.dataset.game === String(S.game.bars))); if(b.dataset.game !== 'free') b.disabled = !(a && (a.engine === 'stems' || a.engine === 'lyria')); });
-  $('#keepAI').checked = !!S.game.ai; $('#keepAI').closest('label').hidden = S.game.mode !== 'trade';
+  document.querySelectorAll('[data-game]').forEach(b => { b.setAttribute('aria-checked', String(S.game.mode === 'free' ? b.dataset.game === 'free' : b.dataset.game === String(S.game.bars))); b.disabled = !hostHere || (b.dataset.game !== 'free' && !(a && (a.engine === 'stems' || a.engine === 'lyria'))); });
+  $('#keepAI').checked = !!S.game.ai; $('#keepAIRow').hidden = S.game.mode !== 'trade' || !hostHere;
   $('#gameNote').textContent = S.game.mode === 'trade' ? 'BARS: take turns trading bars. Only whoever’s on is heard, and it lands on the beat at any distance. Took a seat? The AI plays your part until it’s your turn.' : 'Everyone plays at once. Best when you’re all fairly close.';
+  // the parts, as chips on the stage: tap one to play it
+  const chips = $('#seats'); chips.innerHTML = '';
+  S.seats.forEach(s => {
+    const d = partDesc(s.id), off = d === null && !s.human && !!a, mine = s.human && s.who === me.name;
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.seat = s.id;
+    b.className = 'seat-chip' + (s.human ? ' human' : '') + (mine ? ' mine' : '') + (off ? ' off' : '');
+    const nm = document.createElement('span'); nm.textContent = s.label.replace('Rhythm guitar', 'Guitar');
+    const who = document.createElement('span'); who.className = 'who'; who.textContent = s.human ? (mine ? 'YOU' : (s.who || 'TAKEN').toUpperCase()) : off ? 'OUT' : 'AI';
+    b.title = s.human ? (mine ? 'Hand back to the AI' : 'Played by ' + (s.who || 'someone')) : !a ? 'Waiting for the band' : off ? 'Not in this track' : 'Play this part (the AI steps out)';
+    b.disabled = !S.hostId || (s.human && !mine && !me.isHost);
+    b.onclick = () => session.toggleSeat(s.id);
+    b.append(nm, who); chips.appendChild(b);
+  });
   const box = $('#strips'); box.innerHTML = '';
+  box.hidden = !me.isHost;   // the band's host balances the parts here
   S.seats.forEach(s => {
     const d = partDesc(s.id), off = d === null && !s.human && !!a;
     const el = document.createElement('div'); el.className = 'strip' + (s.human ? ' human' : '') + (off ? ' off' : '');

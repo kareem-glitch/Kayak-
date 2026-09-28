@@ -11,6 +11,7 @@ import * as lyria from './band/lyria.js';
 import * as stems from './band/stems.js';
 import * as trade from './trade.js';
 import * as avatar from './avatar.js';
+import * as layout from './layout.js';
 import { TONES, defaults as toneDefaults } from './audio/tone.js';
 import * as toneIcons from './tone-icons.js';
 
@@ -68,7 +69,7 @@ async function join(){
     catch(e){ audioProblem = e; console.error('audio setup failed', e); }
     const videoOnly = new MediaStream(media.getVideoTracks());
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
-    $('#joinView').hidden = true; $('#roomView').hidden = false; $('#roomTitle').textContent = 'SoundStudio jam';
+    $('#joinView').hidden = true; $('#roomView').hidden = false; layout.start();
     const t = ui.tileFor({ identity:me.id, name:me.name }); if(media.getVideoTracks().length) ui.showVideoIn(t, videoOnly);
     if(joinId) inviteLink = SITE + '?join=' + joinId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
     else {
@@ -126,6 +127,11 @@ function showConnection(){
   $('#inDb').classList.toggle('hot', hold.db > -6);
   showConnection.n = (showConnection.n || 0) + 1;
   if(showConnection.n % 8 === 1) checkSetup(c);   // every 2 s
+  // the light in the top bar: how the connection to the others is doing
+  const worst = c.players.length ? Math.max(...c.players.map(p => p.totalMs)) : null;
+  const jewel = $('#connJewel');
+  jewel.className = worst === null ? '' : c.lossPct > 3 || worst > 120 ? 'bad' : c.lossPct > 1 || worst > 60 ? 'warn' : 'ok';
+  $('#connDotText').textContent = worst === null ? (room.roomCount() > 1 ? 'Connecting…' : 'On your own') : `${c.lossPct > 3 ? 'Choppy' : worst > 60 ? 'OK' : 'Good'} · ${worst} ms`;
   if(!c.live) return;
   $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
   // per player: estimated time from their instrument to your ears
@@ -340,10 +346,14 @@ async function toggleRecording(){
       + (r.beats >= 4 && (q.you != null || q.them != null) ? row('You', q.you) + row('Others, as you heard them', q.them) : '')
       + (notes.length ? `<p class="muted small">${notes.join(' ')}</p>` : '');
     $('#recStatus').textContent = clock(r.seconds) + ' recorded';
+    $('#recEmpty').hidden = true; layout.show('record');   // the take, ready to play and download
   }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
-  btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Record';
+  btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Rec';
 }
 $('#recBtn').onclick = toggleRecording;
+// testing at home: make the other devices sound as if they were across the world
+$('#farApart').checked = store.get('ss.far') === '1'; room.setFakeDelay($('#farApart').checked ? 150 : 0);
+$('#farApart').onchange = () => { store.set('ss.far', $('#farApart').checked ? '1' : '0'); room.setFakeDelay($('#farApart').checked ? 150 : 0); };
 
 ['Slow funk in E minor, 96 bpm','12-bar blues shuffle in A','Lo-fi hip hop for a rainy night','Reggae one drop in G','Up-tempo jazz ii-V-I in Bb','Driving indie rock in D'].forEach(t => {
   const b = document.createElement('button'); b.className = 'chip'; b.textContent = t; b.onclick = () => { $('#prompt').value = t; generate(); }; $('#examples').appendChild(b);

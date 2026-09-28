@@ -31,12 +31,18 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     assert.match(a.tips, /Bluetooth|48 kHz|direct monitoring/, 'setup check shown');
     // Speaker mode: echo cancellation switches on and audio keeps flowing
     assert.equal(await B.evaluate(() => window.jamEchoCancelling()), false, 'headphone mode: no echo cancellation');
-    await B.check('#speaker'); await sleep(2000);
+    await B.click('[data-drawer-tab="audio"]'); await B.check('#speaker'); await sleep(2000);
     assert.equal(await B.evaluate(() => window.jamEchoCancelling()), true, 'speaker mode: echo cancellation on');
     const before = await A.evaluate(() => [...window.jamPeers.values()][0].recv); await sleep(1500);
     const after = await A.evaluate(() => [...window.jamPeers.values()][0].recv);
     assert.ok(after - before > 300, `audio still flows after switching (${after - before} packets in 1.5 s)`);
     assert.ok(a.buffers[0] <= 21.4, `laptop buffer stays within the tight 21 ms limit (${a.buffers})`);
+    // "Pretend we're far apart": the other player's audio now arrives about 150 ms later
+    const arrival = () => A.evaluate(() => { const ages = [...[...window.jamPeers.values()][0].ages].sort((x, y) => x - y); return ages[ages.length >> 1]; });
+    const near = await arrival();
+    await A.click('[data-drawer-tab="stats"]'); await A.check('#farApart'); await sleep(2500);
+    const far = await arrival();
+    assert.ok(far - near > 120 && far - near < 200, `far apart adds about 150 ms (${near.toFixed(0)} -> ${far.toFixed(0)} ms)`);
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });
