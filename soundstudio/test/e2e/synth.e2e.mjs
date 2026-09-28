@@ -46,6 +46,12 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
     assert.ok(quiet < 0.02, `nothing sent before you play: the mic is muted (${quiet})`);
     assert.ok(loud > 0.1, `the host hears the synth (${loud})`);
     assert.ok(after < 0.02, `and silence after you let go (${after})`);
+    // the delay test: with no speaker -> mic path (a test machine) it says so; the timing itself is sample-exact
+    await B.click('#synthTest');
+    await B.waitForFunction(() => !document.getElementById('synthTest').disabled, null, { timeout: 15000 });
+    assert.match(await B.textContent('#synthNote'), /Couldn’t hear the clicks|round trip/, 'the test reports back');
+    const rt = await B.evaluate(() => window.jamRoundTrip(3, 50));
+    assert.ok(rt >= 49 && rt <= 52, `a 50 ms speaker-to-mic path measures as 50 ms (${rt})`);
     await B.click('#synthBtn');
     assert.equal(await B.isHidden('#synthPanel'), true, 'the keyboard goes away');
     assert.equal(await B.isDisabled('#micBtn'), false, 'the mic comes back');

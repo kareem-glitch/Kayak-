@@ -242,7 +242,7 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 
 /* phones and narrow windows: stage on top, drawers as sheets, the bar pinned */
 .synth{flex:1 1 100%;display:grid;gap:10px;padding:12px;margin:-2px 0 2px;border-radius:18px;background:var(--head);color:var(--head-ink);box-shadow:0 10px 30px -12px rgba(0,0,0,.45)}
-.synth-head{display:flex;align-items:center;gap:12px;min-width:0}
+.synth-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;min-width:0}
 .synth-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 9px;border-radius:999px;background:rgba(255,255,255,.08);font:600 .78rem/1 "Geist",sans-serif;white-space:nowrap}
 .synth-chip i{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber)}
 .synth-seg,.synth-octs{display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08)}
@@ -251,6 +251,11 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 .synth-octs button{width:30px;height:26px;border:0;border-radius:999px;background:transparent;color:var(--head-ink);font:600 1rem/1 "Geist",sans-serif;cursor:pointer}
 .synth-octs button:active{background:rgba(255,255,255,.14)}
 .synth-oct{font:600 .72rem/1 "Geist Mono",monospace;color:var(--head-muted);min-width:24px;text-align:center}
+.synth-test{display:inline-flex;align-items:center;gap:7px;border:0;padding:5px 5px 5px 11px;border-radius:999px;background:rgba(255,255,255,.08);cursor:pointer;color:inherit}
+.synth-test-go{padding:4px 9px;border-radius:999px;background:var(--head-ink);color:var(--head);font:600 .7rem/1 "Geist",sans-serif}
+.synth-test:disabled{opacity:.7;cursor:progress}
+.synth-note{font-size:.8rem;color:var(--head-muted);line-height:1.4}
+.synth-note b{color:var(--head-ink)}
 .synth-lat{font:600 .72rem/1 "Geist Mono",monospace;color:var(--head-muted);white-space:nowrap}
 .synth-lat.slow{color:var(--amber)}
 .synth-warn{font-size:.78rem;color:var(--amber)}
@@ -287,5 +292,8 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
   .dock-vol,.dock-meter,#recStatus{display:none}
   .track{max-width:40vw}
   .synth{padding:10px;border-radius:16px}
+  .synth-test{order:5;margin-left:auto}
+  .synth-head .spacer{display:none}
+  .synth-octs{margin-left:auto}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}

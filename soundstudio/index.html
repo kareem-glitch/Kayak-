@@ -190,11 +190,12 @@ window.__audioContexts = [];
         <span class="synth-chip"><i></i><span class="synth-key"></span></span>
         <div class="synth-seg" role="radiogroup" aria-label="Which notes"><button type="button" role="radio" data-scale="key">In key</button><button type="button" role="radio" data-scale="all">All</button></div>
         <span class="spacer"></span>
-        <span class="synth-lat" title="From your finger to your ears"></span>
+        <button type="button" class="synth-test" id="synthTest" title="Test your delay: your phone clicks through its speaker and times it with its mic"><span class="synth-lat"></span><span class="synth-test-go">Test</span></button>
         <div class="synth-octs"><button type="button" data-oct="-1" aria-label="Octave down">–</button><span class="synth-oct">C4</span><button type="button" data-oct="1" aria-label="Octave up">+</button></div>
       </div>
       <div class="synth-pads" role="group" aria-label="Synth keys"></div>
       <p class="synth-warn" hidden>That delay is usually Bluetooth headphones. Wired ones make it feel instant.</p>
+      <p class="synth-note" id="synthNote" hidden></p>
     </div>
     <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
     <div class="track"><b id="dockTitle">No band yet</b><span id="dockMeta">Waiting for the band</span></div>

@@ -112,3 +112,4 @@ export const recordedSeconds = () => recording ? (performance.now() - recStarted
 // The pocket synth is for phones and browsers; the app plays your real instrument.
 export const canSynth = () => false;
 export const synthPorts = () => null;
+export const measureRoundTrip = async () => null;

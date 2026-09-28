@@ -115,6 +115,35 @@ export const currentInputId = () => micStream && micStream.getAudioTracks()[0] &
 // The pocket synth (synth.js) plays straight into what you send, and into your headphones.
 export const canSynth = () => true;
 export const synthPorts = () => node && { ctx, toRoom: node, toEars: ctx.destination };
+// Speaker -> mic round trip, measured: a few clicks out of the speaker, timed
+// when the mic hears them (sample-exact, on the audio clock). Returns ms, or
+// null if the mic didn't hear them (volume down, headphones, echo cancelling).
+export async function measureRoundTrip(clicks = 7, testDelayMs = null){   // testDelayMs: tests only, a fake speaker->mic path of that delay
+  const src = micNodes[0]; if(!ctx || !src) return null;
+  await ctx.audioWorklet.addModule(new URL('./probe-worklet.js', import.meta.url));
+  const probe = new AudioWorkletNode(ctx, 'latency-probe'), sink = ctx.createGain(); sink.gain.value = 0;
+  if(testDelayMs == null) src.connect(probe); probe.connect(sink); sink.connect(ctx.destination);
+  const buf = ctx.createBuffer(1, 96, RATE), d = buf.getChannelData(0);
+  for(let i = 0; i < d.length; i++) d[i] = (Math.floor(i / 12) % 2 ? -0.9 : 0.9) * (1 - i / d.length);   // a sharp 2 kHz tick
+  const got = [];
+  try{
+    for(let n = 0; n < clicks; n++){
+      const at = ctx.currentTime + 0.15, from = Math.round(at * RATE);
+      const heard = new Promise(res => probe.port.onmessage = e => res(e.data.frame));
+      probe.port.postMessage({ from });
+      const s = ctx.createBufferSource(); s.buffer = buf; s.connect(ctx.destination); s.start(at);
+      if(testDelayMs != null){ const dl = ctx.createDelay(1); dl.delayTime.value = testDelayMs / 1000; s.connect(dl); dl.connect(probe); }
+      const f = await heard; if(f != null) got.push((f - from) / RATE * 1000);
+      await new Promise(r => setTimeout(r, 150 + Math.random() * 350));   // random gaps: a regular noise can't line up with the clicks
+    }
+  } finally { try{ src.disconnect(probe); }catch(e){} probe.disconnect(); sink.disconnect(); }
+  // Trust it only if most clicks agree (within 3 ms): a stray noise lands somewhere random.
+  got.sort((a, b) => a - b);
+  let best = [];
+  for(let i = 0; i < got.length; i++){ const c = got.filter(v => v >= got[i] && v <= got[i] + 3); if(c.length > best.length) best = c; }
+  if(best.length < Math.floor(clicks / 2) + 1) return null;
+  return Math.round(best[best.length >> 1]);
+}
 export function setMicEnabled(on){ if(micGain) micGain.gain.value = on ? 1 : 0; }
 export const micEnabled = () => !micGain || micGain.gain.value !== 0;
 

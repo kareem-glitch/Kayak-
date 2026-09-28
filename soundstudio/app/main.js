@@ -338,6 +338,17 @@ function setSynth(on){
   store.set('ss.synth', on ? '1' : '0');
 }
 $('#synthBtn').onclick = () => setSynth(!synth.isOn());
+// Test your delay: clicks out of the speaker, timed by the mic.
+$('#synthTest').onclick = async () => {
+  const b = $('#synthTest'), note = $('#synthNote'), go = b.querySelector('.synth-test-go');
+  b.disabled = true; go.textContent = 'Listening…'; note.hidden = false; note.textContent = 'Stay quiet for a second: your phone is clicking through its speaker and listening with its mic.';
+  const mic = audio.micEnabled(); let rt = null;
+  try{ rt = await audio.measureRoundTrip(); }catch(e){ console.warn(e); }
+  audio.setMicEnabled(mic); b.disabled = false; go.textContent = 'Test';
+  synth.setMeasured(rt);
+  note.innerHTML = rt == null ? 'Couldn’t hear the clicks. Turn the volume up (and take headphones off), then test again.'
+    : `Speaker → mic: <b>${rt} ms</b> round trip, so your speaker is about <b>${Math.round(rt / 2)} ms</b> behind. Touchscreens add about 20–40 ms more. ${rt > 90 ? 'That’s a slow audio path: playing slightly ahead of the beat helps, or use the laptop.' : 'That’s about as quick as phones get.'}`;
+};
 const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + (v > 0 ? '+' : '') + v + ' dB)'; band.options.bandVolumeDb = v; band.applyBandVolume(); };
 if(store.get('ss.bandVol') !== null) $('#bandVol').value = store.get('ss.bandVol');
 $('#bandVol').oninput = () => { bandVol(+$('#bandVol').value); store.set('ss.bandVol', $('#bandVol').value); };
@@ -399,5 +410,8 @@ window.jamStems = stems;
 window.jamTrade = trade;
 window.jamTone = id => pickTone(id);
 window.jamSynth = synth;
+window.jamAudioCtx = audio.context;
+window.jamRoundTrip = (n, fake) => audio.measureRoundTrip(n, fake);
+window.jamSynthOut = () => synth.outNode();
 window.jamLevel = id => room.levelNow(id);
 window.jamRecord = toggleRecording;

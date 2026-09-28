@@ -54,7 +54,9 @@ function silence(){ const { ctx, amp, depth } = voice, t = ctx.currentTime; amp.
 
 // How long from your finger to your ears: the touch reaching the page, plus the
 // audio output (the part Bluetooth headphones make huge). Shown on the panel.
-let touchMs = [], lastShown = -1;
+let touchMs = [], lastShown = -1, measuredOut = null;
+// After a speaker test: the measured round trip (speaker -> mic), about twice the output delay.
+export function setMeasured(roundTripMs){ measuredOut = roundTripMs == null ? null : roundTripMs / 2; lastShown = -1; showDelay(); }
 function noteDelay(e){
   if(e && e.timeStamp) touchMs.push(Math.max(0, performance.now() - e.timeStamp));
   if(touchMs.length > 20) touchMs.shift();
@@ -62,7 +64,7 @@ function noteDelay(e){
 }
 export function delayMs(){
   if(!voice) return 0;
-  const c = voice.ctx, out = ((c.outputLatency || 0) + (c.baseLatency || 0)) * 1000, touch = touchMs.length ? touchMs.reduce((x, y) => x + y) / touchMs.length : 0;
+  const c = voice.ctx, out = Math.max(((c.outputLatency || 0) + (c.baseLatency || 0)) * 1000, measuredOut || 0), touch = touchMs.length ? touchMs.reduce((x, y) => x + y) / touchMs.length : 0;
   return Math.round(out + touch + 128 / c.sampleRate * 1000);
 }
 function showDelay(){
@@ -142,3 +144,4 @@ export function stop(){
 export const isOn = () => !!voice;
 // For tests: play a key by note number.
 export const press = midi => voice && down('t', midi), release = () => voice && up('t');
+export const outNode = () => voice && voice.out;
