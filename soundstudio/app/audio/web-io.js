@@ -3,6 +3,7 @@
 // what the other players send. Packets are handled by net/room.js; this module
 // only deals in 128-frame blocks of Float32 samples.
 export const NATIVE = false;
+import { createToneChain } from './tone.js';
 export const RATE = 48000, FRAMES = 128, BLOCK_MS = FRAMES / RATE * 1000;
 // Headphones (default): no processing at all, your instrument exactly as it is.
 // Echo cancellation on (loudspeaker, no headphones): the browser's echo cancellation
@@ -70,6 +71,21 @@ export function forget(id){ node && node.port.postMessage({ gone:id }); }
 // Feel: 'tight' | 'balanced' | 'smooth' (see FEELS in worklet.js).
 export function setFeel(name){ node && node.port.postMessage({ feel:name }); }
 export function setBufferLimit(blocks){ node && node.port.postMessage({ limit:blocks * FRAMES }); }
+
+// Built-in tone (tone.js): your input through an amp, cab and EQ before the room
+// hears it, and you hear it too (turn off your interface's direct monitoring).
+// 'off' sends your input exactly as it arrives.
+let chain = null, monitor = null;
+export const canTone = () => true;
+export async function setTone(id){
+  if(!ctx) throw new Error('audio not started');
+  if(id !== 'off' && !chain){ chain = await createToneChain(ctx); monitor = ctx.createGain(); monitor.connect(ctx.destination); }
+  if(chain) await chain.set(id);
+  micGain.disconnect(); if(chain){ try{ chain.output.disconnect(); }catch(e){} }
+  if(id === 'off'){ micGain.connect(node, 0, 0); return; }
+  micGain.connect(chain.input); chain.output.connect(node, 0, 0); chain.output.connect(monitor);
+}
+export const setToneEq = eq => { if(chain) chain.setEq(eq); };
 
 // Input: which channel(s) of the device to send: '1', '2', 'mix' (1+2 as mono)
 // or 'stereo' (1 and 2 as left and right). Returns the device's channel count

@@ -129,6 +129,17 @@ window.__audioContexts = [];
         <div class="inmeter-row"><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div><span class="small" id="inDb">– dB</span></div>
         <label class="muted small" for="inCh">Input channel</label>
         <select id="inCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2 (mono)</option><option value="stereo">Inputs 1 + 2 as stereo</option></select>
+        <div id="toneSection">
+          <span class="muted small">Tone</span>
+          <div class="modes tones" role="radiogroup" aria-label="Tone" id="toneBox"></div>
+          <div class="eq" id="eqBox" hidden>
+            <label>Bass <input type="range" min="-12" max="12" step="1" value="0" data-eq="bass"></label>
+            <label>Mid <input type="range" min="-12" max="12" step="1" value="0" data-eq="mid"></label>
+            <label>Treble <input type="range" min="-12" max="12" step="1" value="0" data-eq="treble"></label>
+            <label>Level <input type="range" min="-12" max="12" step="1" value="0" data-eq="level"></label>
+          </div>
+          <p class="muted small" id="toneNote"></p>
+        </div>
         <label class="muted small" for="outDev">Output (headphones or interface)</label>
         <select id="outDev" class="devsel"></select>
         <p class="muted small" id="outNote" hidden>This browser uses your computer’s sound output. To choose here, use Chrome or Edge.</p>

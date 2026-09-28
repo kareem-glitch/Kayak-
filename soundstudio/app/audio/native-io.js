@@ -47,6 +47,10 @@ function onMessage(e){
 }
 
 export const context = () => null;
+// Built-in tones run in the browser for now (see tone.js).
+export const canTone = () => false;
+export const setTone = async () => { throw new Error('Built-in tones are browser-only for now'); };
+export const setToneEq = () => {};
 export async function start(stream, blockHandler){
   onBlock = blockHandler;
   const { port, token } = window.__SS_NATIVE;

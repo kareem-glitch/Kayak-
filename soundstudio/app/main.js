@@ -11,6 +11,7 @@ import * as lyria from './band/lyria.js';
 import * as stems from './band/stems.js';
 import * as trade from './trade.js';
 import * as avatar from './avatar.js';
+import { TONES } from './audio/tone.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -76,6 +77,7 @@ async function join(){
       showRoomStatus(); $('#bigInvite').hidden = false;
     }
     if(!audioProblem){
+      if(audio.canTone() && store.get('ss.tone') && store.get('ss.tone') !== 'off') pickTone(store.get('ss.tone'));
       await fillDevices().catch(() => {});
       const o = store.get('ss.outDev'); if(o) await audio.useOutput(o);
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
@@ -143,6 +145,26 @@ async function fillDevices(){
   $('#outDev').hidden = !canOut; $('#outNote').hidden = canOut;
   if(canOut) ui.fillSelect($('#outDev'), outputs, store.get('ss.outDev') || '');
 }
+// ---- built-in tone: amp + cab + EQ (browser), or your input as it is ----
+let toneEq = { bass: 0, mid: 0, treble: 0, level: 0 };
+try{ Object.assign(toneEq, JSON.parse(store.get('ss.eq') || '{}')); }catch(e){}
+const toneNotes = { off: 'Your input as it arrives, like a DI. Use this for vocals, keys, or a tone from your own amp or pedals.' };
+function showTone(id){
+  document.querySelectorAll('[data-tone]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.tone === id)));
+  $('#eqBox').hidden = id === 'off';
+  $('#toneNote').textContent = toneNotes[id] || 'You hear your tone through air.band. Turn off direct monitoring on your interface so you don’t hear the dry signal too.';
+}
+async function pickTone(id){
+  showTone(id); store.set('ss.tone', id);
+  if(!media) return;   // applied when you join
+  try{ $('#toneNote').textContent = id === 'off' ? $('#toneNote').textContent : 'Loading the amp…'; await audio.setTone(id); audio.setToneEq(toneEq); showTone(id); }
+  catch(e){ $('#toneNote').textContent = 'Couldn’t load that tone: ' + (e.message || e); }
+}
+if(audio.canTone()){
+  TONES.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.tone = t.id; b.textContent = t.label; b.onclick = () => pickTone(t.id); $('#toneBox').appendChild(b); });
+  document.querySelectorAll('[data-eq]').forEach(r => { r.value = toneEq[r.dataset.eq]; r.oninput = () => { toneEq[r.dataset.eq] = +r.value; audio.setToneEq(toneEq); store.set('ss.eq', JSON.stringify(toneEq)); }; });
+  showTone(TONES.some(t => t.id === store.get('ss.tone')) ? store.get('ss.tone') : 'off');
+} else $('#toneSection').hidden = true;   // the desktop app: coming soon
 const showChannels = chans => { $('#inCh').disabled = chans < 2; };
 $('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').checked).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.status('Couldn’t switch input: ' + (e.name || e)));
 $('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
@@ -303,4 +325,5 @@ window.jamEchoCancelling = audio.echoCancelling;
 window.jamLyria = lyria;
 window.jamStems = stems;
 window.jamTrade = trade;
+window.jamTone = id => pickTone(id);
 window.jamRecord = toggleRecording;

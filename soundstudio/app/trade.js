@@ -49,7 +49,7 @@ function delayFor(id){
   const p = room.peers.get(id); if(!p) return 150;
   const ages = [...(p.ages || [])].sort((a, b) => a - b);
   const age = ages.length > 20 ? ages[Math.floor(ages.length * 0.98)] : (p.rtt || 150) / 2 + 20;
-  return Math.min(2000, Math.max(20, (p.inMs || 0) + age + 15));
+  return Math.min(2000, Math.max(20, (p.inMs || 0) + age + 30));   // generous: in BARS a few ms more costs nothing, a late block clicks
 }
 // When their band's position 0 sounds, on my clock (they tell everyone; see 'bs').
 const startOf = (id, prev) => { const p = room.peers.get(id), raw = p && (prev ? p.bsPrev : p.bs); return raw == null ? (prev ? null : band.started.base) : raw - p.offset; };
