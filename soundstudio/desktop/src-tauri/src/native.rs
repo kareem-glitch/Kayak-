@@ -9,13 +9,13 @@
 //
 // Page -> app, text (JSON, with a request number `q` for replies):
 //   {t:'start', input, output, channel} {t:'input', id} {t:'output', id} {t:'channel', ch}
-//   {t:'devices'} {t:'mic', on} {t:'limit', samples} {t:'feel', name} {t:'gone', id} {t:'rec', on}
+//   {t:'devices'} {t:'mic', on} {t:'limit', samples} {t:'feel', name} {t:'gone', id} {t:'rec', on} {t:'installPlugin'}
 // Page -> app, binary: another player's block
 //   [0]=3 [1]=id length [2]=planes, id bytes, then f32 little-endian samples per plane
 // App -> page, binary (header padded so the samples start 8-byte aligned):
 //   your block:   [0]=1 [1]=planes, [8..16] f64 captured-at (epoch ms), samples from 16
 //   a recording:  [0]=2, [4..8] u32 n, [8..16] f64 heard-at of sample 0 (epoch ms), then mic n f32, out n f32
-// App -> page, text: {t:'stats', ...} every 0.5 s, and replies {q, ok, ...}
+// App -> page, text: {t:'stats', ..., plugin} every 0.5 s (plugin: your DAW is the input), and replies {q, ok, ...}
 use crate::audio::{self, Cmd, Out, Shared};
 use serde_json::{json, Value};
 use ssengine::blocks::InputChannel;
@@ -37,6 +37,7 @@ pub fn serve() -> std::io::Result<(u16, String)> {
     let port = listener.local_addr()?.port();
     let (out_tx, out_rx) = crossbeam_channel::unbounded::<Out>();
     let shared = Shared::new(out_tx);
+    crate::plugin::listen(shared.clone());   // the air.band plugin in your DAW (plugin.rs)
     let writer: Writer = Arc::new(Mutex::new(None));
     { let (w, sh) = (writer.clone(), shared.clone()); std::thread::spawn(move || hub(out_rx, w, sh)); }
     let tok = token.clone();
@@ -152,15 +153,16 @@ impl Session {
     fn handle(&mut self, v: &Value) -> Option<Value> {
         let s = |k: &str| v.get(k).and_then(|x| x.as_str()).unwrap_or("").to_string();
         let res = match v.get("t").and_then(|t| t.as_str()).unwrap_or("") {
-            "start" => { self.channel = InputChannel::parse(&s("channel")); self.open_output(&s("output")).and_then(|_| self.open_input(&s("input"))).map(|_| self.state()) }
+            "start" => { self.channel = InputChannel::parse(&s("channel")); self.sh.set_channel(self.channel); self.open_output(&s("output")).and_then(|_| self.open_input(&s("input"))).map(|_| self.state()) }
             "input" => self.open_input(&s("id")).map(|_| self.state()),
             "output" => self.open_output(&s("id")).map(|_| self.state()),
-            "channel" => { self.channel = InputChannel::parse(&s("ch")); let id = self.in_name.clone(); self.open_input(&id).map(|_| self.state()) }
+            "channel" => { self.channel = InputChannel::parse(&s("ch")); self.sh.set_channel(self.channel); let id = self.in_name.clone(); self.open_input(&id).map(|_| self.state()) }
             "devices" => {
                 let (ins, outs) = audio::devices();
                 let list = |d: Vec<(String, u16)>| d.into_iter().map(|(n, c)| json!({ "id": n, "label": n, "channels": c })).collect::<Vec<_>>();
                 Ok(json!({ "ok": true, "inputs": list(ins), "outputs": list(outs) }))
             }
+            "installPlugin" => crate::plugin::install().map(|paths| json!({ "ok": true, "paths": paths })),
             "mic" => { self.sh.set_mic(v.get("on").and_then(|x| x.as_bool()).unwrap_or(true)); return None; }
             "limit" => { let n = v.get("samples").and_then(|x| x.as_f64()).unwrap_or(1024.0); *self.sh.limit.lock().unwrap() = n; let _ = self.sh.cmd_tx.send(Cmd::Limit(n)); return None; }
             "feel" => { let f = feel_named(&s("name")); *self.sh.feel.lock().unwrap() = f; let _ = self.sh.cmd_tx.send(Cmd::Feel(f)); return None; }
@@ -216,7 +218,7 @@ fn hub(rx: crossbeam_channel::Receiver<Out>, writer: Writer, sh: Arc<Shared>) {
             last_stats = Instant::now();
             let st = sh.stats.lock().unwrap().clone();
             let players: serde_json::Map<String, Value> = st.players.iter().map(|p| (p.id.clone(), json!({ "bufferMs": (p.buffer_ms * 10.0).round() / 10.0, "rate": p.rate, "under": p.under }))).collect();
-            send(Message::Text(json!({ "t": "stats", "under": st.under, "players": players, "peak": sh.take_peak(), "inLat": sh.in_lat(), "outLat": sh.out_lat() }).to_string().into()));
+            send(Message::Text(json!({ "t": "stats", "under": st.under, "players": players, "peak": sh.take_peak(), "inLat": sh.in_lat(), "outLat": sh.out_lat(), "plugin": sh.plugin_live.load(std::sync::atomic::Ordering::Relaxed) }).to_string().into()));
         }
     }
 }

@@ -94,7 +94,26 @@ async function join(){
   }
 }
 
+// ---- the DAW plugin (desktop app): install it, and see when it's your input ----
+if(audio.canPlugin()){
+  $('#pluginRow').hidden = false;
+  $('#pluginInstall').onclick = async () => {
+    const b = $('#pluginInstall'); b.disabled = true; b.textContent = 'Installing…';
+    try{ const r = await audio.installPlugin(); b.textContent = 'Installed'; $('#pluginStatus').textContent = 'Installed. Restart your DAW (or rescan plugins), then add “air.band Send” to your guitar track. It goes into: ' + r.paths.join(' · '); }
+    catch(e){ b.disabled = false; b.textContent = 'Install the plugin'; $('#pluginStatus').textContent = 'Couldn’t install: ' + (e.message || e); }
+  };
+}
+let pluginWas = false;
+function showPlugin(){
+  const live = audio.pluginLive(); if(live === pluginWas) return; pluginWas = live;
+  $('#pluginRow').classList.toggle('live', live);
+  $('#inDev').disabled = live;
+  if(live) $('#pluginStatus').textContent = 'Live: your DAW track is your input. Stop playback or remove the plugin to go back to your audio device.';
+  else if($('#pluginInstall').textContent !== 'Installed') $('#pluginStatus').textContent = 'Put the air.band Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.';
+}
+
 function showConnection(){
+  if(audio.canPlugin()) showPlugin();
   const c = room.connectionStats();
   $('#connDebug').textContent = `me ${me.id.slice(0,6)} · ${room.isOwner() ? 'room creator' : 'joined'} · ${c.debug}`;
   // input level: shows whether your mic or instrument is reaching the app

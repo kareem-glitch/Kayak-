@@ -124,6 +124,10 @@ window.__audioContexts = [];
 
       <section class="conn">
         <h2>Audio devices</h2>
+        <div class="plugin-row" id="pluginRow" hidden>
+          <div class="plugin-text"><b>Play through your DAW</b><span class="muted small" id="pluginStatus">Put the air.band Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.</span></div>
+          <button class="btn btn-quiet" id="pluginInstall" type="button">Install the plugin</button>
+        </div>
         <label class="muted small" for="inDev">Input (mic or audio interface)</label>
         <select id="inDev" class="devsel"></select>
         <div class="inmeter-row"><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div><span class="small" id="inDb">– dB</span></div>

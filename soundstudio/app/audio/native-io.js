@@ -26,7 +26,7 @@ const tell = msg => { if(ws && ws.readyState === 1) ws.send(JSON.stringify(msg))
 function onMessage(e){
   if(typeof e.data === 'string'){
     const m = JSON.parse(e.data);
-    if(m.t === 'stats'){ stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; inLat = m.inLat; outLat = m.outLat; }
+    if(m.t === 'stats'){ stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; stats.plugin = !!m.plugin; inLat = m.inLat; outLat = m.outLat; }
     else if(m.q && replies.has(m.q)){ replies.get(m.q).res(m); replies.delete(m.q); }
     return;
   }
@@ -47,6 +47,12 @@ function onMessage(e){
 }
 
 export const context = () => null;
+// The air.band plugin (in your DAW) streams to the app; while it does, it's your input.
+// Apps before 0.4.0 don't have it.
+const newer = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return true; };
+export const canPlugin = () => newer((window.__SS_NATIVE || {}).version || '0', '0.4.0');
+export const pluginLive = () => !!stats.plugin;
+export const installPlugin = () => Promise.race([request({ t: 'installPlugin' }), new Promise((_, rej) => setTimeout(() => rej(new Error('The app didn’t answer. Update to the latest app.')), 10000))]);
 // Built-in tones run in the browser for now (see tone.js).
 export const canTone = () => false;
 export const setTone = async () => { throw new Error('Built-in tones are browser-only for now'); };

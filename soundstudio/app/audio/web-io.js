@@ -77,6 +77,10 @@ export function setBufferLimit(blocks){ node && node.port.postMessage({ limit:bl
 // 'off' sends your input exactly as it arrives.
 let chain = null, monitor = null;
 export const canTone = () => true;
+// The DAW plugin needs the desktop app.
+export const canPlugin = () => false;
+export const pluginLive = () => false;
+export const installPlugin = async () => { throw new Error('The plugin works with the desktop app.'); };
 export async function setTone(id){
   if(!ctx) throw new Error('audio not started');
   if(id !== 'off' && !chain){ chain = await createToneChain(ctx); monitor = ctx.createGain(); monitor.connect(ctx.destination); }

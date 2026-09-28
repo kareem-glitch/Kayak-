@@ -33,6 +33,10 @@ pub struct Shared {
     pub out_tx: Sender<Out>,
     mic_gain: AtomicU32, peak: AtomicU32, in_lat: AtomicU32, out_lat: AtomicU32,
     pub rec: AtomicBool,
+    /// The air.band plugin is streaming your DAW's audio: it's your input (see plugin.rs).
+    pub plugin_live: AtomicBool,
+    /// Your input channel choice (InputChannel as a number), for the plugin input too.
+    pub channel: AtomicU32,
     pub stats: Mutex<Stats>,
     pub limit: Mutex<f64>, pub feel: Mutex<Feel>,
 }
@@ -44,12 +48,18 @@ impl Shared {
     pub fn new(out_tx: Sender<Out>) -> Arc<Self> {
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded();
         Arc::new(Shared { cmd_tx, cmd_rx, out_tx, mic_gain: AtomicU32::new(1f32.to_bits()), peak: AtomicU32::new(0),
-            in_lat: AtomicU32::new(0), out_lat: AtomicU32::new(0), rec: AtomicBool::new(false),
+            in_lat: AtomicU32::new(0), out_lat: AtomicU32::new(0), rec: AtomicBool::new(false), plugin_live: AtomicBool::new(false), channel: AtomicU32::new(0),
             stats: Mutex::new(Stats::default()), limit: Mutex::new(8.0 * 128.0), feel: Mutex::new(TIGHT) })
     }
     pub fn set_mic(&self, on: bool) { set(&self.mic_gain, if on { 1.0 } else { 0.0 }) }
     pub fn in_lat(&self) -> f32 { f(&self.in_lat) }
     pub fn out_lat(&self) -> f32 { f(&self.out_lat) }
+    pub fn mic_gain(&self) -> f32 { f(&self.mic_gain) }
+    pub fn set_in_lat(&self, ms: f32) { set(&self.in_lat, ms) }
+    /// Note an input level for the meter (keeps the loudest until read).
+    pub fn note_peak(&self, v: f32) { if v > f(&self.peak) { set(&self.peak, v) } }
+    pub fn set_channel(&self, c: InputChannel) { self.channel.store(c as u32, Relaxed) }
+    pub fn channel(&self) -> InputChannel { match self.channel.load(Relaxed) { 1 => InputChannel::Two, 2 => InputChannel::Mix, 3 => InputChannel::Stereo, _ => InputChannel::One } }
     /// Loudest input sample since the last call.
     pub fn take_peak(&self) -> f32 { f32::from_bits(self.peak.swap(0, Relaxed)) }
 }
@@ -115,6 +125,7 @@ fn input<T: SizedSample>(d: &Device, cfg: &StreamConfig, channel: InputChannel, 
     let mut blocker = Blocker::new(channel);
     let mut buf: Vec<f32> = Vec::with_capacity(8192);
     d.build_input_stream(cfg, move |data: &[T], info: &cpal::InputCallbackInfo| {
+        if sh.plugin_live.load(Relaxed) { return; }   // your DAW (through the plugin) is the input right now
         buf.clear(); buf.extend(data.iter().map(|s| <f32 as FromSample<T>>::from_sample_(*s)));
         let ts = info.timestamp();
         let lat = ts.callback.duration_since(&ts.capture).map(|d| d.as_secs_f64() * 1000.0).unwrap_or(0.0);

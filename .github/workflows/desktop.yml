@@ -1,11 +1,12 @@
-# Builds the SoundStudio desktop app (Mac and Windows) and runs the audio
-# engine's tests. The app loads the live website, so only changes to the
+# Builds the SoundStudio desktop app (Mac and Windows) with the air.band DAW
+# plugin inside it (soundstudio/plugin), and runs the engine's and plugin's tests. The app loads the live website, so only changes to the
 # native side (desktop/) need a new build. Downloads appear on each run's page under "Artifacts".
 name: Desktop app
 on:
   push:
     paths:
       - 'soundstudio/desktop/**'
+      - 'soundstudio/plugin/**'
       - '.github/workflows/desktop.yml'
   workflow_dispatch:
 
@@ -18,8 +19,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test
 
+  plugin-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libasound2-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxcomposite-dev libxext-dev libxrender-dev libfreetype-dev libfontconfig1-dev libgl1-mesa-dev
+      - run: cmake -S soundstudio/plugin -B build -DAIRBAND_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --target AirBandSendTests AirBandSend_VST3 -j4
+      - run: ./build/AirBandSendTests_artefacts/Release/AirBandSendTests
+
   build:
-    needs: engine-tests
+    needs: [engine-tests, plugin-tests]
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +46,27 @@ jobs:
         with: { targets: '${{ matrix.targets }}' }
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: 'soundstudio/desktop/src-tauri -> target' }
+      # the plugin first: it ships inside the app (src-tauri/plugin), which installs it on request
+      - name: Build the plugin (Mac: AU + VST3, Apple Silicon + Intel)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -S ../plugin -B ../plugin/build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          cmake --build ../plugin/build --target AirBandSend_VST3 AirBandSend_AU -j4
+          A=../plugin/build/AirBandSend_artefacts/Release
+          codesign --force --deep -s - "$A/VST3/air.band Send.vst3" "$A/AU/air.band Send.component"
+          cp -R "$A/VST3/air.band Send.vst3" "$A/AU/air.band Send.component" src-tauri/plugin/
+      - name: Build the plugin (Windows: VST3)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          cmake -S ../plugin -B ../plugin/build
+          cmake --build ../plugin/build --config Release --target AirBandSend_VST3
+          cp -R "../plugin/build/AirBandSend_artefacts/Release/VST3/air.band Send.vst3" src-tauri/plugin/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-plugin
+          path: soundstudio/desktop/src-tauri/plugin/
+          if-no-files-found: error
       - run: npm ci
       - run: npm run web
       - run: npx tauri build ${{ matrix.args }}
