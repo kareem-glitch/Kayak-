@@ -19,17 +19,22 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
 
     await B.click('#synthBtn');
     await B.waitForSelector('#synthPanel:not([hidden])');
-    const pads = await B.$$eval('.pad b', els => els.map(e => e.textContent));
-    assert.equal(pads.length, 12, 'two rows of six pads');
-    assert.deepEqual(pads.slice(6), ['E', 'G', 'A', 'Bb', 'B', 'D'], `the bottom row is E minor blues, from the root (${pads})`);
+    const keys = await B.$$eval('.key', els => els.map(e => ({ nm: e.querySelector('.nm').textContent, black: e.classList.contains('black'), in: e.classList.contains('in'), root: e.classList.contains('root') })));
+    assert.equal(keys.length, 13, 'on a phone: one octave, C to C, every note side by side');
+    assert.equal(keys.filter(k => k.black).length, 5, 'with the black keys');
+    assert.deepEqual(keys.filter(k => k.in).map(k => k.nm), ['D', 'E', 'G', 'A', 'Bb', 'B'], 'the E minor blues notes are marked');
+    assert.deepEqual(keys.filter(k => k.root).map(k => k.nm), ['E'], 'the root stands out');
+    const w = await B.locator('.key.white').first().boundingBox();
+    assert.ok(w.width >= 38 && w.height >= 120, `keys big enough to hit with a thumb (${Math.round(w.width)} x ${Math.round(w.height)})`);
+    await B.click('[data-oct="1"]'); assert.equal(await B.textContent('.synth-oct'), 'C5', 'octave up'); await B.click('[data-oct="-1"]');
     assert.equal(await B.isDisabled('#micBtn'), true, 'the mic is off while the synth is on');
     await sleep(1000);
     const quiet = await walker();
     // hold a pad (a real tap on the screen)
-    const box = await B.locator('.pad').nth(6).boundingBox();
+    const box = await B.locator('.key.white.root').boundingBox();
     await B.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await B.mouse.down();
     await sleep(400);
-    assert.ok(await B.evaluate(() => document.querySelector('.pad.on') !== null), 'the pad lights up');
+    assert.ok(await B.evaluate(() => document.querySelector('.key.on') !== null), 'the key lights up');
     const loud = await walker();
     await B.mouse.up(); await sleep(600);
     const after = await walker();
@@ -37,7 +42,7 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
     assert.ok(loud > 0.1, `the host hears the synth (${loud})`);
     assert.ok(after < 0.02, `and silence after you let go (${after})`);
     await B.click('#synthBtn');
-    assert.equal(await B.isHidden('#synthPanel'), true, 'the pads go away');
+    assert.equal(await B.isHidden('#synthPanel'), true, 'the keyboard goes away');
     assert.equal(await B.isDisabled('#micBtn'), false, 'the mic comes back');
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }

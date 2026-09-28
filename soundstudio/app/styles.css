@@ -241,16 +241,30 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 .eq .linkbtn{grid-column:1/-1;justify-self:end;border:0;background:none;color:var(--muted);font-size:.76rem;text-decoration:underline;cursor:pointer;padding:0}
 
 /* phones and narrow windows: stage on top, drawers as sheets, the bar pinned */
-.synth{flex:1 1 100%;display:grid;gap:8px;padding-bottom:4px}
-.synth-head{display:flex;align-items:center;gap:10px}
-.synth-key{color:var(--amber)}
-.synth-pads{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;touch-action:none;user-select:none;-webkit-user-select:none}
-.pad{height:clamp(52px,9vh,76px);border-radius:12px;background:var(--head);color:var(--head-ink);display:grid;place-content:center;justify-items:center;gap:2px;cursor:pointer;box-shadow:inset 0 -3px 0 rgba(0,0,0,.35);transition:background .06s}
-.pad b{font:700 1rem/1 "Geist",sans-serif}
-.pad i{font:500 .6rem/1 "Geist Mono",monospace;font-style:normal;color:var(--head-muted)}
-.pad.root{box-shadow:inset 0 -3px 0 var(--amber)}
-.pad.on{background:var(--amber);color:var(--amber-ink);transform:translateY(1px)}
-.pad.on i{color:var(--amber-ink)}
+.synth{flex:1 1 100%;display:grid;gap:10px;padding:12px;margin:-2px 0 2px;border-radius:18px;background:var(--head);color:var(--head-ink);box-shadow:0 10px 30px -12px rgba(0,0,0,.45)}
+.synth-head{display:flex;align-items:center;gap:12px;min-width:0}
+.synth-chip{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 9px;border-radius:999px;background:rgba(255,255,255,.08);font:600 .78rem/1 "Geist",sans-serif;white-space:nowrap}
+.synth-chip i{width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.synth-hint{color:var(--head-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.synth-octs{display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08)}
+.synth-octs button{width:30px;height:26px;border:0;border-radius:999px;background:transparent;color:var(--head-ink);font:600 1rem/1 "Geist",sans-serif;cursor:pointer}
+.synth-octs button:active{background:rgba(255,255,255,.14)}
+.synth-oct{font:600 .72rem/1 "Geist Mono",monospace;color:var(--head-muted);min-width:24px;text-align:center}
+.synth-pads{--whites:8;position:relative;height:clamp(132px,22vh,190px);touch-action:none;user-select:none;-webkit-user-select:none}
+.key{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;cursor:pointer;transition:background .05s,transform .05s}
+.key.white{left:calc(var(--i) * 100% / var(--whites));width:calc(100% / var(--whites) - 4px);margin-left:2px;height:100%;border-radius:4px 4px 12px 12px;background:linear-gradient(#f7f5f0,#e9e6de);color:#8a857a;padding-bottom:10px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08)}
+.key.black{left:calc(var(--at) * 100% / var(--whites));width:calc(100% / var(--whites) * .62);transform:translateX(-50%);height:60%;z-index:2;border-radius:3px 3px 9px 9px;background:linear-gradient(#34322d,#1a1917);color:#77726a;padding-bottom:8px;box-shadow:0 3px 0 #0b0a09,inset 0 1px 0 rgba(255,255,255,.08)}
+.key .nm{font:600 .68rem/1 "Geist Mono",monospace;letter-spacing:.02em}
+.key .kb{display:none}
+.key.black .nm{display:none}
+.key.in::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.45}
+.key.in{color:#3d3a34}
+.key.black.in{color:#cfcac0}
+.key.root::before{background:var(--amber);opacity:1;box-shadow:0 0 6px var(--amber)}
+.key.white.on{background:linear-gradient(#ff8a47,var(--amber));color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.key.black.on{background:var(--amber);color:#fff;box-shadow:0 1px 0 #0b0a09}
+.key.on::before{background:#fff;box-shadow:none;opacity:1}
+@media (min-width:861px){ .key .kb{display:block;font:500 .58rem/1 "Geist Mono",monospace;opacity:.55} }
 @media (max-width:860px){
   .room{height:auto;min-height:100dvh}
   .top{padding:8px 16px;gap:6px;overflow-x:auto;scrollbar-width:none}
@@ -267,6 +281,7 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
   .dock{position:sticky;bottom:0;z-index:10;gap:10px}
   .dock-vol,.dock-meter,#recStatus{display:none}
   .track{max-width:40vw}
-  .synth-hint,.pad i{display:none}
+  .synth-hint{display:none}
+  .synth{padding:10px;border-radius:16px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}

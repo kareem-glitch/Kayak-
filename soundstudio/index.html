@@ -186,8 +186,13 @@ window.__audioContexts = [];
 
   <footer class="dock">
     <div class="synth" id="synthPanel" hidden>
-      <div class="synth-head"><span class="label">Pocket synth</span><span class="label synth-key"></span><span class="spacer"></span><span class="muted small synth-hint">Slide between pads to glide · your mic is off</span></div>
-      <div class="synth-pads" role="group" aria-label="Synth pads"></div>
+      <div class="synth-head">
+        <span class="synth-chip"><i></i><span class="synth-key"></span></span>
+        <span class="muted small synth-hint">Slide to glide · mic off while you play</span>
+        <span class="spacer"></span>
+        <div class="synth-octs"><button type="button" data-oct="-1" aria-label="Octave down">–</button><span class="synth-oct">C4</span><button type="button" data-oct="1" aria-label="Octave up">+</button></div>
+      </div>
+      <div class="synth-pads" role="group" aria-label="Synth keys"></div>
     </div>
     <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
     <div class="track"><b id="dockTitle">No band yet</b><span id="dockMeta">Waiting for the band</span></div>

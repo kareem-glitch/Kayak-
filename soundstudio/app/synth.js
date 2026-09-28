@@ -1,6 +1,6 @@
 // The pocket synth: a mono lead you play on screen, for jamming from a phone
-// when you've no instrument with you. Two rows of pads in the song's key (an
-// octave each: the same scale the AI soloist uses), so every note fits. Slide
+// when you've no instrument with you. A keyboard, every note side by side,
+// with the song's scale marked (the same scale the AI soloist uses). Slide
 // your finger across to glide between notes; hold one and it grows a vibrato.
 // It goes to the room as your input (your mic is muted while it's on) and
 // you hear it straight away.
@@ -8,16 +8,21 @@ import { S } from './state.js';
 import { scaleFor } from './band/phrase.js';
 
 const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-const KEYS = ['asdfgh', 'qwerty'];   // on a laptop: bottom row A..H, top row Q..Y
+const BLACK = [1, 3, 6, 8, 10];
+const KEYS = 'awsedftgyhujk';   // on a laptop, like a DAW: A = C, W = C#, S = D ... K = the C above
 
-// The pads: 2 rows x 6 notes, the bottom row starting on the song's root (G3..F#4).
-export function padNotes(key, style){
-  const sc = scaleFor(key, style), steps = sc.steps.length >= 6 ? sc.steps.slice(0, 6) : sc.steps.concat(12);
-  const base = 55 + ((sc.root - 55) % 12 + 12) % 12;
-  return [0, 12].map(oct => steps.map(s => ({ midi: base + oct + s, name: NAMES[(sc.root + s) % 12], root: s % 12 === 0 })));
+// The keyboard: every note, side by side, like a piano, from `from` for `octaves`
+// octaves (plus the top C). Notes in the song's scale are marked.
+export function keysFor(key, style, from = 60, octaves = 1){
+  const sc = scaleFor(key, style), out = [];
+  for(let m = from; m <= from + 12 * octaves; m++){
+    const pc = m % 12;
+    out.push({ midi: m, name: NAMES[pc], black: BLACK.includes(pc), inKey: sc.steps.includes(((pc - sc.root) % 12 + 12) % 12), root: pc === sc.root });
+  }
+  return out;
 }
 
-let voice = null, held = [], panel = null, keyShown = '';
+let voice = null, held = [], panel = null, keyShown = '', lowC = 60;
 const hz = m => 440 * Math.pow(2, (m - 69) / 12);
 
 // One voice for the whole jam: two slightly detuned saws through a filter that
@@ -50,17 +55,25 @@ function up(id){ const was = held.length && held[held.length - 1].id === id; hel
 function move(id, midi){ const h = held.find(h => h.id === id); if(!h || h.midi === midi) return; h.midi = midi; if(held[held.length - 1] === h) sound(midi, true); light(); }
 const light = () => panel && panel.querySelectorAll('[data-midi]').forEach(p => p.classList.toggle('on', held.length > 0 && +p.dataset.midi === held[held.length - 1].midi));
 
-function render(){
-  const arr = S.arr || {}, k = (arr.key || 'E minor') + '|' + (arr.style || '');
-  if(k === keyShown) return; keyShown = k;
-  const rows = padNotes(arr.key, arr.style);
-  panel.querySelector('.synth-key').textContent = (arr.key || 'E minor') + ' scale';
-  const grid = panel.querySelector('.synth-pads'); grid.innerHTML = '';
-  rows.slice().reverse().forEach((row, r) => row.forEach((n, i) => {
-    const p = document.createElement('div'); p.className = 'pad' + (n.root ? ' root' : ''); p.dataset.midi = n.midi;
-    p.innerHTML = `<b>${n.name}</b><i>${KEYS[1 - r][i].toUpperCase()}</i>`; grid.appendChild(p);
-  }));
+const octaves = () => panel && panel.clientWidth >= 640 ? 2 : 1;
+function render(force){
+  const arr = S.arr || {}, k = [arr.key, arr.style, lowC, octaves()].join('|');
+  if(k === keyShown && !force) return; keyShown = k;
+  panel.querySelector('.synth-key').textContent = arr.key || 'E minor';
+  panel.querySelector('.synth-oct').textContent = 'C' + (lowC / 12 - 1);
+  const board = panel.querySelector('.synth-pads'), keys = keysFor(arr.key, arr.style, lowC, octaves()), whites = keys.filter(n => !n.black).length;
+  board.innerHTML = ''; board.style.setProperty('--whites', whites);
+  let w = 0;
+  keys.forEach(n => {
+    const el = document.createElement('div');
+    el.className = 'key ' + (n.black ? 'black' : 'white') + (n.inKey ? ' in' : '') + (n.root ? ' root' : ''); el.dataset.midi = n.midi;
+    if(n.black) el.style.setProperty('--at', w); else { el.style.setProperty('--i', w); w++; }
+    const li = KEYS[n.midi - lowC]; el.innerHTML = `<span class="nm">${n.name}</span>` + (li ? `<span class="kb">${li.toUpperCase()}</span>` : '');
+    board.appendChild(el);
+  });
+  light();
 }
+export function shift(dir){ lowC = Math.max(36, Math.min(84, lowC + 12 * dir)); render(true); }
 
 // Touch/mouse: one pointer per finger; sliding onto another pad glides to it.
 function wire(){
@@ -70,9 +83,12 @@ function wire(){
   ['pointerup', 'pointercancel'].forEach(t => grid.addEventListener(t, e => voice && up('p' + e.pointerId)));
   window.addEventListener('keydown', e => {
     if(!voice || e.repeat || e.metaKey || e.ctrlKey || /input|select|textarea/i.test(e.target.tagName)) return;
-    const r = KEYS.findIndex(s => s.includes(e.key.toLowerCase())); if(r < 0) return;
-    const rows = padNotes(S.arr && S.arr.key, S.arr && S.arr.style); down('k' + e.key.toLowerCase(), rows[r][KEYS[r].indexOf(e.key.toLowerCase())].midi); e.preventDefault();
+    const k = e.key.toLowerCase(), i = KEYS.indexOf(k);
+    if(k === 'z' || k === 'x'){ shift(k === 'z' ? -1 : 1); return; }
+    if(i < 0) return; down('k' + k, lowC + i); e.preventDefault();
   });
+  panel.querySelectorAll('[data-oct]').forEach(b => b.onclick = () => shift(+b.dataset.oct));
+  window.addEventListener('resize', () => voice && render());
   window.addEventListener('keyup', e => { if(voice) up('k' + e.key.toLowerCase()); });
 }
 
