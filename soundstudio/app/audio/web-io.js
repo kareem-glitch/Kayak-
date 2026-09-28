@@ -112,6 +112,9 @@ export async function useInput(deviceId, speaker){
   return chans;
 }
 export const currentInputId = () => micStream && micStream.getAudioTracks()[0] && micStream.getAudioTracks()[0].getSettings().deviceId;
+// The pocket synth (synth.js) plays straight into what you send, and into your headphones.
+export const canSynth = () => true;
+export const synthPorts = () => node && { ctx, toRoom: node, toEars: ctx.destination };
 export function setMicEnabled(on){ if(micGain) micGain.gain.value = on ? 1 : 0; }
 export const micEnabled = () => !micGain || micGain.gain.value !== 0;
 

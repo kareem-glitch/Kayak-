@@ -6,5 +6,5 @@ export const {
   NATIVE, RATE, FRAMES, BLOCK_MS, micOptions, isPhone, stats, context, start, startRecording, stopRecording, recordedSeconds,
   deliver, forget, setFeel, setBufferLimit, connectMic, setInputChannel, useInput, currentInputId, setMicEnabled, micEnabled,
   canChooseOutput, useOutput, listDevices, inputLatencyMs, inputSampleRate, echoCancelling, outputLatencyMs,
-  canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin,
+  canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts,
 } = m;

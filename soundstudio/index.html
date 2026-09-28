@@ -25,7 +25,7 @@ window.__audioContexts = [];
     <h2>Jam room</h2>
     <p class="muted small" id="roomLine">Camera and live audio, straight from browser to browser.</p>
     <label for="nameInput">Your name</label>
-    <div class="name-row"><input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?"><button type="button" id="nameDice" class="dice" title="Another name" aria-label="Suggest another name">🎲</button></div>
+    <div class="name-row"><input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?"><button type="button" id="nameDice" class="dice" title="Shuffle name" aria-label="Shuffle name"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></button></div>
     <div class="look-pick">
       <span class="muted small">Pick your player</span>
       <div id="lookPick" class="looks" role="radiogroup" aria-label="Your player"></div>
@@ -59,6 +59,7 @@ window.__audioContexts = [];
     <span class="spacer"></span>
     <button class="conn-dot" id="connDot" type="button" data-open="stats" title="Connection details"><i id="connJewel"></i><span id="connDotText">Connecting…</span></button>
     <button class="btn btn-quiet btn-toggle" id="micBtn" aria-pressed="true">Mic on</button>
+    <button class="btn btn-quiet" id="synthBtn" aria-pressed="false" title="Play a synth on screen: for jamming without an instrument" hidden>Synth</button>
     <button class="btn btn-quiet btn-toggle" id="camBtn" aria-pressed="true">Camera on</button>
     <button class="btn btn-quiet" id="avatarBtn" aria-pressed="false" title="Show a pixel character instead of your camera">Avatar</button>
     <button class="btn btn-primary" id="inviteBtn">Invite</button>
@@ -184,6 +185,10 @@ window.__audioContexts = [];
   </main>
 
   <footer class="dock">
+    <div class="synth" id="synthPanel" hidden>
+      <div class="synth-head"><span class="label">Pocket synth</span><span class="label synth-key"></span><span class="spacer"></span><span class="muted small synth-hint">Slide between pads to glide · your mic is off</span></div>
+      <div class="synth-pads" role="group" aria-label="Synth pads"></div>
+    </div>
     <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
     <div class="track"><b id="dockTitle">No band yet</b><span id="dockMeta">Waiting for the band</span></div>
     <div class="modes game-seg" role="radiogroup" aria-label="Game" id="gameBox">

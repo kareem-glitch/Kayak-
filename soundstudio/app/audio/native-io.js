@@ -109,3 +109,6 @@ export const echoCancelling = () => false;
 export function startRecording(){ if(!ws) throw new Error('audio not started'); recording = true; recStartedAt = performance.now(); tell({ t: 'rec', on: true }); }
 export function stopRecording(){ return new Promise(res => { recDone = res; recording = false; tell({ t: 'rec', on: false }); }); }
 export const recordedSeconds = () => recording ? (performance.now() - recStartedAt) / 1000 : 0;
+// The pocket synth is for phones and browsers; the app plays your real instrument.
+export const canSynth = () => false;
+export const synthPorts = () => null;

@@ -11,6 +11,7 @@ import * as lyria from './band/lyria.js';
 import * as stems from './band/stems.js';
 import * as trade from './trade.js';
 import * as avatar from './avatar.js';
+import * as synth from './synth.js';
 import * as layout from './layout.js';
 import { TONES, defaults as toneDefaults } from './audio/tone.js';
 import * as toneIcons from './tone-icons.js';
@@ -85,6 +86,7 @@ async function join(){
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
     if(look !== 'cam') setAvatar(true);
+    if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
     if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
     if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
@@ -325,6 +327,17 @@ function setAvatar(on){
   $('#avatarBtn').setAttribute('aria-pressed', String(on)); $('#avatarBtn').textContent = on ? avatar.CHARS[avatar.charOf(+look)].name : 'Avatar'; $('#camBtn').disabled = on;
 }
 $('#avatarBtn').onclick = () => setAvatar(!avatar.isOn());
+// The pocket synth: pads on screen instead of your instrument (your mic goes quiet while it's on).
+let micBeforeSynth = true;
+function setSynth(on){
+  const ports = audio.synthPorts(); if(on && !ports) return;
+  if(on){ micBeforeSynth = audio.micEnabled(); audio.setMicEnabled(false); synth.start($('#synthPanel'), ports.ctx, ports.toRoom, ports.toEars); if(ports.ctx.state !== 'running') ports.ctx.resume(); }
+  else { synth.stop(); audio.setMicEnabled(micBeforeSynth); }
+  $('#synthBtn').setAttribute('aria-pressed', String(on)); $('#synthBtn').textContent = on ? 'Synth on' : 'Synth';
+  const mic = audio.micEnabled(); $('#micBtn').disabled = on; $('#micBtn').textContent = mic ? 'Mic on' : 'Mic off'; $('#micBtn').setAttribute('aria-pressed', String(mic));
+  store.set('ss.synth', on ? '1' : '0');
+}
+$('#synthBtn').onclick = () => setSynth(!synth.isOn());
 const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + (v > 0 ? '+' : '') + v + ' dB)'; band.options.bandVolumeDb = v; band.applyBandVolume(); };
 if(store.get('ss.bandVol') !== null) $('#bandVol').value = store.get('ss.bandVol');
 $('#bandVol').oninput = () => { bandVol(+$('#bandVol').value); store.set('ss.bandVol', $('#bandVol').value); };
@@ -385,4 +398,6 @@ window.jamLyria = lyria;
 window.jamStems = stems;
 window.jamTrade = trade;
 window.jamTone = id => pickTone(id);
+window.jamSynth = synth;
+window.jamLevel = id => room.levelNow(id);
 window.jamRecord = toggleRecording;
