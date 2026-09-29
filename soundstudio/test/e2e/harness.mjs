@@ -20,8 +20,7 @@ const TYPES = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javas
 export async function startServers({ internet = false, fakeAudio = null } = {}){
   const web = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
-    if(u.pathname === '/api/stems'){   // stand-in for the stems service: the funk stock track's parts, code 'test'
-      if(req.headers['x-stems-code'] !== 'test'){ res.statusCode = 403; return res.end('{"error":"code"}'); }
+    if(u.pathname === '/api/stems'){   // stand-in for the stems service: the funk stock track's parts
       const d = path.join(ROOT, 'packs/funk-em-96'), meta = JSON.parse(fs.readFileSync(path.join(d, 'pack.json')));
       const stems = Object.fromEntries(Object.keys(meta.stems).map(n => [n, fs.readFileSync(path.join(d, n + '.mp3')).toString('base64')]));
       res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify({ stems, seconds: 30 }));

@@ -31,12 +31,11 @@ test('stems band: stock track, seats mute parts, prompted track shared', { timeo
     a = await peek(A); b = await peek(B);
     assert.ok(a.drums < 0.05 && b.drums < 0.05, `taking the drums silences the drum part everywhere (${a.drums}, ${b.drums})`);
 
-    // prompted track: wrong code asks for one, right code makes it and the guest gets it over the room
+    // prompted track: no access code needed; the host makes it and the guest gets it over the room
     await h.drawer(A, 'band'); await A.click('#mode-prompt');
     await A.fill('#prompt', 'Slow funk in E minor, 96 bpm');
-    await A.fill('#stemsCode', 'nope'); await A.click('#genBtn');
-    await A.waitForFunction(() => /access code/.test(document.getElementById('genStatus').textContent), null, { timeout: 10000 });
-    await A.fill('#stemsCode', 'test'); await A.click('#genBtn');
+    assert.equal(await A.isVisible('#stemsCode'), false, 'no access code box');
+    await A.click('#genBtn');
     await A.waitForFunction(() => /track is ready/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
     const id = await A.evaluate(() => window.jamStems.parts().length && document.getElementById('facts').textContent);
     assert.match(id, /Your track/);

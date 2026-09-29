@@ -1,6 +1,5 @@
 // Prompt -> backing track -> stems, with ElevenLabs (music + stem separation).
-// POST { prompt } with header x-stems-code (a shared access code while testing,
-// so strangers can't spend the ElevenLabs credits). Returns
+// POST { prompt }: open to anyone for now (no access code). Returns
 // { stems: { drums: base64 mp3, bass: ..., ... }, seconds }.
 // The band host's device then shares the stems with the room directly.
 import { inflateRawSync } from 'node:zlib';
@@ -30,7 +29,6 @@ export default async function handler(req, res){
   if(req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
   const key = process.env.ELEVENLABS_API_KEY;
   if(!key) return res.status(501).json({ error: 'Stems are not set up on this server' });
-  if(!process.env.STEMS_CODE || req.headers['x-stems-code'] !== process.env.STEMS_CODE) return res.status(403).json({ error: 'code' });
   const prompt = String((req.body && req.body.prompt) || '').trim().slice(0, 400);
   if(!prompt) return res.status(400).json({ error: 'Describe the track first' });
   try{

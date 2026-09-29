@@ -304,7 +304,7 @@ function showMode(m){
   $('#modeNote').textContent = MODE_NOTES[m] || '';
   $('#stockList').hidden = m !== 'stock'; $('#promptBox').hidden = m === 'stock';
   $('#genBtn').textContent = m === 'prompt' ? 'Make it with parts' : 'Start the live band';
-  $('#codeRow').hidden = !(m === 'prompt' && !store.get('ss.stemsCode'));
+  $('#codeRow').hidden = true;   // prompt -> stems is open to anyone for now
 }
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => showMode(b.dataset.mode));
 if(session.mode === 'tone') $('#hostControls .modes').hidden = true;   // tests / built-in band only
