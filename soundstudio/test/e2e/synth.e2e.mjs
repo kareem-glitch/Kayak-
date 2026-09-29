@@ -25,12 +25,14 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
     assert.deepEqual(keys.filter(k => k.root).length, 2, 'the roots stand out');
     const cube = await B.locator('.key').first().boundingBox();
     assert.ok(cube.width >= 40 && Math.abs(cube.width - cube.height) < 2, `square keys big enough for a thumb (${Math.round(cube.width)} x ${Math.round(cube.height)})`);
-    await B.click('[data-scale="all"]');
+    await h.drawer(B, 'audio'); await B.click('[data-scale="all"]');
     keys = await read();
     assert.equal(keys.length, 13, 'All: every note, C to C, in one row');
     assert.deepEqual(keys.filter(k => k.in).map(k => k.nm), ['D', 'E', 'G', 'A', 'Bb', 'B'], 'with the scale marked');
     await B.click('[data-scale="key"]');
-    await B.click('[data-oct="1"]'); assert.equal(await B.textContent('.synth-oct'), 'C5', 'octave up'); await B.click('[data-oct="-1"]');
+    await B.click('[data-drawer-tab="audio"]');   // close the settings
+    const low = await B.getAttribute('.key', 'data-midi');
+    await B.click('[data-oct="1"]'); assert.equal(+await B.getAttribute('.key', 'data-midi'), +low + 12, 'an octave higher'); await B.click('[data-oct="-1"]');
     assert.equal(await B.isDisabled('#micBtn'), true, 'the mic is off while the synth is on');
     await sleep(1000);
     const quiet = await walker();
@@ -40,18 +42,19 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
     await sleep(400);
     assert.ok(await B.evaluate(() => document.querySelector('.key.on') !== null), 'the key lights up');
     const loud = await walker();
-    assert.match(await B.textContent('.synth-lat'), /^\d+ ms$/, 'the delay from finger to ears is shown');
+    assert.match(await B.textContent('.synth-lat'), /^\d+ ms from your finger/, 'the delay from finger to ears is shown');
     await B.mouse.up(); await sleep(600);
     const after = await walker();
     assert.ok(quiet < 0.02, `nothing sent before you play: the mic is muted (${quiet})`);
     assert.ok(loud > 0.1, `the host hears the synth (${loud})`);
     assert.ok(after < 0.02, `and silence after you let go (${after})`);
     // the delay test: with no speaker -> mic path (a test machine) it says so; the timing itself is sample-exact
-    await B.click('#synthTest');
+    await h.drawer(B, 'audio'); await B.click('#synthTest');
     await B.waitForFunction(() => !document.getElementById('synthTest').disabled, null, { timeout: 15000 });
     assert.match(await B.textContent('#synthNote'), /Couldn’t hear the clicks|round trip/, 'the test reports back');
     const rt = await B.evaluate(() => window.jamRoundTrip(3, 50));
     assert.ok(rt >= 49 && rt <= 52, `a 50 ms speaker-to-mic path measures as 50 ms (${rt})`);
+    await B.click('[data-close]:visible');
     await B.click('#synthBtn');
     assert.equal(await B.isHidden('#synthPanel'), true, 'the keyboard goes away');
     assert.equal(await B.isDisabled('#micBtn'), false, 'the mic comes back');

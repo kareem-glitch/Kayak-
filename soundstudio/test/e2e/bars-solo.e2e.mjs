@@ -32,7 +32,7 @@ test('BARS solo: you trade with the AI band; your seat drops out only on your tu
     await A.click('[data-pick="4"]');
     assert.match(await A.textContent('#pickNote'), /Alone\? You trade with the AI band/);
     await A.fill('#nameInput', 'Solo'); await A.click('#joinBtn');
-    await A.waitForSelector('#hostControls:not([hidden])');   // started the room: running the band
+    await A.waitForSelector('#hostControls:not([hidden])', { state: 'attached' });   // started the room: running the band
     assert.equal(await A.getAttribute('[data-game="4"]', 'aria-checked'), 'true', 'the room starts in BARS 4');
     assert.match(await A.evaluate(() => window.getInvite()), /&g=4/, 'the invite says which game');
     await A.waitForFunction(() => /Slow funk/.test(document.getElementById('arrTitle').textContent), null, { timeout: 20000 });

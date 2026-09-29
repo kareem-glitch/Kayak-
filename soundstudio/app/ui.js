@@ -78,7 +78,7 @@ export function render(){
     const b = document.createElement('button'); b.type = 'button'; b.dataset.seat = s.id;
     b.className = 'seat-chip' + (s.human ? ' human' : '') + (mine ? ' mine' : '') + (off ? ' off' : '');
     const nm = document.createElement('span'); nm.textContent = s.label.replace('Rhythm guitar', 'Guitar');
-    const who = document.createElement('span'); who.className = 'who'; who.textContent = s.human ? (mine ? 'YOU' : (s.who || 'TAKEN').toUpperCase()) : off ? 'OUT' : 'AI';
+    const who = document.createElement('span'); who.className = 'who'; who.textContent = s.human ? (mine ? 'You' : (s.who || 'Taken')) : '';
     b.title = s.human ? (mine ? 'Hand back to the AI' : 'Played by ' + (s.who || 'someone')) : !a ? 'Waiting for the band' : off ? 'Not in this track' : 'Play this part (the AI steps out)';
     b.disabled = !S.hostId || (s.human && !mine && !me.isHost);
     b.onclick = () => session.toggleSeat(s.id);

@@ -13,8 +13,8 @@ test('stems band: stock track, seats mute parts, prompted track shared', { timeo
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
-    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
-    await A.waitForSelector('#stock-blues-a-92'); await A.click('#stock-blues-a-92');
+    await A.waitForSelector('#hostControls:not([hidden])', { state: 'attached' });   // the room's creator runs the band
+    await h.drawer(A, 'band'); await A.waitForSelector('#stock-blues-a-92'); await A.click('#stock-blues-a-92');
     await A.waitForFunction(() => /Blues shuffle in A/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
     await A.click('#playBtn');
     await B.waitForFunction(() => window.jamStems.playing(), null, { timeout: 15000 });
@@ -32,7 +32,7 @@ test('stems band: stock track, seats mute parts, prompted track shared', { timeo
     assert.ok(a.drums < 0.05 && b.drums < 0.05, `taking the drums silences the drum part everywhere (${a.drums}, ${b.drums})`);
 
     // prompted track: wrong code asks for one, right code makes it and the guest gets it over the room
-    await A.click('#mode-prompt');
+    await h.drawer(A, 'band'); await A.click('#mode-prompt');
     await A.fill('#prompt', 'Slow funk in E minor, 96 bpm');
     await A.fill('#stemsCode', 'nope'); await A.click('#genBtn');
     await A.waitForFunction(() => /access code/.test(document.getElementById('genStatus').textContent), null, { timeout: 10000 });

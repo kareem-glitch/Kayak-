@@ -12,12 +12,12 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Wife');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout:30000 });
-    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
-    await A.fill('#prompt', 'Slow funk in E minor, 96 bpm'); await A.click('#genBtn'); await sleep(1500);
+    await A.waitForSelector('#hostControls:not([hidden])', { state: 'attached' });   // the room's creator runs the band
+    await h.drawer(A, 'band'); await A.fill('#prompt', 'Slow funk in E minor, 96 bpm'); await A.click('#genBtn'); await sleep(1500);
     await A.uncheck('#countIn'); await A.click('#playBtn'); await sleep(2000);
 
     async function take(what, seconds){
-      await A.selectOption('#recWhat', what);
+      await h.drawer(A, 'record'); await A.selectOption('#recWhat', what);
       await A.click('#recBtn'); await sleep(seconds * 1000);
       assert.match(await A.textContent('#recStatus'), /^0:0\d$/, 'timer runs while recording');
       await A.click('#recBtn');

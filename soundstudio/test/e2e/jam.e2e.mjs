@@ -15,8 +15,8 @@ test('four players jam; fifth is refused', { timeout: 240000 }, async () => {
     const B = await h.page('Wife'), C = await h.page('Sam');
     await h.join(B, link, 'Wife'); await sleep(2500); await h.join(C, link, 'Sam'); await sleep(4000);
 
-    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
-    await A.fill('#prompt', 'Slow funk in E minor, 96 bpm'); await A.click('#genBtn'); await sleep(1500);
+    await A.waitForSelector('#hostControls:not([hidden])', { state: 'attached' });   // the room's creator runs the band
+    await h.drawer(A, 'band'); await A.fill('#prompt', 'Slow funk in E minor, 96 bpm'); await A.click('#genBtn'); await sleep(1500);
     await A.uncheck('#countIn'); await A.click('#playBtn'); await sleep(2500);
     const D = await h.page('Dee'); await h.join(D, link, 'Dee'); await sleep(6000);   // joins mid-song
     await C.click('[data-seat="keys"]'); await sleep(1500);

@@ -55,15 +55,11 @@ window.__audioContexts = [];
   <header class="top">
     <span class="logo" aria-hidden="true">air<b>.</b>band</span>
     <h1 id="roomTitle" class="sr-only">air.band jam</h1>
-    <span class="badge" id="gameBadge">Free jam</span>
+    <button class="badge" id="gameBadge" type="button" data-open="band" title="Game and band">Free jam</button>
     <span class="spacer"></span>
-    <button class="conn-dot" id="connDot" type="button" data-open="stats" title="Connection details"><i id="connJewel"></i><span id="connDotText">Connecting…</span></button>
-    <button class="btn btn-quiet btn-toggle" id="micBtn" aria-pressed="true">Mic on</button>
-    <button class="btn btn-quiet" id="synthBtn" aria-pressed="false" title="Play a synth on screen: for jamming without an instrument" hidden>Synth</button>
-    <button class="btn btn-quiet btn-toggle" id="camBtn" aria-pressed="true">Camera on</button>
-    <button class="btn btn-quiet" id="avatarBtn" aria-pressed="false" title="Show a pixel character instead of your camera">Avatar</button>
-    <button class="btn btn-primary" id="inviteBtn">Invite</button>
-    <button class="btn btn-quiet" id="leaveBtn">Leave</button>
+    <button class="conn-dot" id="connDot" type="button" data-open="stats" title="Connection"><i id="connJewel"></i><span id="connDotText" class="sr-only">Connecting…</span></button>
+    <button class="btn btn-primary pill" id="inviteBtn">Invite</button>
+    <button class="icon-btn" id="setBtn" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </header>
 
   <main class="main">
@@ -77,20 +73,27 @@ window.__audioContexts = [];
       </div>
       <div class="banner" aria-live="polite"><span class="turn-line" id="turnLine" hidden></span><span class="count big-count" id="turnCount"></span></div>
       <div class="seats" id="seats" aria-label="Parts: tap one to play it"></div>
-      <button class="btn btn-primary big-invite" id="bigInvite" hidden>Copy invite link</button>
     </section>
 
     <aside class="side" aria-label="Setup">
       <nav class="rail" role="tablist" aria-label="Setup">
-        <button class="tab" role="tab" data-drawer-tab="band" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="3"/><circle cx="17" cy="15" r="3"/><path d="M10 17V5l10-2v12"/></svg>Band</button>
-        <button class="tab" role="tab" data-drawer-tab="tone" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="14" r="3.5"/><path d="M8 8h.01M12 8h.01M16 8h.01"/></svg>Tone</button>
-        <button class="tab" role="tab" data-drawer-tab="audio" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Audio</button>
-        <button class="tab" role="tab" data-drawer-tab="record" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>Takes</button>
-        <button class="tab" role="tab" data-drawer-tab="stats" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 7 4-14 3 7h4"/></svg>Stats</button>
+        <button class="tab" role="tab" data-drawer-tab="band" aria-selected="false" aria-label="Band" title="Band"><svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="3"/><circle cx="17" cy="15" r="3"/><path d="M10 17V5l10-2v12"/></svg></button>
+        <button class="tab" role="tab" data-drawer-tab="tone" aria-selected="false" aria-label="Tone" title="Tone"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="14" r="3.5"/><path d="M8 8h.01M12 8h.01M16 8h.01"/></svg></button>
+        <button class="tab" role="tab" data-drawer-tab="audio" aria-selected="false" aria-label="Audio" title="Audio"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+        <button class="tab" role="tab" data-drawer-tab="record" aria-selected="false" aria-label="Takes" title="Takes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></button>
       </nav>
       <div class="drawer" id="drawer" hidden>
         <section class="pane" data-drawer="band" hidden>
-          <div class="pane-head"><h2>Band</h2><button class="close" type="button" data-close>Close</button></div>
+          <div class="pane-head"><h2>Band</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <div class="modes game-seg" role="radiogroup" aria-label="Game" id="gameBox">
+            <span class="modes-label" aria-hidden="true">BARS</span>
+            <button type="button" role="radio" data-game="4" aria-checked="false" aria-label="BARS 4">4</button>
+            <button type="button" role="radio" data-game="8" aria-checked="false">8</button>
+            <button type="button" role="radio" data-game="16" aria-checked="false">16</button>
+            <button type="button" role="radio" data-game="32" aria-checked="false">32</button>
+            <button type="button" role="radio" data-game="free" aria-checked="true">Free jam</button>
+          </div>
+          <label class="slider"><span>Band volume <span id="bandVolDb"></span></span><input type="range" id="bandVol" min="-40" max="6" step="1" value="0" aria-label="Band volume"></label>
           <div id="hostSection">
           <div class="hostbox" id="claimBox">
           <p class="small">One person runs the band from their device and everyone hears it. Whoever runs it controls the prompt and play button.</p>
@@ -129,7 +132,7 @@ window.__audioContexts = [];
           <div class="strips" id="strips"></div>
         </section>
         <section class="pane" data-drawer="tone" hidden>
-          <div class="pane-head"><h2>Tone</h2><button class="close" type="button" data-close>Close</button></div>
+          <div class="pane-head"><h2>Tone</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
           <div id="toneSection">
                     <div class="modes tones" role="radiogroup" aria-label="Tone" id="toneBox"></div>
           <div class="eq" id="eqBox" hidden>
@@ -145,7 +148,14 @@ window.__audioContexts = [];
         </div>
         </section>
         <section class="pane" data-drawer="audio" hidden>
-          <div class="pane-head"><h2>Audio</h2><button class="close" type="button" data-close>Close</button></div>
+          <div class="pane-head"><h2>Audio</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <div class="level"><span>Your level <span class="small" id="inDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div></div>
+          <div class="synth-set" id="synthSet" hidden>
+            <h3>Synth</h3>
+            <div class="modes two" role="radiogroup" aria-label="Which notes"><button type="button" role="radio" data-scale="key">In key</button><button type="button" role="radio" data-scale="all">All notes</button></div>
+            <div class="row"><button type="button" class="btn btn-quiet" id="synthTest">Test my delay</button><span class="synth-lat muted small"></span></div>
+            <p class="muted small" id="synthNote" hidden></p>
+          </div>
           <div class="plugin-row" id="pluginRow" hidden>
           <div class="plugin-text"><b>Play through your DAW</b><span class="muted small" id="pluginStatus">Put the air.band Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.</span></div>
           <button class="btn btn-quiet" id="pluginInstall" type="button">Install the plugin</button>
@@ -162,8 +172,10 @@ window.__audioContexts = [];
         <label class="check small"><input type="checkbox" id="studio"> Studio quality (32-bit audio, about twice the bandwidth)</label>
         </section>
         <section class="pane" data-drawer="record" hidden>
-          <div class="pane-head"><h2>Takes</h2><button class="close" type="button" data-close>Close</button></div>
-          <p class="muted small" id="recEmpty">Record from the bar at the bottom. Your take shows up here to play back and download.</p>
+          <div class="pane-head"><h2>Takes</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <label class="muted small" for="recWhat">Record</label>
+          <select id="recWhat" class="devsel"><option value="me">Just me</option><option value="all">The whole jam</option><option value="video">Jam + video</option></select>
+          <p class="muted small" id="recEmpty">Hit ● at the bottom. Your take shows up here.</p>
           <div class="rec-result" id="recResult" hidden>
           <div class="rec-media" id="recMedia"></div>
           <a class="btn btn-primary rec-dl" id="recDownload" href="#" download>Download</a>
@@ -172,7 +184,7 @@ window.__audioContexts = [];
         </div>
         </section>
         <section class="pane" data-drawer="stats" hidden>
-          <div class="pane-head"><h2>Connection</h2><button class="close" type="button" data-close>Close</button></div>
+          <div class="pane-head"><h2>Connection</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
           <ul class="lat" id="latList"></ul>
           <div class="stats" id="connStats">Waiting for others…</div>
           <label class="check small"><input type="checkbox" id="farApart"> Pretend we're far apart (adds 150 ms, for testing at home)</label>
@@ -186,35 +198,22 @@ window.__audioContexts = [];
 
   <footer class="dock">
     <div class="synth" id="synthPanel" hidden>
-      <div class="synth-head">
-        <span class="synth-chip"><i></i><span class="synth-key"></span></span>
-        <div class="synth-seg" role="radiogroup" aria-label="Which notes"><button type="button" role="radio" data-scale="key">In key</button><button type="button" role="radio" data-scale="all">All</button></div>
-        <span class="spacer"></span>
-        <button type="button" class="synth-test" id="synthTest" title="Test your delay: your phone clicks through its speaker and times it with its mic"><span class="synth-lat"></span><span class="synth-test-go">Test</span></button>
-        <div class="synth-octs"><button type="button" data-oct="-1" aria-label="Octave down">–</button><span class="synth-oct">C4</span><button type="button" data-oct="1" aria-label="Octave up">+</button></div>
-      </div>
+      <button type="button" class="oct" data-oct="-1" aria-label="Lower"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <div class="synth-pads" role="group" aria-label="Synth keys"></div>
-      <p class="synth-warn" hidden>That delay is usually Bluetooth headphones. Wired ones make it feel instant.</p>
-      <p class="synth-note" id="synthNote" hidden></p>
+      <button type="button" class="oct" data-oct="1" aria-label="Higher"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <p class="synth-warn" hidden>Lots of delay: usually Bluetooth headphones. Wired ones feel instant.</p>
     </div>
-    <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
     <div class="track"><b id="dockTitle">No band yet</b><span id="dockMeta">Waiting for the band</span></div>
-    <div class="modes game-seg" role="radiogroup" aria-label="Game" id="gameBox">
-      <span class="modes-label" aria-hidden="true">BARS</span>
-      <button type="button" role="radio" data-game="4" aria-checked="false" aria-label="BARS 4">4</button>
-      <button type="button" role="radio" data-game="8" aria-checked="false">8</button>
-      <button type="button" role="radio" data-game="16" aria-checked="false">16</button>
-      <button type="button" role="radio" data-game="32" aria-checked="false">32</button>
-      <button type="button" role="radio" data-game="free" aria-checked="true">Free jam</button>
+    <div class="controls">
+      <button class="ctl" id="micBtn" aria-pressed="true" aria-label="Mic" title="Mic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="off" d="M4 4l16 16"/></svg></button>
+      <button class="ctl" id="avatarBtn" aria-pressed="false" aria-label="Camera" title="Camera or character"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg><canvas class="me-face" width="24" height="24"></canvas></button>
+      <button class="ctl" id="synthBtn" aria-pressed="false" aria-label="Synth" title="Play a synth on screen" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v7M12 6v7M16 6v7"/></svg></button>
+      <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+      <button class="ctl rec" id="recBtn" aria-pressed="false" aria-label="Record" title="Record"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel"></span></button>
+      <button class="ctl leave" id="leaveBtn" aria-label="Leave" title="Leave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 17l5-5-5-5M21 12H9M12 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/></svg></button>
+      <button class="btn btn-quiet" id="camBtn" aria-pressed="true" hidden>Camera on</button>
     </div>
-    <span class="spacer"></span>
-    <div class="rec-group">
-      <select id="recWhat" aria-label="What to record"><option value="me">Just me</option><option value="all">The whole jam</option><option value="video">Jam + video</option></select>
-      <button class="rec" id="recBtn" aria-pressed="false"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel">Rec</span></button>
-      <span class="muted small" id="recStatus"></span>
-    </div>
-    <label class="dock-vol"><span>Band <span id="bandVolDb"></span></span><input type="range" id="bandVol" min="-40" max="6" step="1" value="0" aria-label="Band volume"></label>
-    <div class="dock-meter"><span>You <span class="small" id="inDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div></div>
+    <span class="dock-end muted small" id="recStatus"></span>
   </footer>
 </div>
 

@@ -45,8 +45,15 @@ export async function startServers({ internet = false, fakeAudio = null } = {}){
     p.on('pageerror', e => errors.push(`${name}: ${e.message}`));
     return p;
   }
+  // Open a settings drawer: the tab beside the stage (phones: the gear first); Connection is the light in the top bar.
+  async function drawer(p, name){
+    if(await p.isVisible(`[data-drawer="${name}"]`)) return;
+    if(name === 'stats') return p.click('#connDot');
+    if(!await p.isVisible(`[data-drawer-tab="${name}"]`)) await p.click('#setBtn');
+    if(!await p.isVisible(`[data-drawer="${name}"]`)) await p.click(`[data-drawer-tab="${name}"]`);
+  }
   async function join(p, url, name){ await p.goto(url); await p.fill('#nameInput', name); await p.click('#joinBtn'); }
   async function close(){ await browser.close(); for(const s of [web, broker]){ s.closeAllConnections && s.closeAllConnections(); s.close(); } }
-  return { base, page, join, errors, close };
+  return { base, page, join, drawer, errors, close };
 }
 export const sleep = ms => new Promise(r => setTimeout(r, ms));

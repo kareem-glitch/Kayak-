@@ -35,9 +35,9 @@ session.hooks.onChange = ui.render;
 session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
 room.events.onStatus = ui.status;
-room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); $('#bigInvite').hidden = !room.isOwner() || room.roomCount() >= room.MAX_ROOM; showRoomStatus(); ui.render(); };
+room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
-room.events.onLeave = id => { ui.removeTile(id); session.peerLeft(id); $('#bigInvite').hidden = !room.isOwner() || room.roomCount() >= room.MAX_ROOM; showRoomStatus(); ui.render(); };
+room.events.onLeave = id => { ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
 room.events.onMessage = (m, id) => trade.handle(m, id) || avatar.handle(m, id) || session.handleMessage(m, id);
 trade.hooks.onTurn = ui.showTurn; trade.start();
 
@@ -77,7 +77,7 @@ async function join(){
       inviteLink = SITE + '?join=' + me.id + '&g=' + gamePick + (params.get('broker') ? '&broker=' + params.get('broker') : '');
       if(!audio.NATIVE) history.replaceState(null, '', inviteLink);   // copying the address bar works too
       try{ sessionStorage.setItem('ss.hostId', me.id); }catch(e){}
-      showRoomStatus(); $('#bigInvite').hidden = false;
+      showRoomStatus();
     }
     if(!audioProblem){
       if(audio.canTone() && store.get('ss.tone') && store.get('ss.tone') !== 'off') pickTone(store.get('ss.tone'));
@@ -86,7 +86,7 @@ async function join(){
       navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
     }
     if(look !== 'cam') setAvatar(true);
-    if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
+    if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; $('#synthSet').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
     if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
     if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
@@ -124,6 +124,7 @@ function showConnection(){
   const hold = showConnection.hold || { db: -Infinity, t: 0 }, now = Date.now();
   if(db >= hold.db || now - hold.t > 1500){ hold.db = db; hold.t = now; } showConnection.hold = hold;   // peak hold for 1.5 s
   $('#inLevel').style.width = (100 - pct(db)) + '%'; $('#inHold').style.left = 'calc(' + pct(hold.db) + '% - 2px)';
+  $('#micBtn').style.setProperty('--lvl', Math.max(0, Math.min(1, (db + 50) / 50)).toFixed(2));   // the mic button glows with your level
   $('#inMeter').setAttribute('aria-valuenow', isFinite(db) ? Math.round(db) : -60);
   $('#inDb').textContent = isFinite(hold.db) && hold.db > -60 ? (hold.db >= -0.1 ? 'CLIP' : Math.round(hold.db) + ' dB') : '– dB';
   $('#inDb').classList.toggle('hot', hold.db > -6);
@@ -133,7 +134,7 @@ function showConnection(){
   const worst = c.players.length ? Math.max(...c.players.map(p => p.totalMs)) : null;
   const jewel = $('#connJewel');
   jewel.className = worst === null ? '' : c.lossPct > 3 || worst > 120 ? 'bad' : c.lossPct > 1 || worst > 60 ? 'warn' : 'ok';
-  $('#connDotText').textContent = worst === null ? (room.roomCount() > 1 ? 'Connecting…' : 'On your own') : `${c.lossPct > 3 ? 'Choppy' : worst > 60 ? 'OK' : 'Good'} · ${worst} ms`;
+  $('#connDot').title = $('#connDotText').textContent = worst === null ? (room.roomCount() > 1 ? 'Connecting…' : 'On your own') : `${c.lossPct > 3 ? 'Choppy' : worst > 60 ? 'OK' : 'Good'} · ${worst} ms`;
   if(!c.live) return;
   $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
   // per player: estimated time from their instrument to your ears
@@ -316,15 +317,16 @@ $('#bpm').addEventListener('change', () => session.setTempo(clamp(Math.round(+$(
 const feel = audio.isPhone() ? 'balanced' : 'tight', BUFFER_LIMIT = audio.isPhone() ? 12 : 8;   // limit in 128-frame blocks
 const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeText(inviteLink); const t = btn.textContent; btn.textContent = done; setTimeout(() => btn.textContent = t, 2000); }catch(e){ prompt('Copy this invite link', inviteLink); } };
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
-$('#bigInvite').onclick = () => copy($('#bigInvite'), inviteLink, 'Link copied. Send it to your friends');
 $('#leaveBtn').onclick = () => { room.leave(); location.href = location.pathname; };
-$('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); $('#micBtn').textContent = on ? 'Mic on' : 'Mic off'; $('#micBtn').setAttribute('aria-pressed', String(on)); };
+$('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); $('#micBtn').setAttribute('aria-pressed', String(on)); $('#micBtn').title = on ? 'Mic on' : 'Mic off'; };
 $('#camBtn').onclick = () => { const v = media && media.getVideoTracks()[0]; if(!v) return; v.enabled = !v.enabled; $('#camBtn').textContent = v.enabled ? 'Camera on' : 'Camera off'; $('#camBtn').setAttribute('aria-pressed', String(v.enabled)); };
 // Avatar instead of camera: your camera is switched off for everyone while it's on.
 function setAvatar(on){
   avatar.setMine(on, avatar.charOf(+look)); store.set('ss.look', on ? String(avatar.charOf(+look)) : 'cam');
   const v = media && media.getVideoTracks()[0]; if(v) v.enabled = !on && $('#camBtn').getAttribute('aria-pressed') !== 'false';
-  $('#avatarBtn').setAttribute('aria-pressed', String(on)); $('#avatarBtn').textContent = on ? avatar.CHARS[avatar.charOf(+look)].name : 'Avatar'; $('#camBtn').disabled = on;
+  const who = on ? avatar.CHARS[avatar.charOf(+look)].name : 'Camera';
+  $('#avatarBtn').setAttribute('aria-pressed', String(on)); $('#avatarBtn').setAttribute('aria-label', who); $('#avatarBtn').title = on ? who + ' (tap for your camera)' : 'Camera (tap to be your character)'; $('#camBtn').disabled = on;
+  if(on) avatar.portrait($('#avatarBtn canvas'), avatar.charOf(+look), false, false);
 }
 $('#avatarBtn').onclick = () => setAvatar(!avatar.isOn());
 // The pocket synth: pads on screen instead of your instrument (your mic goes quiet while it's on).
@@ -333,18 +335,19 @@ function setSynth(on){
   const ports = audio.synthPorts(); if(on && !ports) return;
   if(on){ micBeforeSynth = audio.micEnabled(); audio.setMicEnabled(false); synth.start($('#synthPanel'), ports.ctx, ports.toRoom, ports.toEars); if(ports.ctx.state !== 'running') ports.ctx.resume(); }
   else { synth.stop(); audio.setMicEnabled(micBeforeSynth); }
-  $('#synthBtn').setAttribute('aria-pressed', String(on)); $('#synthBtn').textContent = on ? 'Synth on' : 'Synth';
-  const mic = audio.micEnabled(); $('#micBtn').disabled = on; $('#micBtn').textContent = mic ? 'Mic on' : 'Mic off'; $('#micBtn').setAttribute('aria-pressed', String(mic));
+  $('#synthBtn').setAttribute('aria-pressed', String(on)); $('#synthBtn').title = on ? 'Synth on' : 'Play a synth on screen';
+  const mic = audio.micEnabled(); $('#micBtn').disabled = on; $('#micBtn').setAttribute('aria-pressed', String(mic)); $('#micBtn').title = on ? 'Mic off while the synth is on' : mic ? 'Mic on' : 'Mic off';
   store.set('ss.synth', on ? '1' : '0');
 }
 $('#synthBtn').onclick = () => setSynth(!synth.isOn());
+$('#setBtn').onclick = () => layout.current() ? layout.show(null) : layout.show(layout.last() || 'band');
 // Test your delay: clicks out of the speaker, timed by the mic.
 $('#synthTest').onclick = async () => {
-  const b = $('#synthTest'), note = $('#synthNote'), go = b.querySelector('.synth-test-go');
+  const b = $('#synthTest'), note = $('#synthNote'), go = b;
   b.disabled = true; go.textContent = 'Listening…'; note.hidden = false; note.textContent = 'Stay quiet for a second: your phone is clicking through its speaker and listening with its mic.';
   const mic = audio.micEnabled(); let rt = null;
   try{ rt = await audio.measureRoundTrip(); }catch(e){ console.warn(e); }
-  audio.setMicEnabled(mic); b.disabled = false; go.textContent = 'Test';
+  audio.setMicEnabled(mic); b.disabled = false; go.textContent = 'Test my delay';
   synth.setMeasured(rt);
   note.innerHTML = rt == null ? 'Couldn’t hear the clicks. Turn the volume up (and take headphones off), then test again.'
     : `Speaker → mic: <b>${rt} ms</b> round trip, so your speaker is about <b>${Math.round(rt / 2)} ms</b> behind. Touchscreens add about 20–40 ms more. ${rt > 90 ? 'That’s a slow audio path: playing slightly ahead of the beat helps, or use the laptop.' : 'That’s about as quick as phones get.'}`;
@@ -366,7 +369,7 @@ async function toggleRecording(){
     btn.disabled = true;
     try{ await recording.start($('#recWhat').value); }catch(e){ btn.disabled = false; $('#recStatus').textContent = 'Recording needs working audio on this device.'; return; }
     btn.disabled = false; $('#recWhat').disabled = true;
-    btn.setAttribute('aria-pressed', 'true'); $('#recLabel').textContent = 'Stop'; $('#recStatus').textContent = '0:00';
+    btn.setAttribute('aria-pressed', 'true');  $('#recStatus').textContent = '0:00';
     recTimer = setInterval(() => { const t = recording.seconds(); $('#recStatus').textContent = clock(t); if(t >= recording.MAX_SECONDS) toggleRecording(); }, 250);
     return;
   }
@@ -389,7 +392,7 @@ async function toggleRecording(){
     $('#recStatus').textContent = clock(r.seconds) + ' recorded';
     $('#recEmpty').hidden = true; layout.show('record');   // the take, ready to play and download
   }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
-  btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); $('#recLabel').textContent = 'Rec';
+  btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); 
 }
 $('#recBtn').onclick = toggleRecording;
 // testing at home: make the other devices sound as if they were across the world

@@ -28,7 +28,7 @@ test('pick a player: the room sees your character, or your camera', { timeout: 9
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
     await B.waitForFunction(() => document.querySelectorAll('.tile.avatar').length === 1, null, { timeout: 30000 });
-    assert.equal(await A.textContent('#avatarBtn'), 'Juno', 'your player is named in the top bar');
+    assert.equal(await A.getAttribute('#avatarBtn', 'aria-label'), 'Juno', 'your player is on the character button');
     await B.waitForFunction(() => document.querySelector('.tile.avatar canvas.sprite'), null, { timeout: 5000 });
     await new Promise(r => setTimeout(r, 300));
     assert.ok(await hasColour(B, 'Host', '#7b4fd6'), 'the guest sees Juno (purple hair)');

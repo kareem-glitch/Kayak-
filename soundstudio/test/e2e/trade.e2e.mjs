@@ -16,8 +16,8 @@ test('trade bars: turns alternate, only the soloist is heard, on the beat', { ti
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
     await B.waitForFunction(() => [...window.jamPeers.values()].some(p => p.recv > 200), null, { timeout: 30000 });
-    await A.waitForSelector('#hostControls:not([hidden])');   // the room's creator runs the band
-    await A.waitForSelector('#stock-rock-d-120'); await A.click('#stock-rock-d-120');
+    await A.waitForSelector('#hostControls:not([hidden])', { state: 'attached' });   // the room's creator runs the band
+    await h.drawer(A, 'band'); await A.waitForSelector('#stock-rock-d-120'); await A.click('#stock-rock-d-120');
     await A.waitForFunction(() => /Indie rock/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
     await A.click('[data-game="4"]');
     await B.waitForFunction(() => document.querySelector('[data-game="4"]').getAttribute('aria-checked') === 'true', null, { timeout: 5000 });
@@ -59,7 +59,7 @@ test('trade bars: turns alternate, only the soloist is heard, on the beat', { ti
     assert.ok(last.a.late + last.b.late < 20, `the soloist's audio arrives in time to play on the beat (late blocks: ${last.a.late + last.b.late})`);
 
     // back to free jam: everyone returns to the shared timing
-    await A.click('[data-game="free"]'); await sleep(3000);
+    await h.drawer(A, 'band'); await A.click('[data-game="free"]'); await sleep(3000);
     const fa = await peek(A), fb = await peek(B);
     assert.ok(Math.abs(fa.zero - fa.base) < 2 && Math.abs(fb.zero - fb.base) < 2, 'free jam: back on the room’s shared timing');
     assert.deepEqual(h.errors, [], 'no page errors');

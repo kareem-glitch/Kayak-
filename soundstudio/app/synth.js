@@ -69,7 +69,7 @@ export function delayMs(){
 }
 function showDelay(){
   const ms = delayMs(); if(!panel || ms === lastShown) return; lastShown = ms;
-  const el = panel.querySelector('.synth-lat'); el.textContent = ms + ' ms';
+  const el = document.querySelector('.synth-lat'); el.textContent = ms + ' ms from your finger to your ears';
   el.classList.toggle('slow', ms > 60);
   el.title = ms > 60 ? 'That much delay is usually Bluetooth headphones. Wired ones make the synth feel instant.' : 'From your finger to your ears';
   panel.querySelector('.synth-warn').hidden = ms <= 60;
@@ -85,9 +85,7 @@ const wide = () => panel && panel.clientWidth >= 640;
 function render(force){
   const arr = S.arr || {}, k = [arr.key, arr.style, lowC, wide(), inKeyOnly].join('|');
   if(k === keyShown && !force) return; keyShown = k;
-  panel.querySelector('.synth-key').textContent = arr.key || 'E minor';
-  panel.querySelector('.synth-oct').textContent = 'C' + (lowC / 12 - 1);
-  panel.querySelectorAll('[data-scale]').forEach(b => b.setAttribute('aria-checked', String((b.dataset.scale === 'key') === inKeyOnly)));
+  document.querySelectorAll('[data-scale]').forEach(b => b.setAttribute('aria-checked', String((b.dataset.scale === 'key') === inKeyOnly)));
   shown = keysFor(arr.key, arr.style, lowC, wide() ? 2 : 1, inKeyOnly);
   const row = panel.querySelector('.synth-pads'), letters = inKeyOnly ? SCALE_KEYS : CHROMATIC_KEYS;
   row.innerHTML = ''; row.style.setProperty('--n', shown.length);
@@ -121,7 +119,7 @@ function wire(){
   });
   window.addEventListener('keyup', e => { if(voice) up('k' + e.key.toLowerCase()); });
   panel.querySelectorAll('[data-oct]').forEach(b => b.onclick = () => shift(+b.dataset.oct));
-  panel.querySelectorAll('[data-scale]').forEach(b => b.onclick = () => showScaleOnly(b.dataset.scale === 'key'));
+  document.querySelectorAll('[data-scale]').forEach(b => b.onclick = () => showScaleOnly(b.dataset.scale === 'key'));
   window.addEventListener('resize', () => voice && render());
 }
 
