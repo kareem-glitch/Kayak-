@@ -98,6 +98,9 @@ button.badge{border:0;cursor:pointer}
 .knob-big i{font:700 clamp(1rem,2.6vmin,1.6rem)/1 var(--wide);font-stretch:125%;font-style:normal;color:#6b6c71}
 .knob-next{font-weight:700;font-size:clamp(.72rem,1.5vmin,.9rem);color:#b9bac0;text-transform:uppercase;letter-spacing:.06em;min-height:1.1em}
 .knob.countdown .knob-big b{color:var(--amber);text-shadow:0 0 18px rgba(255,204,0,.5)}
+/* the four spots on the floor where players land */
+.mark{position:absolute;left:calc(50% + var(--x) * 1%);top:calc(50% + var(--y) * 1% + var(--fig) * .38);width:calc(var(--fig) * .95);height:calc(var(--fig) * .3);transform:translate(-50%,-50%);border-radius:50%;
+  border:1.5px dashed #34353a;background:radial-gradient(closest-side,rgba(255,255,255,.035),transparent)}
 /* a band member */
 .spot{position:absolute;left:calc(50% + var(--x) * 1%);top:calc(50% + var(--y) * 1%);transform:translate(-50%,-50%);display:grid;justify-items:center;gap:5px;
   padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer;--pad:#ececea}

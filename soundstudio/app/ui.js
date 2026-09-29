@@ -27,12 +27,13 @@ export function tileFor(p){
 export function removeTile(id){ tiles.get(id)?.remove(); tiles.delete(id); placeSpots(); }
 
 // ---- the stage: the players standing in a circle ----
-// Only who's really playing stands there: the people in the room, and the AI
-// band's parts that are in the track, not taken by someone and not turned all
-// the way off. People with their mic muted are greyed out. They stand
-// where a band would: drums at the back, then clockwise keys, anyone without
-// a part, guitar, bass; spread evenly around the circle for however many.
-const ORDER = { drums: 0, keys: 1, free: 2, guitar: 3, bass: 4 };
+// Four spots marked on the floor, one per part where a band would stand: drums
+// at the back, keys right, guitar front, bass left. Only who's really playing
+// stands there: the people in the room, and the AI band's parts that are in the
+// track, not taken by someone and not turned all the way off. Someone without
+// a part takes a free spot (front first). People with their mic muted are
+// greyed out. (Bigger rooms: more spots, later.)
+const HOME = { drums: -90, keys: 0, guitar: 90, bass: 180 }, OPEN = [90, 180, 0, -90], EXTRA = [135, 45, -135, -45];
 const spots = new Map();
 function spotEl(key, button){
   let sp = spots.get(key);
@@ -57,15 +58,16 @@ export function placeSpots(){
   if(!$('#circle')) return;
   const a = S.arr, list = [], byName = n => [...tiles.entries()].find(([, t]) => t.dataset.name === n);
   S.seats.forEach(s => {
-    if(s.human){ const p = byName(s.who); if(p) list.push({ key: 'seat:' + s.id, order: ORDER[s.id] ?? 2, seat: s, person: p }); return; }
-    if(a && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, order: ORDER[s.id] ?? 2, seat: s });   // the AI plays it (turned all the way off: it's gone)
+    if(s.human){ const p = byName(s.who); if(p) list.push({ key: 'seat:' + s.id, seat: s, person: p }); return; }
+    if(a && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, seat: s });   // the AI plays it (turned all the way off: it's gone)
   });
-  tiles.forEach((t, id) => { if(!S.seats.some(s => s.human && s.who === t.dataset.name)) list.push({ key: 'free:' + id, order: ORDER.free, person: [id, t] }); });
-  list.sort((x, y) => x.order - y.order);
-  const n = list.length, used = new Set();
+  tiles.forEach((t, id) => { if(!S.seats.some(s => s.human && s.who === t.dataset.name)) list.push({ key: 'free:' + id, person: [id, t] }); });
+  const taken = new Set(list.filter(m => m.seat).map(m => HOME[m.seat.id]));
+  list.forEach(m => { m.deg = m.seat ? HOME[m.seat.id] ?? 90 : OPEN.find(d => !taken.has(d)) ?? EXTRA.find(d => !taken.has(d)) ?? 90; taken.add(m.deg); });
+  const used = new Set();
   list.forEach((m, i) => {
     const s = m.seat, sp = spotEl(m.key, !!s); used.add(m.key);
-    const deg = n === 1 ? 90 : -90 + i * 360 / n, r = deg * Math.PI / 180;   // alone: front and centre
+    const r = m.deg * Math.PI / 180;
     sp.style.setProperty('--x', (Math.cos(r) * 37).toFixed(1)); sp.style.setProperty('--y', (Math.sin(r) * 34).toFixed(1));
     const id = m.person && m.person[0], mine = id === me.id;
     stand(sp, m.person && m.person[1]);
