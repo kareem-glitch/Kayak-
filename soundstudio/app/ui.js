@@ -59,7 +59,7 @@ export function placeSpots(){
   const a = S.arr, list = [], byName = n => [...tiles.entries()].find(([, t]) => t.dataset.name === n);
   S.seats.forEach(s => {
     if(s.human){ const p = byName(s.who); if(p) list.push({ key: 'seat:' + s.id, seat: s, person: p }); return; }
-    if(a && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, seat: s });   // the AI plays it (turned all the way off: it's gone)
+    if(a && S.hostId && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, seat: s });   // the AI plays it (turned all the way off: it's gone)
   });
   tiles.forEach((t, id) => { if(!S.seats.some(s => s.human && s.who === t.dataset.name)) list.push({ key: 'free:' + id, person: [id, t] }); });
   const taken = new Set(list.filter(m => m.seat).map(m => HOME[m.seat.id]));
