@@ -1,5 +1,5 @@
-// Everything on screen: the stage (the band standing in a circle around the
-// turn knob, one spot per part plus anyone without one), the chord screen,
+// Everything on screen: the stage (the players as a grid of tiles, under the
+// chord screen and the turn bar),
 // band panel, part meters, device pickers and the connection panel.
 import { $, clamp } from './util.js';
 import { S, me } from './state.js';
@@ -26,22 +26,19 @@ export function tileFor(p){
 }
 export function removeTile(id){ tiles.get(id)?.remove(); tiles.delete(id); placeSpots(); }
 
-// ---- the stage: the players standing in a circle ----
-// Four spots marked on the floor, one per part where a band would stand: drums
-// at the back, keys right, guitar front, bass left. Only who's really playing
-// stands there: the people in the room, and the AI band's parts that are in the
-// track, not taken by someone and not turned all the way off. Someone without
-// a part takes a free spot (front first). People with their mic muted are
-// greyed out. (Bigger rooms: more spots, later.)
-const HOME = { drums: -90, keys: 0, guitar: 90, bass: 180 }, OPEN = [90, 180, 0, -90], EXTRA = [135, 45, -135, -45];
+// ---- the stage: the players as a grid of tiles ----
+// Only who's really playing gets a tile: the people in the room (in the order
+// they joined, left to right, then a new row), then the AI band's parts that
+// are in the track, not taken by someone and not turned all the way off.
+// People with their mic muted are greyed out. Up to 4 across (2 on a phone).
 const spots = new Map();
 function spotEl(key, button){
   let sp = spots.get(key);
   if(!sp){
     sp = document.createElement(button ? 'button' : 'div'); if(button) sp.type = 'button';
     sp.className = 'spot';
-    sp.innerHTML = '<span class="floor"></span><span class="fig"></span><span class="tag"><i class="pad"></i><span class="who"></span><span class="role"></span></span><span class="inst"></span>';
-    $('#circle').appendChild(sp); spots.set(key, sp);
+    sp.innerHTML = '<span class="floor"></span><span class="fig"></span><span class="tag"><i class="pad"></i><span class="who"></span><span class="role"></span><span class="inst"></span></span>';
+    spots.set(key, sp);
   }
   return sp;
 }
@@ -54,21 +51,23 @@ function label(sp, who, role){
   sp.querySelector('.who').textContent = who;
   const r = sp.querySelector('.role'); r.textContent = role; r.className = 'role' + (role ? ' ' + role.toLowerCase() : '');
 }
+const phone = () => matchMedia('(max-width:860px)').matches;
 export function placeSpots(){
-  if(!$('#circle')) return;
-  const a = S.arr, list = [], byName = n => [...tiles.entries()].find(([, t]) => t.dataset.name === n);
-  S.seats.forEach(s => {
-    if(s.human){ const p = byName(s.who); if(p) list.push({ key: 'seat:' + s.id, seat: s, person: p }); return; }
-    if(a && S.hostId && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, seat: s });   // the AI plays it (turned all the way off: it's gone)
+  const grid = $('#players'); if(!grid) return;
+  const a = S.arr, list = [];
+  tiles.forEach((t, id) => {
+    const s = S.seats.find(x => x.human && x.who === t.dataset.name);
+    list.push({ key: s ? 'seat:' + s.id : 'free:' + id, seat: s, person: [id, t] });
   });
-  tiles.forEach((t, id) => { if(!S.seats.some(s => s.human && s.who === t.dataset.name)) list.push({ key: 'free:' + id, person: [id, t] }); });
-  const taken = new Set(list.filter(m => m.seat).map(m => HOME[m.seat.id]));
-  list.forEach(m => { m.deg = m.seat ? HOME[m.seat.id] ?? 90 : OPEN.find(d => !taken.has(d)) ?? EXTRA.find(d => !taken.has(d)) ?? 90; taken.add(m.deg); });
+  S.seats.forEach(s => {
+    if(!s.human && a && S.hostId && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, seat: s });   // the AI plays it (turned all the way off: it's gone)
+  });
+  const n = list.length, cols = Math.max(1, Math.min(n, phone() ? 2 : 4));
+  grid.style.setProperty('--cols', cols); grid.style.setProperty('--rows', Math.max(1, Math.ceil(n / cols)));
   const used = new Set();
   list.forEach((m, i) => {
     const s = m.seat, sp = spotEl(m.key, !!s); used.add(m.key);
-    const r = m.deg * Math.PI / 180;
-    sp.style.setProperty('--x', (Math.cos(r) * 37).toFixed(1)); sp.style.setProperty('--y', (Math.sin(r) * 34).toFixed(1));
+    if(grid.children[i] !== sp) grid.insertBefore(sp, grid.children[i] || null);
     const id = m.person && m.person[0], mine = id === me.id;
     stand(sp, m.person && m.person[1]);
     if(id) sp.dataset.who = id; else delete sp.dataset.who;
@@ -89,14 +88,15 @@ export function placeSpots(){
   });
   spots.forEach((sp, key) => { if(!used.has(key)){ sp.remove(); spots.delete(key); } });
 }
+addEventListener('resize', () => placeSpots());
 export function showVideoIn(t, stream){ const v = document.createElement('video'); v.autoplay = v.playsInline = v.muted = true; v.srcObject = stream; t.querySelector('.vid').replaceChildren(v); t.querySelector('.initial').hidden = true; }
 
 let beatNow = null;
 export function showBeat(m){
   document.querySelectorAll('#beats span').forEach((el, i) => el.classList.toggle('on', i === m.beat));
   beatNow = m.beat ?? null;
-  if(!(S.game.mode === 'trade' && S.playing)){   // free jam: the knob's ring walks the bar
-    $('#knob').style.setProperty('--n', 4); $('#knob').style.setProperty('--p', beatNow == null ? 0 : (beatNow + 1) / 4);
+  if(!(S.game.mode === 'trade' && S.playing)){   // free jam: the step lights walk the bar
+    setLeds(4, beatNow == null ? 0 : (beatNow + 1) / 4);
     if(S.playing && beatNow != null){ $('#turnCount').textContent = String(beatNow + 1); $('#turnOf').textContent = '/4'; }
   }
   $('#countNum').textContent = m.count ? String(m.count) : '';
@@ -144,7 +144,7 @@ export function render(){
   document.querySelectorAll('[data-game]').forEach(b => { b.setAttribute('aria-checked', String(S.game.mode === 'free' ? b.dataset.game === 'free' : b.dataset.game === String(S.game.bars))); b.disabled = !hostHere || (b.dataset.game !== 'free' && !(a && (a.engine === 'stems' || a.engine === 'lyria'))); });
   $('#keepAI').checked = !!S.game.ai; $('#keepAIRow').hidden = S.game.mode !== 'trade' || !hostHere;
   $('#gameNote').textContent = S.game.mode === 'trade' ? 'BARS: take turns trading bars. Only whoever’s on is heard, and it lands on the beat at any distance. Took a seat? The AI plays your part until it’s your turn.' : 'Everyone plays at once. Best when you’re all fairly close.';
-  placeSpots();   // the parts, standing around the circle: tap one to play it
+  placeSpots();   // the players' tiles: tap a part to play it
   const box = $('#strips'); box.innerHTML = '';
   box.hidden = !me.isHost;   // the band's host balances the parts here
   S.seats.forEach(s => {
@@ -179,33 +179,39 @@ function meterLoop(){
   requestAnimationFrame(meterLoop);
 }
 
-// The knob in the middle: whose turn it is (BARS), how far through it (the ring,
-// one segment a beat) and who's next; in free jam, the beat of the bar.
+// The turn bar: whose turn it is (BARS), how far through it (a row of step
+// lights, one a beat, like the P-6's) and who's next; in free jam, the beat of the bar.
+function setLeds(n, p){
+  const row = $('#leds');
+  if(row.children.length !== n) row.replaceChildren(...Array.from({ length: n }, (_, i) => { const e = document.createElement('i'); if(i && i % 4 === 0) e.className = 'bar'; return e; }));
+  const lit = p > 0 ? Math.ceil(p * n - 1e-6) : 0;
+  [...row.children].forEach((e, i) => e.classList.toggle('on', i < lit));
+}
 function glow(leader, next){
   tiles.forEach((el, id) => { el.classList.toggle('onmic', id === leader); el.classList.toggle('next', id === next && id !== leader); });
   spots.forEach(sp => {
-    const who = sp.dataset.who, band = sp.classList.contains('ai') && !sp.classList.contains('off');
+    const who = sp.dataset.who, band = sp.classList.contains('ai');
     sp.classList.toggle('on', !!leader && (who ? who === leader : leader === 'ai' && band));
     sp.classList.toggle('next', !!next && next !== leader && (who ? who === next : next === 'ai' && band));
   });
   $('#bandTile').classList.toggle('onmic', leader === 'ai'); $('#bandTile').classList.toggle('next', next === 'ai' && leader !== 'ai');
 }
 export function showTurn(t){
-  const line = $('#turnLine'), count = $('#turnCount'), of = $('#turnOf'), next = $('#turnNext'), knob = $('#knob');
+  const line = $('#turnLine'), count = $('#turnCount'), of = $('#turnOf'), next = $('#turnNext'), bar = $('#turnBar');
   if(!t || t.mode !== 'trade'){
-    glow(null, null); knob.classList.remove('countdown');
+    glow(null, null); bar.classList.remove('countdown');
     const trade = S.game.mode === 'trade';
     line.textContent = trade ? `BARS ${S.game.bars}` : 'Free jam';
-    if(!S.playing){ count.textContent = '–'; of.textContent = ''; knob.style.setProperty('--p', 0); }
+    if(!S.playing){ count.textContent = '–'; of.textContent = ''; setLeds(trade ? Math.min(32, S.game.bars * 4) : 4, 0); }
     next.textContent = S.playing ? '' : !S.arr ? 'Pick a track' : trade ? 'Starts with the band' : 'Press play';
     return;
   }
   line.textContent = t.mine ? `Your ${t.bars} bars` : t.leader ? `${t.nameOf(t.leader)} is on` : `BARS ${t.bars}`;
   next.textContent = t.next && t.next !== t.leader ? 'next: ' + (t.next === me.id ? 'you' : t.nameOf(t.next)) : '';
-  knob.classList.toggle('countdown', !!t.count);
+  bar.classList.toggle('countdown', !!t.count);
   if(t.count){ count.textContent = String(t.count); of.textContent = ''; }   // your turn is coming: 4, 3, 2, 1
   else { count.textContent = t.bar ? String(t.bar) : '–'; of.textContent = t.bar ? '/' + t.bars : ''; }
-  knob.style.setProperty('--n', Math.min(32, t.bars * 4)); knob.style.setProperty('--p', t.progress || 0);
+  setLeds(Math.min(32, t.bars * 4), t.progress || 0);
   glow(t.leader, t.next);
 }
 export function status(text){ $('#connStats').textContent = text; }

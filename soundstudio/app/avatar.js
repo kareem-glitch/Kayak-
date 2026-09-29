@@ -95,6 +95,9 @@ export const charFor = (id, name) => { const l = looks.get(id); return l && Numb
 
 // Draws a character on a transparent canvas, one sprite pixel = canvas.width / 20.
 export function draw(canvas, char, inst, playing, bob, ai = false){
+  const key = [char, inst, playing, bob, ai].join('|');
+  if(canvas.dataset.k === key) return;   // same frame as last time: nothing to paint (keeps the page light while you play)
+  canvas.dataset.k = key;
   const g = canvas.getContext('2d'), px = Math.floor(canvas.width / 20), c = palette(char), y0 = bob ? -1 : 0;
   g.clearRect(0, 0, canvas.width, canvas.height);
   compose(inst, playing, CHARS[charOf(char)].hair, ai).forEach((row, y) => row.forEach((k, x) => { if(k !== '.' && c[k]){ g.fillStyle = c[k]; g.fillRect(x * px, (y + y0) * px, px, px); } }));

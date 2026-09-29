@@ -117,7 +117,7 @@ export function info(){
   const now = clk(), pos = now - st.zero, seg = turnMs(), k = Math.floor(pos / seg);
   const next = pos < 0 ? 0 : k + 1, untilNext = st.zero + next * seg - now;
   const count = leaderOf(next) === me.id && untilNext <= 4 * beatMs() ? Math.ceil(untilNext / beatMs()) : 0;
-  const progress = pos < 0 ? 0 : (pos - k * seg) / seg;   // how far through this turn (the knob's ring)
+  const progress = pos < 0 ? 0 : (pos - k * seg) / seg;   // how far through this turn (the turn bar's lights)
   return { mode: 'trade', bars: S.game.bars, leader: pos < 0 ? null : leaderOf(k), next: leaderOf(next), mine: pos >= 0 && leaderOf(k) === me.id, count, nameOf,
     progress, bar: pos < 0 ? 0 : Math.floor(progress * S.game.bars) + 1 };
 }

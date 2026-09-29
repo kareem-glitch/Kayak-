@@ -60,7 +60,7 @@ export function stop(){
 // One frame: every player's tile (camera or initial) in a grid, with names.
 function paint(g, c){
   g.fillStyle = '#121c1f'; g.fillRect(0, 0, c.width, c.height);
-  const tiles = [...document.querySelectorAll('#circle .tile')];
+  const tiles = [...document.querySelectorAll('#players .tile')];
   const n = Math.max(1, tiles.length), cols = n > 1 ? 2 : 1, rows = Math.ceil(n / cols), gap = 12;
   const w = (c.width - gap * (cols + 1)) / cols, h = (c.height - gap * (rows + 1)) / rows;
   tiles.forEach((t, i) => {

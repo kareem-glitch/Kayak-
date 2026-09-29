@@ -70,18 +70,17 @@ window.__audioContexts = [];
 
   <main class="main">
     <section class="stage" aria-label="Stage">
-      <div class="lcd" id="bandTile">
-        <div class="label" id="bandTileTitle">The band is waiting for someone to run it</div>
-        <div class="lcd-row"><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span><span class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></span></div>
+      <div class="stage-top">
+        <div class="lcd" id="bandTile">
+          <div class="label" id="bandTileTitle">The band is waiting for someone to run it</div>
+          <div class="lcd-row"><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span><span class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></span></div>
+        </div>
+        <div class="turn-bar" id="turnBar" aria-live="polite">
+          <div class="turn-main"><span class="turn-label" id="turnLine">Free jam</span><span class="leds" id="leds" aria-hidden="true"></span></div>
+          <div class="turn-side"><span class="turn-big"><b id="turnCount">–</b><i id="turnOf"></i></span><span class="turn-next" id="turnNext"></span></div>
+        </div>
       </div>
-      <div class="circle" id="circle">
-        <span class="mark" style="--x:0;--y:-34" aria-hidden="true"></span><span class="mark" style="--x:37;--y:0" aria-hidden="true"></span><span class="mark" style="--x:0;--y:34" aria-hidden="true"></span><span class="mark" style="--x:-37;--y:0" aria-hidden="true"></span>
-        <div class="knob" id="knob" aria-live="polite"><div class="knob-face">
-          <span class="knob-label" id="turnLine">Free jam</span>
-          <span class="knob-big"><b id="turnCount">–</b><i id="turnOf"></i></span>
-          <span class="knob-next" id="turnNext"></span>
-        </div></div>
-      </div>
+      <div class="players-box"><div class="players" id="players"></div></div>
     </section>
 
     <aside class="side" aria-label="Setup">
