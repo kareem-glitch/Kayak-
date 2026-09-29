@@ -7,6 +7,7 @@ import { STYLES, DESC } from './band/theory.js';
 import * as band from './band/engine.js';
 import * as session from './session.js';
 import { PAD } from './avatar-colors.js';
+import { muted } from './presence.js';
 
 export const tiles = new Map();
 export function tileFor(p){
@@ -25,12 +26,15 @@ export function tileFor(p){
 }
 export function removeTile(id){ tiles.get(id)?.remove(); tiles.delete(id); placeSpots(); }
 
-// ---- the stage: spots around the circle ----
-// The parts stand where a band would: drums at the back, bass left, keys right,
-// guitar at the front. Anyone not playing a part gets a spot in between.
-const ANGLE = { drums: -90, keys: 0, guitar: 90, bass: 180 }, FREE = [135, 45, -135, -45];
+// ---- the stage: the players standing in a circle ----
+// Only who's really playing stands there: the people in the room, and the AI
+// band's parts that are in the track, not taken by someone and not turned all
+// the way off. People with their mic muted are greyed out. They stand
+// where a band would: drums at the back, then clockwise keys, anyone without
+// a part, guitar, bass; spread evenly around the circle for however many.
+const ORDER = { drums: 0, keys: 1, free: 2, guitar: 3, bass: 4 };
 const spots = new Map();
-function spotEl(key, angle, button){
+function spotEl(key, button){
   let sp = spots.get(key);
   if(!sp){
     sp = document.createElement(button ? 'button' : 'div'); if(button) sp.type = 'button';
@@ -38,8 +42,6 @@ function spotEl(key, angle, button){
     sp.innerHTML = '<span class="floor"></span><span class="fig"></span><span class="tag"><i class="pad"></i><span class="who"></span><span class="role"></span></span><span class="inst"></span>';
     $('#circle').appendChild(sp); spots.set(key, sp);
   }
-  const r = angle * Math.PI / 180;
-  sp.style.setProperty('--x', (Math.cos(r) * 37).toFixed(1)); sp.style.setProperty('--y', (Math.sin(r) * 34).toFixed(1));
   return sp;
 }
 function stand(sp, tile){
@@ -53,26 +55,35 @@ function label(sp, who, role){
 }
 export function placeSpots(){
   if(!$('#circle')) return;
-  const a = S.arr, used = new Set(), byName = n => [...tiles.entries()].find(([, t]) => t.dataset.name === n);
+  const a = S.arr, list = [], byName = n => [...tiles.entries()].find(([, t]) => t.dataset.name === n);
   S.seats.forEach(s => {
-    const key = 'seat:' + s.id, sp = spotEl(key, ANGLE[s.id] ?? 90, true); used.add(key);
-    const d = partDesc(s.id), off = d === null && !s.human && !!a, mine = s.human && s.who === me.name, p = s.human ? byName(s.who) : null;
-    sp.dataset.seat = s.id; sp.style.setProperty('--pad', PAD[s.id] || '#ececea');
-    sp.classList.toggle('ai', !s.human); sp.classList.toggle('off', off); sp.classList.toggle('mine', !!mine);
-    stand(sp, p && p[1]); if(p) sp.dataset.who = p[0]; else delete sp.dataset.who;
-    const part = s.label.replace('Rhythm guitar', 'Guitar');
-    label(sp, s.human ? s.who || 'Taken' : part, s.human ? (mine ? 'YOU' : '') : off ? 'OUT' : 'AI');
-    sp.querySelector('.inst').textContent = s.human ? part : '';
-    sp.title = s.human ? (mine ? 'Hand ' + part.toLowerCase() + ' back to the AI' : 'Played by ' + (s.who || 'someone')) : !a ? 'Waiting for the band' : off ? 'Not in this track' : 'Play ' + part.toLowerCase() + ' (the AI steps out)';
-    sp.disabled = !S.hostId || (s.human && !mine && !me.isHost);
-    sp.onclick = () => session.toggleSeat(s.id);
+    if(s.human){ const p = byName(s.who); if(p) list.push({ key: 'seat:' + s.id, order: ORDER[s.id] ?? 2, seat: s, person: p }); return; }
+    if(a && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, order: ORDER[s.id] ?? 2, seat: s });   // the AI plays it (turned all the way off: it's gone)
   });
-  let i = 0;
-  tiles.forEach((t, id) => {
-    if(S.seats.some(s => s.human && s.who === t.dataset.name)) return;
-    const key = 'free:' + id, sp = spotEl(key, FREE[i++ % FREE.length], false); used.add(key);
-    sp.classList.add('free'); sp.dataset.who = id; sp.style.setProperty('--pad', '#ececea');
-    stand(sp, t); label(sp, t.dataset.name, id === me.id ? 'YOU' : ''); sp.querySelector('.inst').textContent = id === me.id ? 'Tap a part to play it' : 'Jamming';
+  tiles.forEach((t, id) => { if(!S.seats.some(s => s.human && s.who === t.dataset.name)) list.push({ key: 'free:' + id, order: ORDER.free, person: [id, t] }); });
+  list.sort((x, y) => x.order - y.order);
+  const n = list.length, used = new Set();
+  list.forEach((m, i) => {
+    const s = m.seat, sp = spotEl(m.key, !!s); used.add(m.key);
+    const deg = n === 1 ? 90 : -90 + i * 360 / n, r = deg * Math.PI / 180;   // alone: front and centre
+    sp.style.setProperty('--x', (Math.cos(r) * 37).toFixed(1)); sp.style.setProperty('--y', (Math.sin(r) * 34).toFixed(1));
+    const id = m.person && m.person[0], mine = id === me.id;
+    stand(sp, m.person && m.person[1]);
+    if(id) sp.dataset.who = id; else delete sp.dataset.who;
+    sp.classList.toggle('ai', !m.person); sp.classList.toggle('mine', mine);
+    sp.classList.toggle('muted', !!m.person && muted.has(id));
+    sp.style.setProperty('--pad', s ? PAD[s.id] || '#ececea' : '#ececea');
+    if(s){
+      const part = s.label.replace('Rhythm guitar', 'Guitar');
+      sp.dataset.seat = s.id;
+      label(sp, m.person ? m.person[1].dataset.name : part, m.person ? (mine ? 'YOU' : '') : 'AI');
+      sp.querySelector('.inst').textContent = m.person ? part : '';
+      sp.title = m.person ? (mine ? 'Hand ' + part.toLowerCase() + ' back to the AI' : 'Played by ' + s.who) : 'Play ' + part.toLowerCase() + ' (the AI steps out)';
+      sp.disabled = !S.hostId || (!!m.person && !mine && !me.isHost);
+      sp.onclick = () => session.toggleSeat(s.id);
+    } else {
+      delete sp.dataset.seat; label(sp, m.person[1].dataset.name, mine ? 'YOU' : ''); sp.querySelector('.inst').textContent = '';
+    }
   });
   spots.forEach((sp, key) => { if(!used.has(key)){ sp.remove(); spots.delete(key); } });
 }
@@ -152,7 +163,7 @@ export function render(){
       const v = document.createElement('label'); v.className = 'vol'; v.textContent = 'Level';
       const r = document.createElement('input'); r.type = 'range'; r.min = -30; r.max = 6; r.value = S.levels[s.id] || 0;
       r.setAttribute('aria-label', s.label + ' level');
-      r.oninput = () => session.setLevel(s.id, +r.value);
+      r.oninput = () => { session.setLevel(s.id, +r.value); placeSpots(); };
       v.appendChild(r); el.appendChild(v);
       const m = document.createElement('div'); m.className = 'meter'; m.innerHTML = `<i data-meter="${s.id}"></i>`; el.appendChild(m);
     }

@@ -34,6 +34,18 @@ test('pick a player: the room sees your character, or your camera', { timeout: 9
     assert.ok(await hasColour(B, 'Host', '#7b4fd6'), 'the guest sees Juno (purple hair)');
     assert.ok(!await hasColour(B, 'Host', '#d8322a'), '…not Blaze');
     if(SHOTS) await B.screenshot({ path: SHOTS + '/players-room.png' });
+    // only who's really there stands in the circle: no band yet, so just the two of them
+    const spots = () => B.evaluate(() => [...document.querySelectorAll('.spot')].map(sp => sp.querySelector('.who').textContent + (sp.classList.contains('muted') ? ' (muted)' : '')));
+    assert.ok((await spots()).includes('Drums'), 'the band is loaded: its parts stand there too');
+    await h.drawer(A, 'band');
+    await A.$$eval('#strips input[type=range]', rs => rs.forEach(r => { r.value = -30; r.dispatchEvent(new Event('input', { bubbles: true })); }));   // the host turns every part off
+    await B.waitForFunction(() => document.querySelectorAll('.spot').length === 2, null, { timeout: 5000 });
+    assert.deepEqual((await spots()).sort(), ['Guest', 'Host'], 'band parts turned off: just the two players, nobody else');
+    await h.drawer(A, 'band'); await A.click('[data-drawer-tab="band"]');   // close the drawer
+    await A.click('#micBtn');
+    await B.waitForFunction(() => [...document.querySelectorAll('.spot.muted .who')].some(e => e.textContent === 'Host'), null, { timeout: 5000 });
+    assert.deepEqual((await spots()).sort(), ['Guest', 'Host (muted)'], 'muting greys you out for the others');
+    await A.click('#micBtn');
     // back to the camera in the room
     await A.click('#avatarBtn');
     await B.waitForFunction(() => !document.querySelector('.tile.avatar'), null, { timeout: 5000 });

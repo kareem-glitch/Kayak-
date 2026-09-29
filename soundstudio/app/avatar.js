@@ -4,18 +4,26 @@
 // it moves with your delayed audio, not ahead of it).
 import { S, me } from './state.js';
 import * as room from './net/room.js';
-import { tiles } from './ui.js';
+import { tiles, placeSpots } from './ui.js';
+import { muted } from './presence.js';
 
 const looks = new Map();   // id -> { on, char } for each player
-let mine = false, myChar = 0, lastBeat = 0;
+let mine = false, myChar = 0, myMuted = false, lastBeat = 0;
 export const isOn = () => mine;
 export const beat = () => { lastBeat = performance.now(); };
 
 // Turn yours on/off (and pick your player) and tell the room. Returns the new state.
-const look = () => ({ t:'look', avatar:mine, char:myChar });
+const look = () => ({ t:'look', avatar:mine, char:myChar, muted:myMuted });
 export function setMine(on, char = myChar){ mine = on; myChar = char; looks.set(me.id, { on, char }); room.send(look()); return on; }
-export const tellNewcomer = id => { if(mine) room.send(look(), id); };
-export function handle(m, id){ if(m.t !== 'look') return false; looks.set(id, { on:!!m.avatar, char:m.char }); return true; }
+// Your mic muted (you show greyed out for everyone).
+export function setMuted(on){ myMuted = on; if(on) muted.add(me.id); else muted.delete(me.id); room.send(look()); placeSpots(); }
+export const tellNewcomer = id => { if(mine || myMuted) room.send(look(), id); };
+export function handle(m, id){
+  if(m.t !== 'look') return false;
+  looks.set(id, { on:!!m.avatar, char:m.char });
+  if(m.muted) muted.add(id); else muted.delete(id);
+  placeSpots(); return true;
+}
 
 // The characters, Pokemon-overworld style: a chibi facing you (16 x 16) inside a
 // 20 x 20 grid with its instrument. H hair, S skin, E eyes, M mouth, T shirt,
@@ -44,12 +52,13 @@ export const AI_CHAR = { drums:3, bass:1, keys:0, guitar:2 };
 
 // The character with its instrument: a Strat (or a longer-necked bass) across the
 // body, a keyboard in front, or a drum kit seen from above. Rows of colour keys.
-function compose(inst, playing, hair = {}){
+function compose(inst, playing, hair = {}, ai = false){
   const g = Array.from({ length:20 }, () => Array(20).fill('.'));
   const put = (x, y, c) => { if(x >= 0 && x < 20 && y >= 0 && y < 20) g[y][x] = c; };
   const disc = (cx, cy, r2, in2, rim, head) => { for(let y = cy - 4; y <= cy + 4; y++) for(let x = cx - 4; x <= cx + 4; x++){ const d = (x - cx) ** 2 + (y - cy) ** 2; if(d <= r2) put(x, y, d > in2 ? rim : head); } };
   const sitting = inst === 'drums' || inst === 'keys', yo = sitting ? 1 : 3;
   BODY.forEach((r, y) => [...(hair[y] || r)].forEach((c, x) => { if(c !== '.') put(x + 2, y + yo, c); }));
+  if(ai){ for(let x = 5; x <= 14; x++){ put(x, 4 + yo, 'V'); put(x, 5 + yo, 'V'); } put(7, 4 + yo, 'v'); put(12, 4 + yo, 'v'); }   // the AI players wear a visor
   if(playing){ put(9, 7 + yo, 'M'); put(10, 7 + yo, 'M'); put(9, 8 + yo, 'M'); put(10, 8 + yo, 'M'); }   // singing along
   if(inst === 'guitar' || inst === 'bass'){
     const bass = inst === 'bass';
@@ -79,16 +88,16 @@ const hash = s => { let h = 2166136261; for(const c of String(s)) h = Math.imul(
 function palette(i){
   const c = CHARS[charOf(i)];
   return { H: c.H, S: c.S, E: '#1b1b1b', M: '#a33a3a', T: c.T, D: shade(c.T, 0.72), P: c.P, B: '#1b1b1b', C: c.C, c: c.c,
-    R: c.R, k: '#1d1c1a', w: '#f4f1ea', n: '#e2b46a', p: '#c9ced6', W: '#f4f1ea', X: '#26241f', Y: '#e8c14d', G: '#5a5650', bg: c.T };
+    R: c.R, k: '#1d1c1a', w: '#f4f1ea', n: '#e2b46a', p: '#c9ced6', W: '#f4f1ea', X: '#26241f', Y: '#e8c14d', G: '#5a5650', V: '#15161a', v: '#8fe8ff', bg: c.T };
 }
 export const seatOf = name => { const s = S.seats.find(x => x.human && x.who === name); return s ? s.id : null; };
 export const charFor = (id, name) => { const l = looks.get(id); return l && Number.isInteger(l.char) ? charOf(l.char) : hash(name) % CHARS.length; };
 
 // Draws a character on a transparent canvas, one sprite pixel = canvas.width / 20.
-export function draw(canvas, char, inst, playing, bob){
+export function draw(canvas, char, inst, playing, bob, ai = false){
   const g = canvas.getContext('2d'), px = Math.floor(canvas.width / 20), c = palette(char), y0 = bob ? -1 : 0;
   g.clearRect(0, 0, canvas.width, canvas.height);
-  compose(inst, playing, CHARS[charOf(char)].hair).forEach((row, y) => row.forEach((k, x) => { if(k !== '.' && c[k]){ g.fillStyle = c[k]; g.fillRect(x * px, (y + y0) * px, px, px); } }));
+  compose(inst, playing, CHARS[charOf(char)].hair, ai).forEach((row, y) => row.forEach((k, x) => { if(k !== '.' && c[k]){ g.fillStyle = c[k]; g.fillRect(x * px, (y + y0) * px, px, px); } }));
 }
 const sprite = holder => {
   let cv = holder.querySelector('canvas.sprite');
@@ -107,7 +116,8 @@ setInterval(() => {
   });
   document.querySelectorAll('.spot.ai').forEach(sp => {
     const seat = sp.dataset.seat, out = sp.classList.contains('off');
-    draw(sprite(sp.querySelector('.fig')), AI_CHAR[seat] ?? 0, seat, S.playing && !out && beatNow, S.playing && !out && beatNow);
+    const on = S.playing && !out && !sp.classList.contains('muted') && beatNow;
+    draw(sprite(sp.querySelector('.fig')), AI_CHAR[seat] ?? 0, seat, on, on, true);
   });
 }, 80);
 

@@ -318,7 +318,7 @@ const feel = audio.isPhone() ? 'balanced' : 'tight', BUFFER_LIMIT = audio.isPhon
 const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeText(inviteLink); const t = btn.textContent; btn.textContent = done; setTimeout(() => btn.textContent = t, 2000); }catch(e){ prompt('Copy this invite link', inviteLink); } };
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
 $('#leaveBtn').onclick = () => { room.leave(); location.href = location.pathname; };
-$('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); $('#micBtn').setAttribute('aria-pressed', String(on)); $('#micBtn').title = on ? 'Mic on' : 'Mic off'; };
+$('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); avatar.setMuted(!on); $('#micBtn').setAttribute('aria-pressed', String(on)); $('#micBtn').title = on ? 'Mic on' : 'Mic off'; };
 $('#camBtn').onclick = () => { const v = media && media.getVideoTracks()[0]; if(!v) return; v.enabled = !v.enabled; $('#camBtn').textContent = v.enabled ? 'Camera on' : 'Camera off'; $('#camBtn').setAttribute('aria-pressed', String(v.enabled)); };
 // Avatar instead of camera: your camera is switched off for everyone while it's on.
 function setAvatar(on){
