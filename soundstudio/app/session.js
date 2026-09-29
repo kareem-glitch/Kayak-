@@ -52,7 +52,7 @@ async function generateStems(prompt, code){
   S.arr = stemsArr({ title:base.title, style:base.style, key:base.key, bpm:base.bpm }, { prompt, source:'prompt', pack:{ id, source:'prompt', parts:stems.parts() } });
   band.applyMutes(); broadcastState(); shareStems(); hooks.onChange();
   if(S.playing) await startBand(false);
-  return { note:'Your track is ready. Press play.' };
+  return { note:'Your track is ready. Press play.' + (j.reworded ? ` (Real artists and songs can’t be named, so it made: “${j.reworded}”)` : '') };
 }
 // Send the parts to one player (or everyone) in small pieces over the room's connections.
 const CHUNK = 48000;
