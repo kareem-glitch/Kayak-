@@ -6,7 +6,7 @@
 <title>air.band</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:wdth,wght@125,600;125,700;125,800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script>
 // Remember every AudioContext the page creates, including the one inside Tone.js,
 // so the output device picker can switch all of them (AudioContext.setSinkId).
@@ -64,15 +64,17 @@ window.__audioContexts = [];
 
   <main class="main">
     <section class="stage" aria-label="Stage">
-      <div class="grid" id="grid">
-        <div class="band-tile" id="bandTile">
-          <div class="label" id="bandTileTitle">The band is waiting for someone to run it</div>
-          <div><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span></div>
-          <div class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-        </div>
+      <div class="lcd" id="bandTile">
+        <div class="label" id="bandTileTitle">The band is waiting for someone to run it</div>
+        <div class="lcd-row"><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span><span class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></span></div>
       </div>
-      <div class="banner" aria-live="polite"><span class="turn-line" id="turnLine" hidden></span><span class="count big-count" id="turnCount"></span></div>
-      <div class="seats" id="seats" aria-label="Parts: tap one to play it"></div>
+      <div class="circle" id="circle">
+        <div class="knob" id="knob" aria-live="polite"><div class="knob-face">
+          <span class="knob-label" id="turnLine">Free jam</span>
+          <span class="knob-big"><b id="turnCount">–</b><i id="turnOf"></i></span>
+          <span class="knob-next" id="turnNext"></span>
+        </div></div>
+      </div>
     </section>
 
     <aside class="side" aria-label="Setup">

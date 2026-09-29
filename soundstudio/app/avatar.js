@@ -1,5 +1,5 @@
-// Avatars: a little pixel character instead of your camera. You pick one of
-// four players on the start screen (or keep your camera); it bobs on the beat and switches to its "playing" frame
+// Characters: a little pixel player instead of your camera. You pick one of
+// four on the start screen (or keep your camera); it bobs on the beat and switches to its "playing" frame
 // when you play, timed to when the others actually hear you (so in Trade bars
 // it moves with your delayed audio, not ahead of it).
 import { S, me } from './state.js';
@@ -17,53 +17,58 @@ export function setMine(on, char = myChar){ mine = on; myChar = char; looks.set(
 export const tellNewcomer = id => { if(mine) room.send(look(), id); };
 export function handle(m, id){ if(m.t !== 'look') return false; looks.set(id, { on:!!m.avatar, char:m.char }); return true; }
 
-// 20 x 20 pixel character. H hair, S skin, E eyes, M mouth, T shirt, D shirt shade, P trousers, B shoes.
+// The characters, Pokemon-overworld style: a chibi facing you (16 x 16) inside a
+// 20 x 20 grid with its instrument. H hair, S skin, E eyes, M mouth, T shirt,
+// D shirt shade, P trousers, B shoes.
 const BODY = [
-  '........HHHH........', '......HHHHHHHH......', '.....HHHHHHHHHH.....', '.....HSSSSSSSSH.....', '.....HSESSSSESH.....',
-  '......SSSSSSSS......', '......SSSMMSSS......', '.......SSSSSS.......', '.....TTTTTTTTTT.....', '....TTTTTTTTTTTT....',
-  '....TTDTTTTTTDTT....', '....TTTTTTTTTTTT....', '....TTTTTTTTTTTT....', '.....TTTTTTTTTT.....', '......PPPPPPPP......',
-  '......PPPPPPPP......', '......PPP..PPP......', '......PPP..PPP......', '......PPP..PPP......', '.....BBBB..BBBB.....',
+  '....HHHHHHHH....', '...HHHHHHHHHH...', '..HHHHHHHHHHHH..', '..HHSSSSSSSSHH..', '..HSSESSSSESSH..', '..HSSESSSSESSH..',
+  '...SSSSSSSSSS...', '....SSSMMSSS....', '.....SSSSSS.....', '...TTTTTTTTTT...', '..TTTTTTTTTTTT..', '..STTDTTTTDTTS..',
+  '..STTTTTTTTTTS..', '...PPPPPPPPPP...', '...PPPP..PPPP...', '...BBBB..BBBB...',
 ];
 
 // The four players: each has their own hair, colours and Strat finish.
 // hair: rows that replace the top of BODY (C = beanie, c = its band).
 export const CHARS = [
-  { name:'Blaze', H:'#d8322a', S:'#f6d2b8', T:'#1d1c1a', P:'#3b3b3b', R:'#d7262f', hair:{
-    0:'....H..H..H..H......', 1:'....HHHHHHHHHHH.....', 2:'.....HHHHHHHHHH.....' } },
+  { name:'Blaze', H:'#d8322a', S:'#f6d2b8', T:'#34322d', P:'#3b3b3b', R:'#d7262f', hair:{ 0:'...H..HH..H..H..', 1:'...HHHHHHHHHHH..' } },
   { name:'Juno', H:'#7b4fd6', S:'#c68a62', T:'#29a19c', P:'#2d3a4a', R:'#2a9d8f', hair:{
-    3:'....HHSSSSSSSSHH....', 4:'....HHSESSSSESHH....', 5:'....HHSSSSSSSSHH....', 6:'....HHSSSMMSSSHH....', 7:'....HH.SSSSSS.HH....' } },
-  { name:'Dex', H:'#2b1d16', S:'#8d5a3b', T:'#f0a238', P:'#2d3a4a', R:'#f0a238', hair:{
-    0:'......HHHHHHHH......', 1:'....HHHHHHHHHHHH....', 2:'...HHHHHHHHHHHHHH...', 3:'...HHHSSSSSSSSHHH...', 4:'....HHSESSSSESHH....' } },
+    3:'.HHHSSSSSSSSHHH.', 4:'.HHSSESSSSESSHH.', 5:'.HHSSESSSSESSHH.', 6:'.HHSSSSSSSSSSHH.', 7:'.HH.SSSMMSSS.HH.', 8:'.HH..SSSSSS..HH.' } },
+  { name:'Dex', H:'#2b1d16', S:'#8d5a3b', T:'#f0a238', P:'#2d3a4a', R:'#e07b1f', hair:{
+    0:'...HHHHHHHHHH...', 1:'.HHHHHHHHHHHHHH.', 2:'HHHHHHHHHHHHHHHH', 3:'.HHHSSSSSSSSHHH.', 4:'.HHSSESSSSESSHH.' } },
   { name:'Moss', H:'#d8a444', S:'#e8b48f', T:'#0984e3', P:'#4a3b2a', R:'#e8e4d8', C:'#2f8f4e', c:'#236b3a', hair:{
-    0:'.........CC.........', 1:'......CCCCCCCC......', 2:'.....CCCCCCCCCC.....', 3:'.....cccccccccc.....' } },
+    0:'.......CC.......', 1:'....CCCCCCCC....', 2:'..CCCCCCCCCCCC..', 3:'..cccccccccccc..' } },
 ];
 export const charOf = v => Number.isInteger(v) && v >= 0 && v < CHARS.length ? v : 0;
+// Each part has its pad colour (like a lit pad), and the AI band its own players.
+export { PAD } from './avatar-colors.js';
+export const AI_CHAR = { drums:3, bass:1, keys:0, guitar:2 };
 
-// The character with its instrument: a Strat held on the diagonal (body on the
-// hip, neck past the shoulder), a keyboard, or drums. Returns rows of colour keys.
+// The character with its instrument: a Strat (or a longer-necked bass) across the
+// body, a keyboard in front, or a drum kit seen from above. Rows of colour keys.
 function compose(inst, playing, hair = {}){
-  const g = BODY.map((r, y) => [...(hair[y] || r)]);
+  const g = Array.from({ length:20 }, () => Array(20).fill('.'));
   const put = (x, y, c) => { if(x >= 0 && x < 20 && y >= 0 && y < 20) g[y][x] = c; };
-  if(playing){ put(8, 6, 'M'); put(11, 6, 'M'); }   // singing along
-  if(inst === 'keys'){
-    for(let x = 1; x < 19; x++){ put(x, 13, x % 3 === 1 ? 'X' : 'W'); put(x, 14, 'W'); put(x, 15, 'k'); }
-    put(1, 16, 'k'); put(18, 16, 'k'); put(1, 17, 'k'); put(18, 17, 'k');
-    put(playing ? 6 : 7, playing ? 13 : 12, 'S'); put(playing ? 13 : 12, playing ? 12 : 13, 'S');
+  const disc = (cx, cy, r2, in2, rim, head) => { for(let y = cy - 4; y <= cy + 4; y++) for(let x = cx - 4; x <= cx + 4; x++){ const d = (x - cx) ** 2 + (y - cy) ** 2; if(d <= r2) put(x, y, d > in2 ? rim : head); } };
+  const sitting = inst === 'drums' || inst === 'keys', yo = sitting ? 1 : 3;
+  BODY.forEach((r, y) => [...(hair[y] || r)].forEach((c, x) => { if(c !== '.') put(x + 2, y + yo, c); }));
+  if(playing){ put(9, 7 + yo, 'M'); put(10, 7 + yo, 'M'); put(9, 8 + yo, 'M'); put(10, 8 + yo, 'M'); }   // singing along
+  if(inst === 'guitar' || inst === 'bass'){
+    const bass = inst === 'bass';
+    [[9,14],[10,14],[11,13],[12,13],[13,12],[14,12],[15,11],[16,11], ...(bass ? [[17,10],[18,10]] : [])].forEach(([x, y]) => put(x, y, 'n'));
+    (bass ? [[19,9],[19,8]] : [[17,10],[18,10],[18,9]]).forEach(([x, y]) => put(x, y, 'p'));
+    const body = bass ? { 13:[3,6], 14:[2,8], 15:[1,8], 16:[1,7], 17:[2,6] } : { 13:[4,6], 14:[3,8], 15:[2,8], 16:[2,7], 17:[3,6] };
+    for(const [y, [a, b]] of Object.entries(body)) for(let x = a; x <= b; x++) put(x, +y, 'R');
+    (bass ? [[4,15],[5,15]] : [[5,14],[4,15],[5,15],[6,15],[4,16],[5,16]]).forEach(([x, y]) => put(x, y, 'w'));
+    put(8, playing ? 16 : 15, 'S'); put(bass ? 16 : 14, bass ? 10 : 11, 'S');   // strumming hand, fretting hand
   } else if(inst === 'drums'){
-    const drum = { 14: [3, 'kRRRRRRRRRRRRk'], 15: [3, 'kRwwwwwwwwwwRk'], 16: [3, 'kRRRRRRRRRRRRk'], 17: [4, 'k..........k'], 18: [4, 'k..........k'] };
-    for(const [y, [x0, row]] of Object.entries(drum)) [...row].forEach((c, i) => { if(c !== '.') put(x0 + i, +y, c); });
-    const up = playing ? -2 : 0;
-    for(let i = 0; i < 3; i++){ put(4, 11 + up + i, 'n'); put(15, 11 - up + i, 'n'); }
-  } else {
-    // neck: maple, rising one row every two columns, outlined, fret dots
-    for(let x = 9; x <= 17; x++){ const yc = 12 - Math.floor((x - 9) / 2); put(x, yc - 2, 'k'); put(x, yc - 1, 'n'); put(x, yc, 'n'); put(x, yc + 1, 'k'); if(x % 2 === 0 && x > 10) put(x, yc, 'f'); }
-    [[18,5,'p'],[19,5,'p'],[18,6,'h'],[19,6,'h'],[18,7,'h'],[19,7,'k'],[18,8,'k']].forEach(([x, y, c]) => put(x, y, c));
-    const body = { 10: [5, 'kk'], 11: [4, 'kRRk'], 12: [2, 'kkRRRRk'], 13: [1, 'kRRwwwRRkk'], 14: [0, 'kRRwwwwwRRk'], 15: [0, 'kRwwwwwwwRk'], 16: [0, 'kRRwwwwRRk'], 17: [1, 'kRRRRRRk'], 18: [2, 'kkkkkk'] };
-    for(const [y, [x0, row]] of Object.entries(body)) [...row].forEach((c, i) => { if(c !== '.') put(x0 + i, +y, c); });
-    [[6,13],[7,14],[4,14],[5,15],[2,15],[3,16]].forEach(([x, y]) => put(x, y, 'K'));   // three slanted pickups, then the bridge
-    put(1, 15, 'p'); put(1, 16, 'p');
-    put(15, 8, 'S'); put(15, 9, 'S'); put(16, 9, 'S');   // fretting hand
-    if(playing){ put(8, 16, 'S'); put(9, 16, 'S'); } else { put(8, 14, 'S'); put(9, 15, 'S'); }   // strumming hand
+    disc(2, 10, 3, 9, 'Y', 'Y'); put(2, 10, 'k'); disc(17, 10, 3, 9, 'Y', 'Y'); put(17, 10, 'k');
+    disc(7, 11, 2, 0.5, 'R', 'w'); disc(12, 11, 2, 0.5, 'R', 'w'); disc(10, 16, 9, 5, 'R', 'w');
+    disc(5, 14, 2, 0.5, 'p', 'w'); disc(15, 14, 3, 1, 'R', 'w');
+    const up = playing ? 1 : 0; put(6, 9 - up, 'S'); put(13, 9 - up, 'S'); put(5, 8 - up, 'n'); put(14, 8 - up, 'n');
+  } else if(inst === 'keys'){
+    const blacks = 'WXWXWWXWXWXWWXWXWW';
+    for(let x = 1; x <= 18; x++){ put(x, 12, 'k'); put(x, 13, blacks[x - 1]); put(x, 14, 'W'); put(x, 15, 'k'); }
+    const hop = playing ? 1 : 0; put(6 + hop, 12, 'S'); put(7 + hop, 12, 'S'); put(12 - hop, 12, 'S'); put(13 - hop, 12, 'S');
+    [[2,16],[2,17],[17,16],[17,17]].forEach(([x, y]) => put(x, y, 'G'));
   }
   return g;
 }
@@ -73,32 +78,36 @@ const hash = s => { let h = 2166136261; for(const c of String(s)) h = Math.imul(
 
 function palette(i){
   const c = CHARS[charOf(i)];
-  return { H: c.H, S: c.S, E: '#1b1b1b', M: '#a33a3a', T: c.T, D: shade(c.T, 0.75), P: c.P, B: '#1b1b1b', C: c.C, c: c.c,
-    R: c.R, k: '#1d1c1a', w: '#f4f1ea', K: '#1d1c1a', n: '#e2b46a', f: '#7a4b22', h: '#e2b46a', p: '#c9ced6', W: '#f4f1ea', X: '#1b1b1b', bg: c.T === '#1d1c1a' ? c.R : c.T };
+  return { H: c.H, S: c.S, E: '#1b1b1b', M: '#a33a3a', T: c.T, D: shade(c.T, 0.72), P: c.P, B: '#1b1b1b', C: c.C, c: c.c,
+    R: c.R, k: '#1d1c1a', w: '#f4f1ea', n: '#e2b46a', p: '#c9ced6', W: '#f4f1ea', X: '#26241f', Y: '#e8c14d', G: '#5a5650', bg: c.T };
 }
-const instrumentOf = name => { const s = S.seats.find(x => x.human && x.who === name); return s ? s.id : 'guitar'; };
+export const seatOf = name => { const s = S.seats.find(x => x.human && x.who === name); return s ? s.id : null; };
+export const charFor = (id, name) => { const l = looks.get(id); return l && Number.isInteger(l.char) ? charOf(l.char) : hash(name) % CHARS.length; };
 
-// Draws player `char` into the canvas (a stage backdrop in their colour), holding `inst`.
+// Draws a character on a transparent canvas, one sprite pixel = canvas.width / 20.
 export function draw(canvas, char, inst, playing, bob){
-  const g = canvas.getContext('2d'), W = canvas.width, H = canvas.height, px = Math.floor(Math.min(W / 32, (H - 40) / 20)), c = palette(char);
-  // a faceplate-style backdrop: the player's colour, softly, on the stage floor
-  g.fillStyle = shade(c.bg, 0.22); g.fillRect(0, 0, W, H);
-  const glow = g.createRadialGradient(W / 2, H * 0.45, 10, W / 2, H * 0.45, W * 0.6); glow.addColorStop(0, shade(c.bg, 0.5)); glow.addColorStop(1, shade(c.bg, 0.22));
-  g.fillStyle = glow; g.fillRect(0, 0, W, H);
-  g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(0, H - 30, W, 30);
-  const x0 = Math.round((W - 20 * px) / 2), y0 = H - 20 * px - Math.round(H / 15) - (playing ? 3 : 0) - (bob ? 2 : 0);
-  compose(inst, playing, CHARS[charOf(char)].hair).forEach((row, y) => row.forEach((k, x) => { if(k !== '.'){ g.fillStyle = c[k]; g.fillRect(x0 + x * px, y0 + y * px, px, px); } }));
+  const g = canvas.getContext('2d'), px = Math.floor(canvas.width / 20), c = palette(char), y0 = bob ? -1 : 0;
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  compose(inst, playing, CHARS[charOf(char)].hair).forEach((row, y) => row.forEach((k, x) => { if(k !== '.' && c[k]){ g.fillStyle = c[k]; g.fillRect(x * px, (y + y0) * px, px, px); } }));
 }
+const sprite = holder => {
+  let cv = holder.querySelector('canvas.sprite');
+  if(!cv){ cv = document.createElement('canvas'); cv.className = 'sprite'; cv.width = cv.height = 100; holder.prepend(cv); }
+  return cv;
+};
 
-// ~12 frames a second: every tile showing an avatar.
+// ~12 frames a second: every player shown as a character (anyone without a
+// camera picture, or who chose a character) and the AI band's players.
 setInterval(() => {
   const beatNow = performance.now() - lastBeat < 120;
   tiles.forEach((t, id) => {
-    const l = looks.get(id), on = !!(l && l.on); t.classList.toggle('avatar', on); if(!on) return;
-    let cv = t.querySelector('canvas.sprite');
-    if(!cv){ cv = document.createElement('canvas'); cv.className = 'sprite'; cv.width = 320; cv.height = 240; t.insertBefore(cv, t.querySelector('.tname')); }
+    const l = looks.get(id), on = !!(l && l.on) || !t.querySelector('video'); t.classList.toggle('avatar', on); if(!on) return;
     const name = id === me.id ? me.name : ((room.peers.get(id) || {}).name || '');
-    draw(cv, l.char ?? hash(name) % CHARS.length, instrumentOf(name), room.levelNow(id === me.id ? 'me' : id) > 0.06, beatNow);
+    draw(sprite(t), charFor(id, name), seatOf(name) || 'guitar', room.levelNow(id === me.id ? 'me' : id) > 0.06, beatNow);
+  });
+  document.querySelectorAll('.spot.ai').forEach(sp => {
+    const seat = sp.dataset.seat, out = sp.classList.contains('off');
+    draw(sprite(sp.querySelector('.fig')), AI_CHAR[seat] ?? 0, seat, S.playing && !out && beatNow, S.playing && !out && beatNow);
   });
 }, 80);
 
@@ -107,15 +116,15 @@ setInterval(() => {
 export function portrait(canvas, char, playing, bob){
   const g = canvas.getContext('2d'), c = palette(char);
   canvas.width = canvas.height = 24;
-  g.fillStyle = shade(c.bg, 0.3); g.fillRect(0, 0, 24, 24);
-  g.fillStyle = shade(c.bg, 0.45); g.fillRect(0, 21, 24, 3);
-  compose('guitar', playing, CHARS[charOf(char)].hair).forEach((row, y) => row.forEach((k, x) => { if(k !== '.'){ g.fillStyle = c[k]; g.fillRect(2 + x, 3 + y - (bob ? 1 : 0) - (playing ? 1 : 0), 1, 1); } }));
+  g.fillStyle = '#1c1d20'; g.fillRect(0, 0, 24, 24);
+  g.fillStyle = shade(c.bg, 0.45); g.fillRect(4, 20, 16, 2);   // their spot on the floor
+  compose('guitar', playing, CHARS[charOf(char)].hair).forEach((row, y) => row.forEach((k, x) => { if(k !== '.' && c[k]){ g.fillStyle = c[k]; g.fillRect(2 + x, 2 + y - (bob ? 1 : 0), 1, 1); } }));
 }
 // The "keep my camera" choice: a little pixel camera.
 const CAM = ['....kkkk........', '..kkkkkkkkkkk.kk', '..kwwkkkkkkkkkrk', '..kkkkgggkkkkkkk', '..kkkgbbbgkkkkkk', '..kkkgbwbgkkkkkk', '..kkkgbbbgkkkkkk', '..kkkkgggkkkkkkk', '..kkkkkkkkkkkkkk'];
 export function cameraIcon(canvas, on){
-  const g = canvas.getContext('2d'), col = { k:'#3a3833', w:'#f4f1ea', g:'#8f8a80', b:'#1b2a3a', r: on ? '#d6452a' : '#5a5650' };
+  const g = canvas.getContext('2d'), col = { k:'#3a3b40', w:'#f4f4f2', g:'#8b8c91', b:'#10151b', r: on ? '#e8321c' : '#5d5e63' };
   canvas.width = canvas.height = 24;
-  g.fillStyle = '#26251f'; g.fillRect(0, 0, 24, 24); g.fillStyle = '#34322d'; g.fillRect(0, 21, 24, 3);
+  g.fillStyle = '#1c1d20'; g.fillRect(0, 0, 24, 24);
   CAM.forEach((row, y) => [...row].forEach((k, x) => { if(k !== '.'){ g.fillStyle = col[k]; g.fillRect(3 + x, 7 + y, 1, 1); } }));
 }

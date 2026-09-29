@@ -41,7 +41,7 @@ test('BARS solo: you trade with the AI band; your seat drops out only on your tu
     await A.waitForFunction(() => window.jamStems.playing(), null, { timeout: 15000 });
 
     const t0 = await A.evaluate(() => window.jamStart.base), turn = 4 * 4 * 60000 / 96;   // 4 bars at 96 bpm
-    const peek = () => A.evaluate(() => ({ line: document.getElementById('turnLine').textContent, bandGlow: document.getElementById('bandTile').classList.contains('onmic'),
+    const peek = () => A.evaluate(() => ({ line: document.getElementById('turnLine').textContent + ' · ' + document.getElementById('turnNext').textContent, bandGlow: document.getElementById('bandTile').classList.contains('onmic'),
       guitar: window.jamStems.gainOf('guitar'), piano: window.jamStems.gainOf('piano'), drums: window.jamStems.gainOf('drums'), solo: Object.assign({}, window.jamTrade.soloistState) }));
     const at = async k => { const w = t0 + (k + 0.6) * turn - await A.evaluate(() => performance.timeOrigin + performance.now()); if(w > 0) await sleep(w); return peek(); };
     const mine = await at(0), band = await at(1);
