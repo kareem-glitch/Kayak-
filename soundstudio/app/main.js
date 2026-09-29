@@ -31,7 +31,7 @@ const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ retu
 // ---- module wiring ----
 band.hooks.onBeat = m => { ui.showBeat(m); if(m.beat !== undefined) avatar.beat(); };
 band.hooks.onChange = ui.render;
-session.hooks.onChange = ui.render;
+session.hooks.onChange = () => { ui.render(); autoSeat(); };
 session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
 room.events.onStatus = ui.status;
@@ -237,6 +237,19 @@ $('#nameDice').onclick = () => { $('#nameInput').value = randomName(); store.set
 $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInput').value));
 $('#nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#joinBtn').onclick = join;
+// What you play, picked on the start screen: you land on that part's spot and its AI player steps out.
+let part = ['guitar', 'bass', 'keys', 'drums', 'none'].includes(store.get('ss.part')) ? store.get('ss.part') : 'guitar', seated = false;
+const showPart = () => document.querySelectorAll('[data-part]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.part === part)));
+document.querySelectorAll('[data-part]').forEach(b => b.onclick = () => { part = b.dataset.part; store.set('ss.part', part); showPart(); });
+showPart();
+// Once you're in and someone runs the band: take your part (or the first one nobody's playing).
+function autoSeat(){
+  if(seated || part === 'none' || !S.hostId || $('#roomView').hidden) return;
+  seated = true;
+  if(S.seats.some(s => s.human && s.who === me.name)) return;
+  const free = [part, 'guitar', 'bass', 'keys', 'drums'].map(id => S.seats.find(s => s.id === id)).find(s => s && !s.human);
+  if(free) session.toggleSeat(free.id);
+}
 // Your player, picked on the start screen like an arcade game: one of four characters, or your camera.
 let look = store.get('ss.look') ?? (store.get('ss.avatar') === '0' ? 'cam' : '0');
 if(look !== 'cam') look = String(avatar.charOf(+look));

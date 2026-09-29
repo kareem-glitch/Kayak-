@@ -30,6 +30,12 @@ window.__audioContexts = [];
       <span class="muted small">Pick your player</span>
       <div id="lookPick" class="looks" role="radiogroup" aria-label="Your player"></div>
     </div>
+    <div class="look-pick">
+      <span class="muted small">I play</span>
+      <div class="modes parts" id="partPick" role="radiogroup" aria-label="What you play">
+        <button type="button" role="radio" data-part="guitar">Guitar</button><button type="button" role="radio" data-part="bass">Bass</button><button type="button" role="radio" data-part="keys">Keys</button><button type="button" role="radio" data-part="drums">Drums</button>
+      </div>
+    </div>
     <div id="gamePick" class="game-pick">
       <span class="muted small">Game (you can change it in the room)</span>
       <div class="modes" role="radiogroup" aria-label="Game">
