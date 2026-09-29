@@ -80,6 +80,7 @@ window.__audioContexts = [];
           <div class="turn-side"><span class="turn-big"><b id="turnCount">–</b><i id="turnOf"></i></span><span class="turn-next" id="turnNext"></span></div>
         </div>
       </div>
+      <div class="hud" id="hud" aria-label="Live latency" hidden></div>
       <div class="players-box"><div class="players" id="players"></div></div>
     </section>
 
@@ -195,6 +196,7 @@ window.__audioContexts = [];
           <div class="pane-head"><h2>Connection</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
           <ul class="lat" id="latList"></ul>
           <div class="stats" id="connStats">Waiting for others…</div>
+          <label class="check small"><input type="checkbox" id="hudOn"> Show latency on screen (like an FPS counter)</label>
           <label class="check small"><input type="checkbox" id="farApart"> Pretend we're far apart (adds 150 ms, for testing at home)</label>
           <h3>Setup check</h3>
           <ul class="tips" id="tips"><li class="muted">Join to check your setup.</li></ul>

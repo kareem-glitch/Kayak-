@@ -135,6 +135,7 @@ function showConnection(){
   const jewel = $('#connJewel');
   jewel.className = worst === null ? '' : c.lossPct > 3 || worst > 120 ? 'bad' : c.lossPct > 1 || worst > 60 ? 'warn' : 'ok';
   $('#connDot').title = $('#connDotText').textContent = worst === null ? (room.roomCount() > 1 ? 'Connecting…' : 'On your own') : `${c.lossPct > 3 ? 'Choppy' : worst > 60 ? 'OK' : 'Good'} · ${worst} ms`;
+  showHud(c);
   if(!c.live) return;
   $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
   // per player: estimated time from their instrument to your ears
@@ -408,6 +409,24 @@ async function toggleRecording(){
   btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); 
 }
 $('#recBtn').onclick = toggleRecording;
+// The latency counter: always on screen, like a game's FPS counter. One line per
+// player (their instrument to your ears), coloured, with the last few seconds as a
+// tiny graph; plus your own device's delay. On/off in Connection.
+const hudHist = new Map(), BARS8 = '▁▂▃▄▅▆▇█', tone = ms => ms < 30 ? 'ok' : ms < 60 ? 'warn' : 'bad';
+$('#hudOn').checked = store.get('ss.hud') !== '0';
+$('#hudOn').onchange = () => { store.set('ss.hud', $('#hudOn').checked ? '1' : '0'); $('#hud').hidden = !$('#hudOn').checked; };
+function showHud(c){
+  const hud = $('#hud'); hud.hidden = !$('#hudOn').checked; if(hud.hidden) return;
+  const row = (name, ms, extra) => `<div class="hud-row ${tone(ms)}"><span class="hud-name">${name.replace(/[<&]/g, '')}</span><b>${ms}</b><span class="hud-unit">ms</span>${extra || ''}</div>`;
+  const lines = c.players.map(p => {
+    const h = hudHist.get(p.name) || []; h.push(p.totalMs); if(h.length > 10) h.shift(); hudHist.set(p.name, h);
+    const spark = h.map(v => BARS8[Math.max(0, Math.min(7, Math.round(v / 120 * 7)))]).join('');
+    return row(p.name, p.totalMs, `<span class="hud-spark">${spark}</span>`);
+  });
+  const mine = audio.inputLatencyMs() + audio.outputLatencyMs();
+  lines.push(row('You', mine, `<span class="hud-spark hud-note">in ${audio.inputLatencyMs()} · out ${audio.outputLatencyMs()}</span>`));
+  hud.innerHTML = lines.join('');
+}
 // testing at home: make the other devices sound as if they were across the world
 $('#farApart').checked = store.get('ss.far') === '1'; room.setFakeDelay($('#farApart').checked ? 150 : 0);
 $('#farApart').onchange = () => { store.set('ss.far', $('#farApart').checked ? '1' : '0'); room.setFakeDelay($('#farApart').checked ? 150 : 0); };

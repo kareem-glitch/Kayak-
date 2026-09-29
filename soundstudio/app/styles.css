@@ -79,7 +79,7 @@ button.badge{border:0;cursor:pointer}
   box-shadow:inset 0 2px 10px rgba(0,0,0,.9),0 0 0 4px var(--raised),0 0 0 5px #34353a;max-width:320px;margin:5px}
 .lcd .label{font:400 .7rem/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:rgba(244,244,242,.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lcd-row{display:flex;align-items:center;gap:12px;min-height:2.4rem}
-.now-chord{font:400 2.6rem/1 var(--mono);letter-spacing:.02em;text-shadow:0 0 10px rgba(255,255,255,.35)}
+.now-chord{white-space:nowrap;font:400 2.6rem/1 var(--mono);letter-spacing:.02em;text-shadow:0 0 10px rgba(255,255,255,.35)}
 .now-chord:empty{display:none}
 .count{font:800 2.2rem/1 var(--wide);font-stretch:125%;color:var(--amber)}
 .beats{display:flex;gap:4px}
@@ -100,6 +100,17 @@ button.badge{border:0;cursor:pointer}
 .turn-big i{font:700 1.3rem/1 var(--wide);font-stretch:125%;font-style:normal;color:#6b6c71}
 .turn-next{font-weight:700;font-size:.82rem;color:#b9bac0;text-transform:uppercase;letter-spacing:.06em;min-height:1.1em;white-space:nowrap}
 .turn-bar.countdown .turn-big b{color:var(--amber);text-shadow:0 0 18px rgba(255,204,0,.5)}
+/* the latency counter, like a game's FPS counter */
+.hud{position:absolute;right:14px;bottom:12px;z-index:4;display:grid;gap:2px;padding:7px 10px;border-radius:8px;background:rgba(5,5,6,.82);border:1px solid var(--line);font:400 .74rem/1.25 var(--mono);pointer-events:none;letter-spacing:.04em}
+.hud-row{display:grid;grid-template-columns:minmax(0,7.5em) auto auto auto;align-items:baseline;gap:5px;white-space:nowrap}
+.hud-name{color:var(--muted);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis}
+.hud-row b{font-weight:400;font-size:1.05rem;text-align:right;min-width:2.2em}
+.hud-row.ok b,.hud-row.ok .hud-spark{color:var(--ok)}
+.hud-row.warn b,.hud-row.warn .hud-spark{color:var(--warn)}
+.hud-row.bad b,.hud-row.bad .hud-spark{color:var(--bad)}
+.hud-unit{color:var(--muted);font-size:.66rem}
+.hud-spark{letter-spacing:-.05em;opacity:.85}
+.hud-note{color:var(--muted) !important;font-size:.66rem;letter-spacing:.02em}
 /* the players: square tiles, joined order, left to right */
 .players-box{container-type:size;min-height:0;min-width:0}
 .players{height:100%;display:grid;--cols:4;--rows:1;--gap:18px;
@@ -328,6 +339,9 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
   .players{--gap:10px}
   .tag{left:6px;bottom:6px;padding:3px 6px 3px 7px;font-size:.78rem;gap:5px}
   .tag .inst{display:none}
+  .hud{left:10px;right:10px;bottom:6px;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;padding:4px 8px}
+  .hud-row{display:flex;gap:4px}
+  .hud-spark,.hud-unit{display:none}
   .lcd{left:10px;top:10px;padding:8px 11px}
   .now-chord{font-size:1.9rem}
   .top{padding:8px 12px 8px 16px;gap:8px}
