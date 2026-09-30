@@ -62,7 +62,15 @@ function delayFor(id){
   return Math.min(2000, Math.max(20, (p.inMs || 0) + worst + 60 + (p.bump || 0)));
 }
 // When their band's position 0 sounds, on my clock (they tell everyone; see 'bs').
-const startOf = (id, prev) => { const p = room.peers.get(id), raw = p && (prev ? p.bsPrev : p.bs); return raw == null ? (prev ? null : band.started.base) : raw - p.offset; };
+// Only trust a start they announced for this same song start (base): one from just
+// before their band re-timed its start would line this band up wrong.
+const startOf = (id, prev) => {
+  const p = room.peers.get(id), st = band.started;
+  let raw = p && (prev ? p.bsPrev : p.bs);
+  const base = p && (prev ? p.bsPrevBase : p.bsBase);
+  if(raw != null && base != null && st && Math.abs(base - p.offset - st.base) > 30) raw = null;
+  return raw == null ? (prev ? null : st.base) : raw - p.offset;
+};
 
 // Incoming audio: play the soloist exactly `follow` ms after they played it
 // (on the beat, since this band runs that much behind theirs); drop everyone else.
@@ -113,13 +121,13 @@ function prepare(k, boundary){
   if(Math.abs(target - st.zero) > 1){ band.shiftStart(boundary, target); tellStart(); }
 }
 
-const tellStart = () => { if(band.started) room.send({ t:'bs', start: band.started.zero }); };
+const tellStart = () => { if(band.started) room.send({ t:'bs', start: band.started.zero, base: band.started.base }); };
 // 'bs': another player's band start (their clock). Returns true if handled.
 export function handle(m, id){
   if(m.t !== 'bs') return false;
   const p = room.peers.get(id); if(!p) return true;
-  if(p.bs != null && Math.abs(p.bs - m.start) > 1) p.bsPrev = p.bs;
-  p.bs = m.start; return true;
+  if(p.bs != null && Math.abs(p.bs - m.start) > 1){ p.bsPrev = p.bs; p.bsPrevBase = p.bsBase; }
+  p.bs = m.start; p.bsBase = m.base; return true;
 }
 
 // What the screen shows: whose turn it is (as you hear it), who's next, and a

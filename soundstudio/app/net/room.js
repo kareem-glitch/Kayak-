@@ -160,10 +160,13 @@ function wireConn(c, newcomer){
       }
       p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
       const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p);
-      if(at === null){ p.muted = (p.muted || 0) + 1; return; }
+      if(at === null){ p.muted = (p.muted || 0) + 1; p.last = null; return; }
       const g = gains.get(id); if(g != null && g !== 1) scale(pk.planes, g);
-      // at set: blocks land at fixed times, so a gap is already silence in the right place
-      if(gap && gap <= MAX_FILL && at === undefined && p.last){ for(const f of conceal(p.last, gap)) audio.deliver(id, f); p.filled = (p.filled || 0) + gap; }
+      // with `at` (BARS, far apart) each fill goes exactly where the lost block would have played
+      if(gap && gap <= MAX_FILL && p.last){
+        conceal(p.last, gap).forEach((f, j) => audio.deliver(id, f, at == null ? at : at - (gap - j) * FRAMES / RATE * 1000));
+        p.filled = (p.filled || 0) + gap;
+      }
       p.last = pk.planes;
       audio.deliver(id, pk.planes, at); if(taps.remote) taps.remote(id, pk.planes);
       if(taps.listen) taps.listen(id, pk.planes, at == null ? clk() : at);
