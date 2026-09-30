@@ -317,7 +317,7 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 .slider input{width:100%;accent-color:var(--ink)}
 .synth-set{display:grid;gap:8px}
 .modes.two{grid-template-columns:1fr 1fr}
-.modes.parts{grid-template-columns:repeat(4,1fr)}
+.modes.parts{grid-template-columns:repeat(5,1fr)}
 .synth-warn{font-size:.78rem;color:var(--amber)}
 @media (max-width:860px){
   /* one screen: the tiles shrink to fit between the top bar and the bottom bar (synth open or not) */

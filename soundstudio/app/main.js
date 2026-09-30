@@ -239,6 +239,7 @@ $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInp
 $('#nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#joinBtn').onclick = join;
 // What you play, picked on the start screen: you land on that part's spot and its AI player steps out.
+// Lead ('none'): you solo over the whole band, no part of your own.
 let part = ['guitar', 'bass', 'keys', 'drums', 'none'].includes(store.get('ss.part')) ? store.get('ss.part') : 'guitar', seated = false;
 const showPart = () => document.querySelectorAll('[data-part]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.part === part)));
 document.querySelectorAll('[data-part]').forEach(b => b.onclick = () => { part = b.dataset.part; store.set('ss.part', part); showPart(); });
@@ -248,8 +249,8 @@ function autoSeat(){
   if(seated || part === 'none' || !S.hostId || $('#roomView').hidden) return;
   seated = true;
   if(S.seats.some(s => s.human && s.who === me.name)) return;
-  const free = [part, 'guitar', 'bass', 'keys', 'drums'].map(id => S.seats.find(s => s.id === id)).find(s => s && !s.human);
-  if(free) session.toggleSeat(free.id);
+  const mine = S.seats.find(s => s.id === part);
+  if(mine && !mine.human) session.toggleSeat(part);   // taken already (say, two guitarists)? you just play, no part: the band stays whole
 }
 // Your player, picked on the start screen like an arcade game: one of four characters, or your camera.
 let look = store.get('ss.look') ?? (store.get('ss.avatar') === '0' ? 'cam' : '0');
