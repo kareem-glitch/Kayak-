@@ -10,7 +10,7 @@ mod plugin;
 
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 
-pub const SITE: &str = "https://soundstudio-wine.vercel.app/";
+pub const SITE: &str = "https://air.band/";
 
 fn main() {
     let (port, token) = native::serve().expect("couldn't start the local audio link");

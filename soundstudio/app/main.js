@@ -23,7 +23,7 @@ try{ if(joinId && sessionStorage.getItem('ss.hostId') === joinId){ joinId = null
 let inviteLink = null, media = null, cameraProblem = null;
 // Invite links always point at the website, which the desktop app's rooms share
 // (the app's own page address means nothing to anyone else).
-const SITE = audio.NATIVE ? 'https://soundstudio-wine.vercel.app/' : location.origin + location.pathname;
+const SITE = audio.NATIVE ? 'https://air.band/' : location.origin + location.pathname;
 // A pasted invite: a full link (?join=...) or just the room code.
 const inviteId = text => { const t = (text || '').trim(); if(!t) return null; const m = t.match(/[?&]join=([^&#\s]+)/); return m ? decodeURIComponent(m[1]) : (/^[\w-]{8,}$/.test(t) ? t : null); };
 const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ return null; } }, set: (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} } };
@@ -224,7 +224,7 @@ if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 const APP_VERSION = '0.4.0';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/SoundStudio-${APP_VERSION}-Mac.zip` : `/download/SoundStudio-${APP_VERSION}-Windows-setup.exe`;
-if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://soundstudio-wine.vercel.app${dl()}">Download it</a> and reinstall.`;
+if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://air.band${dl()}">Download it</a> and reinstall.`;
 if(!audio.NATIVE && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/SoundStudio-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/SoundStudio-${APP_VERSION}-Windows-setup.exe">Windows</a>`;
 if(audio.NATIVE){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';

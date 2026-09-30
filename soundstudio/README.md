@@ -6,7 +6,7 @@ AI backing band that drops out of whichever part a human takes over. Built for
 Ireland, the UK and western Europe), where it can feel close to playing in the
 same room.
 
-Live site: https://soundstudio-wine.vercel.app
+Live site: https://air.band
 
 ## Using it
 1. Open the site, type your name, press **Join the jam**. Wear wired headphones.

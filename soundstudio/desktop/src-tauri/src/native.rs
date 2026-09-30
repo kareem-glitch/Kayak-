@@ -91,7 +91,7 @@ fn proxy(mut stream: TcpStream) -> Result<(), String> {
     if let Some(ct) = header("content-type") { req = req.set("content-type", &ct); }
     let resp = match if body.is_empty() && method == "GET" { req.call() } else { req.send_bytes(&body) } {
         Ok(r) => r, Err(ureq::Error::Status(_, r)) => r,
-        Err(e) => { let msg = format!("Couldn’t reach SoundStudio ({e}). Check your internet connection."); let out = format!("HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{msg}", msg.len()); let _ = stream.write_all(out.as_bytes()); return Ok(()); }
+        Err(e) => { let msg = format!("Couldn’t reach air.band ({e}). Check your internet connection."); let out = format!("HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{msg}", msg.len()); let _ = stream.write_all(out.as_bytes()); return Ok(()); }
     };
     let status = resp.status();
     let ctype = resp.header("content-type").unwrap_or("application/octet-stream").to_string();
