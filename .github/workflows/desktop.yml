@@ -1,4 +1,4 @@
-# Builds the SoundStudio desktop app (Mac and Windows) with the air.band DAW
+# Builds the air.band desktop app (Mac and Windows) with the air.band DAW
 # plugin inside it (soundstudio/plugin), and runs the engine's and plugin's tests. The app loads the live website, so only changes to the
 # native side (desktop/) need a new build. Downloads appear on each run's page under "Artifacts".
 name: Desktop app
@@ -34,8 +34,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, name: SoundStudio-Mac, targets: 'aarch64-apple-darwin,x86_64-apple-darwin', args: '--target universal-apple-darwin --bundles dmg', files: 'soundstudio/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg' }
-          - { os: windows-latest, name: SoundStudio-Windows, targets: '', args: '--bundles nsis', files: 'soundstudio/desktop/src-tauri/target/release/bundle/nsis/*.exe' }
+          - { os: macos-latest, name: air.band-Mac, targets: 'aarch64-apple-darwin,x86_64-apple-darwin', args: '--target universal-apple-darwin --bundles dmg', files: 'soundstudio/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg' }
+          - { os: windows-latest, name: air.band-Windows, targets: '', args: '--bundles nsis', files: 'soundstudio/desktop/src-tauri/target/release/bundle/nsis/*.exe' }
     runs-on: ${{ matrix.os }}
     defaults: { run: { working-directory: soundstudio/desktop } }
     steps:

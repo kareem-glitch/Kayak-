@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
   <key>NSMicrophoneUsageDescription</key>
-  <string>SoundStudio sends your instrument or voice to the other players in your jam.</string>
+  <string>air.band sends your instrument or voice to the other players in your jam.</string>
   <key>NSCameraUsageDescription</key>
-  <string>SoundStudio shows your video to the other players in your jam.</string>
+  <string>air.band shows your video to the other players in your jam.</string>
 </dict>
 </plist>

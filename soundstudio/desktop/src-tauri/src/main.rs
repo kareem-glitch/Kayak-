@@ -1,4 +1,4 @@
-// SoundStudio desktop. The window loads the live website, so the app and the
+// air.band desktop. The window loads the live website, so the app and the
 // browser version are always the same code and can share rooms; audio in and
 // out is native (Core Audio on Mac, WASAPI on Windows) for the lowest delay.
 // The page is served through the app's local server and finds the native audio
@@ -19,7 +19,7 @@ fn main() {
             // the live site, served through the app's local server (see native.rs)
             let url = WebviewUrl::External(format!("http://127.0.0.1:{port}/").parse().expect("bad local URL"));
             WebviewWindowBuilder::new(app, "main", url)
-                .title("SoundStudio")
+                .title("air.band")
                 .inner_size(1280.0, 840.0)
                 .min_inner_size(420.0, 600.0)
                 .initialization_script(&format!("window.__SS_NATIVE = {{ port: {port}, token: '{token}', version: '{}' }};", env!("CARGO_PKG_VERSION")))
@@ -27,5 +27,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running SoundStudio");
+        .expect("error while running air.band");
 }

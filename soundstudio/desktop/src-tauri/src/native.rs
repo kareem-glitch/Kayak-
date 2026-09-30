@@ -233,7 +233,7 @@ mod tests {
         let get = |path: &str| { let mut s = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap(); write!(s, "GET {path} HTTP/1.1\r\nHost: x\r\n\r\n").unwrap(); let mut r = Vec::new(); s.read_to_end(&mut r).unwrap(); String::from_utf8_lossy(&r).to_string() };
         let page = get("/");
         assert!(page.starts_with("HTTP/1.1 200"), "{}", &page[..page.len().min(200)]);
-        assert!(page.contains("SoundStudio") && page.contains("text/html"));
+        assert!(page.contains("air.band") && page.contains("text/html"));
         assert!(get("/app/main.js").contains("javascript"));
         // the audio link: wrong token refused, right token answers a devices request
         assert!(tungstenite::connect(format!("ws://127.0.0.1:{port}/?t=nope")).is_err());
