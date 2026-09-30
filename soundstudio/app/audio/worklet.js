@@ -104,7 +104,8 @@ class DelayPlayer {
       if(this.drift > 48){ const k = this.e & (DRING - 1); this.l[k] = L[0]; this.r[k] = R[0]; this.e++; this.drift--; }   // falling behind: repeat a sample
       else if(this.drift < -48){ this.e--; this.drift++; }                                                          // ahead: overwrite one
     }
-    if(this.e + n <= now || this.e - now > DRING - 2 * n){ this.late++; this.e += n; return; }   // too late (or too far ahead) to play
+    if(this.e + n <= now){ this.late++; this.e = now + n; }   // late: play it a moment late rather than drop it (gaps sound robotic)
+    else if(this.e - now > DRING - 2 * n){ this.late++; this.e += n; return; }   // too far ahead to hold
     for(let i = 0; i < n; i++){ const k = (this.e + i) & (DRING - 1); this.l[k] = L[i]; this.r[k] = R[i]; }
     this.e += n;
   }

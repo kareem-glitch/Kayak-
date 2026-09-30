@@ -67,7 +67,15 @@ export function levelNow(id){
   while(q.length > 1 && q[1][0] <= now) q.shift();
   return q[0] && q[0][0] <= now && now - q[0][0] < 150 ? q[0][1] : 0;
 }
+// Your own mix: each player's volume (by id; 1 = as sent), and a boost for your input
+// before it goes to the others. Applied to the audio itself, so the browser and the
+// desktop app both get it.
+export const gains = new Map();
+let inputGain = 1;
+export const setInputGain = g => { inputGain = g; };
+const scale = (planes, g) => { for(const pl of planes) for(let i = 0; i < pl.length; i++){ const v = pl[i] * g; pl[i] = v > 1 ? 1 : v < -1 ? -1 : v; } };
 export function sendBlock(planes, capturedAt){
+  if(inputGain !== 1) scale(planes, inputGain);
   if(taps.local) taps.local(planes);
   noteLevel('me', clk(), peakOf(planes[0]));
   if(taps.listen) taps.listen('me', planes, (capturedAt || clk()) - audio.inputLatencyMs());
@@ -125,10 +133,18 @@ function wireConn(c, newcomer){
       const pk = decodePacket(new Uint8Array(e.data)); if(!pk || peers.get(id) !== p) return;
       if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1) p.lost += d - 1; }
       // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
-      if(p.samples.length){ p.ages.push(clk() - (pk.timeUs / 1000 - p.offset)); if(p.ages.length > 375) p.ages.shift(); }
+      if(p.samples.length){
+        const age = clk() - (pk.timeUs / 1000 - p.offset);
+        p.ages.push(age); if(p.ages.length > 375) p.ages.shift();
+        // the slowest arrival of each of the last 15 seconds (BARS sizes its wait on these, not one second's worth)
+        const sec = Math.floor(clk() / 1000);
+        if(p.maxSec !== sec){ p.maxSec = sec; p.maxes = (p.maxes || []).concat(age).slice(-15); }
+        else if(age > p.maxes[p.maxes.length - 1]) p.maxes[p.maxes.length - 1] = age;
+      }
       p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
       const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p);
       if(at === null){ p.muted = (p.muted || 0) + 1; return; }
+      const g = gains.get(id); if(g != null && g !== 1) scale(pk.planes, g);
       audio.deliver(id, pk.planes, at); if(taps.remote) taps.remote(id, pk.planes);
       if(taps.listen) taps.listen(id, pk.planes, at == null ? clk() : at);
       noteLevel(id, at == null ? clk() : at, peakOf(pk.planes[0]));

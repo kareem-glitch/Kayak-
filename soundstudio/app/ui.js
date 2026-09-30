@@ -8,6 +8,7 @@ import * as band from './band/engine.js';
 import * as session from './session.js';
 import { PAD } from './avatar-colors.js';
 import { muted } from './presence.js';
+import * as stems from './band/stems.js';
 
 export const tiles = new Map();
 export function tileFor(p){
@@ -72,16 +73,22 @@ export function placeSpots(){
     stand(sp, m.person && m.person[1]);
     if(id) sp.dataset.who = id; else delete sp.dataset.who;
     sp.classList.toggle('ai', !m.person); sp.classList.toggle('mine', mine);
-    sp.classList.toggle('muted', !!m.person && muted.has(id));
+    sp.classList.toggle('muted', m.person ? muted.has(id) : stems.localOff.has(s.id));
     sp.style.setProperty('--pad', s ? PAD[s.id] || '#ececea' : '#ececea');
     if(s){
       const part = s.label.replace('Rhythm guitar', 'Guitar');
       sp.dataset.seat = s.id;
       label(sp, m.person ? m.person[1].dataset.name : part, m.person ? (mine ? 'YOU' : '') : 'AI');
       sp.querySelector('.inst').textContent = m.person ? part : '';
-      sp.title = m.person ? (mine ? 'Stop playing ' + part.toLowerCase() : me.isHost ? 'Take ' + m.person[1].dataset.name + ' off ' + part.toLowerCase() : 'Played by ' + m.person[1].dataset.name) : 'Play ' + part.toLowerCase() + ' (the AI steps out)';
-      sp.disabled = !S.hostId || (!!m.person && !mine && !me.isHost);
-      sp.onclick = () => m.person && !mine ? session.setSeat(s.id, false, m.person[1].dataset.name) : session.toggleSeat(s.id);
+      const off = !m.person && stems.localOff.has(s.id);
+      sp.title = m.person ? (mine ? 'Stop playing ' + part.toLowerCase() : me.isHost ? 'Take ' + m.person[1].dataset.name + ' off ' + part.toLowerCase() : 'Played by ' + m.person[1].dataset.name)
+        : off ? 'Muted just for you: tap to bring the ' + part.toLowerCase() + ' back' : 'Tap to mute the AI ' + part.toLowerCase() + ' (just for you)';
+      sp.disabled = m.person ? !S.hostId || (!mine && !me.isHost) : false;
+      // tap an AI player to mute it on your device (tap again to bring it back); taking a part is in the Band drawer
+      sp.onclick = () => {
+        if(!m.person){ if(stems.localOff.has(s.id)) stems.localOff.delete(s.id); else stems.localOff.add(s.id); band.applyMutes(); placeSpots(); return; }
+        m.person && !mine ? session.setSeat(s.id, false, m.person[1].dataset.name) : session.toggleSeat(s.id);
+      };
     } else {
       delete sp.dataset.seat; label(sp, m.person[1].dataset.name, mine ? 'YOU' : ''); sp.querySelector('.inst').textContent = '';
     }
@@ -146,7 +153,7 @@ export function render(){
   $('#gameNote').textContent = S.game.mode === 'trade' ? 'BARS: take turns trading bars. Only whoever’s on is heard, and it lands on the beat at any distance. Took a seat? The AI plays your part until it’s your turn.' : 'Everyone plays at once. Best when you’re all fairly close.';
   placeSpots();   // the players' tiles: tap a part to play it
   const box = $('#strips'); box.innerHTML = '';
-  box.hidden = !me.isHost;   // the band's host balances the parts here
+  // everyone picks their part here; the band's host also balances the levels
   S.seats.forEach(s => {
     const d = partDesc(s.id), off = d === null && !s.human && !!a;
     const el = document.createElement('div'); el.className = 'strip' + (s.human ? ' human' : '') + (off ? ' off' : '');
@@ -155,7 +162,7 @@ export function render(){
     const st = document.createElement('span'); st.className = 'strip-status';
     st.textContent = s.human ? 'Played by ' + session.holders(s).join(', ') : !a ? 'Waiting for the band' : off ? 'Sitting out in this style' : 'AI playing ' + d;
     head.append(nm, st);
-    const btn = document.createElement('button'); btn.className = 'seat';
+    const btn = document.createElement('button'); btn.className = 'seat'; btn.dataset.take = s.id;
     const mine = session.holders(s).includes(me.name);   // anyone can join a part others play too
     btn.textContent = mine ? 'Stop playing' : me.isHost && s.human ? 'Hand back to AI' : "I'll play this";
     btn.disabled = !S.hostId;

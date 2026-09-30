@@ -19,7 +19,7 @@ test('four players jam; fifth is refused', { timeout: 240000 }, async () => {
     await h.drawer(A, 'band'); await A.fill('#prompt', 'Slow funk in E minor, 96 bpm'); await A.click('#genBtn'); await sleep(1500);
     await A.uncheck('#countIn'); await A.click('#playBtn'); await sleep(2500);
     const D = await h.page('Dee'); await h.join(D, link, 'Dee'); await sleep(6000);   // joins mid-song
-    await C.click('[data-seat="keys"]'); await sleep(1500);
+    await h.drawer(C, 'band'); await C.click('[data-take="keys"]'); await sleep(1500);
 
     const players = [['Kareem', A], ['Wife', B], ['Sam', C], ['Dee', D]];
     const snaps = await Promise.all(players.map(([, p]) => p.evaluate(() => ({

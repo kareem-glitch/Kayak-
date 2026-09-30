@@ -37,6 +37,16 @@ test('pick a player: the room sees your character, or your camera', { timeout: 9
     // only who's really there stands in the circle: no band yet, so just the two of them
     const spots = () => B.evaluate(() => [...document.querySelectorAll('.spot')].map(sp => sp.querySelector('.who').textContent + (sp.classList.contains('muted') ? ' (muted)' : '')));
     assert.ok((await spots()).includes('Drums'), 'the band is loaded: its parts stand there too');
+    // tap an AI player to mute it, just for you
+    await B.click('.spot.ai[data-seat="drums"]');
+    assert.ok((await spots()).includes('Drums (muted)'), 'tapping the AI drummer mutes it for the guest');
+    assert.ok(!(await A.evaluate(() => document.querySelector('.spot.ai[data-seat="drums"]').classList.contains('muted'))), '…not for the host');
+    await B.click('.spot.ai[data-seat="drums"]');
+    assert.ok((await spots()).includes('Drums'), 'tap again: back');
+    // your own mix: a volume slider for each other player
+    await h.drawer(B, 'audio');
+    await B.waitForSelector('#mixPlayers [aria-label="Host volume"]', { timeout: 5000 });
+    await h.drawer(B, 'audio'); await B.click('[data-drawer-tab="audio"]');
     await h.drawer(A, 'band');
     await A.$$eval('#strips input[type=range]', rs => rs.forEach(r => { r.value = -30; r.dispatchEvent(new Event('input', { bubbles: true })); }));   // the host turns every part off
     await B.waitForFunction(() => document.querySelectorAll('.spot').length === 2, null, { timeout: 5000 });

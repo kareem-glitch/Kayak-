@@ -36,7 +36,7 @@ test('BARS solo: you trade with the AI band; your seat drops out only on your tu
     assert.equal(await A.getAttribute('[data-game="4"]', 'aria-checked'), 'true', 'the room starts in BARS 4');
     assert.match(await A.evaluate(() => window.getInvite()), /&g=4/, 'the invite says which game');
     await A.waitForFunction(() => /Slow funk/.test(document.getElementById('arrTitle').textContent), null, { timeout: 20000 });
-    await A.click('[data-seat="guitar"]');
+    await h.drawer(A, 'band'); await A.click('[data-take="guitar"]');
     await A.click('#playBtn');
     await A.waitForFunction(() => window.jamStems.playing(), null, { timeout: 15000 });
 

@@ -9,6 +9,7 @@ export const isPhone = () => false;
 export const stats = { under: 0, players: {}, inPeak: 0 };
 
 let ws = null, onBlock = () => {}, q = 0, inLat = 0, outLat = 0, inputName = '', inChannels = 1, channel = '1', micOn = true;
+let statsSeen = 0;
 let recording = false, recStartedAt = 0, recDone = null;
 const replies = new Map();
 const store = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
@@ -26,7 +27,7 @@ const tell = msg => { if(ws && ws.readyState === 1) ws.send(JSON.stringify(msg))
 function onMessage(e){
   if(typeof e.data === 'string'){
     const m = JSON.parse(e.data);
-    if(m.t === 'stats'){ stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; stats.plugin = !!m.plugin; inLat = m.inLat; outLat = m.outLat; }
+    if(m.t === 'stats'){ statsSeen++; stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; stats.plugin = !!m.plugin; inLat = m.inLat; outLat = m.outLat; }
     else if(m.q && replies.has(m.q)){ replies.get(m.q).res(m); replies.delete(m.q); }
     return;
   }
@@ -66,6 +67,21 @@ export async function start(stream, blockHandler){
   });
   await request({ t: 'start', input: store('ss.inDev') || '', output: store('ss.outDev') || '', channel });
 }
+// Is the engine really playing? Its output callback sets outLat, so a stats
+// message with outLat > 0 means sound is going to the speakers.
+export function alive(ms = 3000){
+  return new Promise(res => {
+    const t0 = performance.now(), seen0 = statsSeen;
+    const check = () => {
+      if(!ws || ws.readyState !== 1) return res(false);
+      if(statsSeen > seen0 && outLat > 0) return res(true);
+      if(performance.now() - t0 > ms) return res(false);
+      setTimeout(check, 100);
+    };
+    check();
+  });
+}
+export function stop(){ if(ws){ ws.onclose = null; try{ ws.close(); }catch(e){} ws = null; } }
 // Far-apart mode (at = wall-clock ms it should be heard): held here and handed
 // to the engine just before it's due, less the engine's own output delay.
 const held = []; let pump = null;

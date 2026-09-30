@@ -27,7 +27,7 @@ test('stems band: stock track, seats mute parts, prompted track shared', { timeo
     assert.ok(Math.abs(a.zero - b.zero) < 25, `same start on both devices (${(a.zero - b.zero).toFixed(1)} ms apart)`);
     assert.match(a.facts, /Stock track/);
     assert.ok(a.drums > 0.9 && b.drums > 0.9, 'drums playing before anyone takes the seat');
-    await B.click('[data-seat="drums"]'); await sleep(1200);
+    await h.drawer(B, 'band'); await B.click('[data-take="drums"]'); await sleep(1200);
     a = await peek(A); b = await peek(B);
     assert.ok(a.drums < 0.05 && b.drums < 0.05, `taking the drums silences the drum part everywhere (${a.drums}, ${b.drums})`);
 

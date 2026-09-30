@@ -1,5 +1,5 @@
 // Entry point: the join screen, wiring between modules, and the controls.
-import { $, clamp } from './util.js';
+import { $, clamp, clk } from './util.js';
 import { S, me } from './state.js';
 import * as audio from './audio/io.js';
 import * as band from './band/engine.js';
@@ -20,10 +20,10 @@ const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
 let joinId = params.get('join');
 try{ if(joinId && sessionStorage.getItem('ss.hostId') === joinId){ joinId = null; history.replaceState(null, '', location.pathname); } }catch(e){}
-let inviteLink = null, media = null, cameraProblem = null;
+let inviteLink = null, media = null, cameraProblem = null, engineFellBack = false;
 // Invite links always point at the website, which the desktop app's rooms share
 // (the app's own page address means nothing to anyone else).
-const SITE = audio.NATIVE ? 'https://air.band/' : location.origin + location.pathname;
+const SITE = audio.IN_APP ? 'https://air.band/' : location.origin + location.pathname;
 // A pasted invite: a full link (?join=...) or just the room code.
 const inviteId = text => { const t = (text || '').trim(); if(!t) return null; const m = t.match(/[?&]join=([^&#\s]+)/); return m ? decodeURIComponent(m[1]) : (/^[\w-]{8,}$/.test(t) ? t : null); };
 const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ return null; } }, set: (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} } };
@@ -50,7 +50,7 @@ function showRoomStatus(){
 async function join(){
   const name = $('#nameInput').value.trim();
   if(!name){ $('#joinErr').textContent = 'Add your name so the band knows who you are.'; return; }
-  if(audio.NATIVE && $('#inviteInput').value.trim()){
+  if(audio.IN_APP && $('#inviteInput').value.trim()){
     joinId = inviteId($('#inviteInput').value);
     if(!joinId){ $('#joinErr').textContent = 'That doesn’t look like an invite link. Paste the whole link, or leave it empty to start a new jam.'; return; }
   }
@@ -66,8 +66,18 @@ async function join(){
       catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
     }
     let audioProblem = null;
-    try{ audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); }
+    const startAudio = async () => { audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); };
+    try{ await startAudio(); }
     catch(e){ audioProblem = e; console.error('audio setup failed', e); }
+    // In the desktop app: if its native engine won't start or never plays, use the browser's audio instead
+    if(audio.IN_APP && audio.NATIVE && (audioProblem || !await audio.alive())){
+      console.warn('app audio engine not playing, switching to browser audio', audioProblem);
+      await audio.useWeb(); audioProblem = null; engineFellBack = true; $('#speaker').closest('label').hidden = false;
+      try{
+        const a = await navigator.mediaDevices.getUserMedia({ audio:Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {}) });
+        a.getAudioTracks().forEach(t => media.addTrack(t)); await startAudio();
+      }catch(e){ audioProblem = e; console.error('browser audio setup failed', e); }
+    }
     const videoOnly = new MediaStream(media.getVideoTracks());
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
     $('#joinView').hidden = true; $('#roomView').hidden = false; layout.start();
@@ -75,7 +85,7 @@ async function join(){
     if(joinId) inviteLink = SITE + '?join=' + joinId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
     else {
       inviteLink = SITE + '?join=' + me.id + '&g=' + gamePick + (params.get('broker') ? '&broker=' + params.get('broker') : '');
-      if(!audio.NATIVE) history.replaceState(null, '', inviteLink);   // copying the address bar works too
+      if(!audio.IN_APP) history.replaceState(null, '', inviteLink);   // copying the address bar works too
       try{ sessionStorage.setItem('ss.hostId', me.id); }catch(e){}
       showRoomStatus();
     }
@@ -89,7 +99,8 @@ async function join(){
     if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; $('#synthSet').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
     if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
-    if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
+    if(engineFellBack && !audioProblem) ui.status('The app’s audio engine didn’t play, so this jam uses browser audio (a little more delay). Audio settings → Sound engine to try again.');
+    else if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
     else if(cameraProblem) ui.status('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
     setInterval(showConnection, 250);
   }catch(e){
@@ -116,6 +127,7 @@ function showPlugin(){
 }
 
 function showConnection(){
+  showMix();
   if(audio.canPlugin()) showPlugin();
   const c = room.connectionStats();
   $('#connDebug').textContent = `me ${me.id.slice(0,6)} · ${room.isOwner() ? 'room creator' : 'joined'} · ${c.debug}`;
@@ -160,8 +172,8 @@ function checkSetup(c){
   const far = c.players.filter(p => p.netMs > 30);
   if(far.length) tips.push(['warn', `${far.map(p => p.name).join(', ')} ${far.length > 1 ? 'are' : 'is'} far away on the network (${far.map(p => p.netMs + ' ms').join(', ')}). Tight rhythm works best under ~25 ms.`]);
   const ua = navigator.userAgent;
-  if(!audio.NATIVE && (!/Chrome|Edg\//.test(ua) || /Firefox/.test(ua))) tips.push(['info', 'Chrome or Edge give the lowest audio delay.']);
-  if(!audio.NATIVE && /Windows/.test(ua)) tips.push(['info', 'Windows browsers add some audio delay; a Mac is tighter.']);
+  if(!audio.IN_APP && (!/Chrome|Edg\//.test(ua) || /Firefox/.test(ua))) tips.push(['info', 'Chrome or Edge give the lowest audio delay.']);
+  if(!audio.IN_APP && /Windows/.test(ua)) tips.push(['info', 'Windows browsers add some audio delay; a Mac is tighter.']);
   if(navigator.connection && navigator.connection.type === 'wifi') tips.push(['info', 'You’re on Wi-Fi. An Ethernet cable is steadier.']);
   tips.push(['info', 'Use your interface’s direct monitoring to hear yourself with no delay.']);
   $('#tips').innerHTML = tips.map(([k, t]) => `<li class="${k}">${t}</li>`).join('');
@@ -210,6 +222,20 @@ if(audio.canTone()){
 const showChannels = chans => { $('#inCh').disabled = chans < 2; };
 $('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').checked).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.status('Couldn’t switch input: ' + (e.name || e)));
 $('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
+// A short beep through whichever engine is playing: the quickest way to check you can hear the app
+$('#testSound').onclick = () => {
+  const n = Math.round(0.35 * audio.RATE / audio.FRAMES), t0 = clk() + 80;
+  for(let b = 0; b < n; b++){
+    const pl = new Float32Array(audio.FRAMES);
+    for(let i = 0; i < pl.length; i++){ const k = b * audio.FRAMES + i, env = Math.min(1, k / 480, (n * audio.FRAMES - k) / 2400); pl[i] = 0.3 * env * Math.sin(2 * Math.PI * 660 * k / audio.RATE); }
+    audio.deliver('test-sound', [pl], t0 + b * audio.BLOCK_MS);
+  }
+};
+if(audio.IN_APP){
+  $('#engine').hidden = $('#engineLabel').hidden = false;
+  $('#engine').value = store.get('ss.engine') === 'web' ? 'web' : 'native';
+  $('#engine').onchange = () => { store.set('ss.engine', $('#engine').value); location.reload(); };
+}
 $('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audio.useOutput($('#outDev').value); };
 // Echo cancellation: on by default for phones (often used on loudspeaker), off for computers.
 if(audio.NATIVE) $('#speaker').closest('label').hidden = true;   // no browser echo cancellation in the app
@@ -224,9 +250,9 @@ if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 const APP_VERSION = '0.5.0';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/air.band-${APP_VERSION}-Mac.zip` : `/download/air.band-${APP_VERSION}-Windows-setup.exe`;
-if(audio.NATIVE && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://air.band${dl()}">Download it</a> and reinstall.`;
-if(!audio.NATIVE && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/air.band-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/air.band-${APP_VERSION}-Windows-setup.exe">Windows</a><br>Play through your DAW with the air.band Send plugin (works with the app): <a href="/download/airband-send-${APP_VERSION}-Mac.zip">Mac AU/VST3</a> · <a href="/download/airband-send-${APP_VERSION}-Windows.zip">Windows VST3</a>`;
-if(audio.NATIVE){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
+if(audio.IN_APP && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://air.band${dl()}">Download it</a> and reinstall.`;
+if(!audio.IN_APP && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/air.band-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/air.band-${APP_VERSION}-Windows-setup.exe">Windows</a><br>Play through your DAW with the air.band Send plugin (works with the app): <a href="/download/airband-send-${APP_VERSION}-Mac.zip">Mac AU/VST3</a> · <a href="/download/airband-send-${APP_VERSION}-Windows.zip">Windows VST3</a>`;
+if(audio.IN_APP){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';
 // A ready-made name for first-timers (keep it or roll another), like Discord or Reddit.
 const ADJ = ['Gentle','Soapy','Funky','Velvet','Cosmic','Sleepy','Brassy','Mellow','Rusty','Groovy','Lucky','Salty','Dusty','Electric','Golden','Midnight','Smooth','Wild','Humble','Fuzzy','Swinging','Bouncy','Quiet','Loud','Crispy','Neon','Lazy','Brave','Silver','Sunny'];
@@ -369,6 +395,29 @@ $('#synthTest').onclick = async () => {
 const bandVol = v => { $('#bandVolDb').textContent = v <= -40 ? '(off)' : '(' + (v > 0 ? '+' : '') + v + ' dB)'; band.options.bandVolumeDb = v; band.applyBandVolume(); };
 if(store.get('ss.bandVol') !== null) $('#bandVol').value = store.get('ss.bandVol');
 $('#bandVol').oninput = () => { bandVol(+$('#bandVol').value); store.set('ss.bandVol', $('#bandVol').value); };
+// Boost what you send (too quiet for the others? turn this up, or your interface's gain).
+const inGain = db => { $('#inGainDb').textContent = db ? '(+' + db + ' dB)' : '(off)'; room.setInputGain(Math.pow(10, db / 20)); };
+if(store.get('ss.inGain') !== null) $('#inGain').value = store.get('ss.inGain');
+$('#inGain').oninput = () => { inGain(+$('#inGain').value); store.set('ss.inGain', $('#inGain').value); };
+inGain(+$('#inGain').value);
+// Each player's volume in your ears (remembered by name). All the way down mutes them.
+function showMix(){
+  const box = $('#mixPlayers'), here = new Set();
+  room.peers.forEach((p, id) => {
+    if(!p.name) return; here.add(id);
+    let row = box.querySelector(`[data-mix="${id}"]`);
+    if(!row){
+      row = document.createElement('label'); row.className = 'slider'; row.dataset.mix = id;
+      row.innerHTML = '<span><b></b> <i></i></span><input type="range" min="-30" max="12" step="1">';
+      const r = row.querySelector('input'), key = 'ss.gain.' + p.name, set = db => { row.querySelector('i').textContent = db <= -30 ? '(muted)' : '(' + (db > 0 ? '+' : '') + db + ' dB)'; room.gains.set(id, db <= -30 ? 0 : Math.pow(10, db / 20)); };
+      r.value = store.get(key) ?? 0; r.setAttribute('aria-label', p.name + ' volume');
+      r.oninput = () => { set(+r.value); store.set(key, r.value); }; set(+r.value);
+      box.appendChild(row);
+    }
+    row.querySelector('b').textContent = p.name;
+  });
+  box.querySelectorAll('[data-mix]').forEach(r => { if(!here.has(r.dataset.mix)){ room.gains.delete(r.dataset.mix); r.remove(); } });
+}
 bandVol(+$('#bandVol').value);
 // ---- record: just you, the whole jam, or the jam with video; plus the timing check ----
 let recTimer = null, recUrls = [];
@@ -438,14 +487,14 @@ $('#farApart').onchange = () => { store.set('ss.far', $('#farApart').checked ? '
 // for automated tests
 window.getInvite = () => inviteLink;
 window.jamEngine = band.engine;
-window.jamStats = audio.stats;
-window.jamEchoCancelling = audio.echoCancelling;
+Object.defineProperty(window, 'jamStats', { get: () => audio.stats });
+window.jamEchoCancelling = () => audio.echoCancelling();
 window.jamLyria = lyria;
 window.jamStems = stems;
 window.jamTrade = trade;
 window.jamTone = id => pickTone(id);
 window.jamSynth = synth;
-window.jamAudioCtx = audio.context;
+window.jamAudioCtx = () => audio.context();
 window.jamRoundTrip = (n, fake) => audio.measureRoundTrip(n, fake);
 window.jamSynthOut = () => synth.outNode();
 window.jamLevel = id => room.levelNow(id);

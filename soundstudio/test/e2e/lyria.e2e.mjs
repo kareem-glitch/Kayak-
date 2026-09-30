@@ -57,7 +57,7 @@ test('Lyria band: same stream in step on two devices, seats steer it', { timeout
     assert.equal(play.config.bpm, 120); assert.equal(play.config.scale, 'D_MAJOR_B_MINOR');
     assert.match(play.prompts[0].text, /drums.*bass guitar/);
     // the guest takes the drums: the host tells the relay to mute them
-    await B.click('[data-seat="drums"]');
+    await h.drawer(B, 'band'); await B.click('[data-take="drums"]');
     await sleep(1500);
     const upd = relay.log.filter(m => m.t === 'update').pop();
     assert.ok(upd && upd.config.muteDrums === true, 'taking the drums mutes them in the music model');

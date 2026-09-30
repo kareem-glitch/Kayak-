@@ -102,7 +102,6 @@ window.__audioContexts = [];
             <button type="button" role="radio" data-game="32" aria-checked="false">32</button>
             <button type="button" role="radio" data-game="free" aria-checked="true">Free jam</button>
           </div>
-          <label class="slider"><span>Band volume <span id="bandVolDb"></span></span><input type="range" id="bandVol" min="-40" max="6" step="1" value="0" aria-label="Band volume"></label>
           <div id="hostSection">
           <div class="hostbox" id="claimBox">
           <p class="small">One person runs the band from their device and everyone hears it. Whoever runs it controls the prompt and play button.</p>
@@ -158,6 +157,11 @@ window.__audioContexts = [];
         </section>
         <section class="pane" data-drawer="audio" hidden>
           <div class="pane-head"><h2>Audio</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <h3>Your mix (just for you)</h3>
+          <label class="slider"><span>Band <span id="bandVolDb"></span></span><input type="range" id="bandVol" min="-40" max="6" step="1" value="-6" aria-label="Band volume"></label>
+          <div class="mix-players" id="mixPlayers"></div>
+          <h3>Your input</h3>
+          <label class="slider"><span>Boost what you send <span id="inGainDb"></span></span><input type="range" id="inGain" min="0" max="24" step="1" value="0" aria-label="Input boost"></label>
           <div class="level"><span>Your level <span class="small" id="inDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div></div>
           <div class="synth-set" id="synthSet" hidden>
             <h3>Synth</h3>
@@ -176,6 +180,9 @@ window.__audioContexts = [];
         
         <label class="muted small" for="outDev">Output (headphones or interface)</label>
         <select id="outDev" class="devsel"></select>
+        <button type="button" class="btn btn-quiet" id="testSound">Play a test sound</button>
+        <label class="muted small" for="engine" id="engineLabel" hidden>Sound engine (desktop app)</label>
+        <select id="engine" class="devsel" hidden><option value="native">App engine (lowest delay)</option><option value="web">Browser engine (backup)</option></select>
         <p class="muted small" id="outNote" hidden>This browser uses your computer’s sound output. To choose here, use Chrome or Edge.</p>
         <label class="check small"><input type="checkbox" id="speaker"> Echo cancellation (turn on if you’re not using headphones)</label>
         <label class="check small"><input type="checkbox" id="studio"> Studio quality (32-bit audio, about twice the bandwidth)</label>

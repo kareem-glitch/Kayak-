@@ -15,6 +15,8 @@ export const hooks = { onReady: () => {} };
 // Whether a seat's human is playing right now (so its AI part should be silent).
 // Free jam: whenever the seat is taken. BARS sets this to "only on their turn".
 export const seatRule = { playing: s => s.human };
+// AI parts muted on this device only (tap an AI player to mute it; tap again to bring it back).
+export const localOff = new Set();
 let featured = null;   // BARS: the AI band's turn puts this part up front
 export function feature(name){ featured = name; applySeats(); }
 
@@ -110,7 +112,7 @@ export function applySeats(){
   for(const [name, g] of Object.entries(gains)){
     const seat = SEAT_OF[name], s = seat && S.seats.find(x => x.id === seat);
     const db = seat ? ((S.levels || {})[seat] || 0) : 0;
-    let v = s && seatRule.playing(s) ? 0 : db <= -30 ? 0 : Math.pow(10, db / 20);
+    let v = s && seatRule.playing(s) || localOff.has(seat) ? 0 : db <= -30 ? 0 : Math.pow(10, db / 20);
     if(featured) v *= name === featured ? 1.8 : 0.75;
     g.gain.setTargetAtTime(v, cx.currentTime, 0.015);
   }

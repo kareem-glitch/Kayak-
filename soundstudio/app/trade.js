@@ -15,6 +15,7 @@ import * as room from './net/room.js';
 import * as stems from './band/stems.js';
 import * as soloist from './band/soloist.js';
 import * as session from './session.js';
+import * as audio from './audio/io.js';
 
 export const hooks = { onTurn: () => {} };   // UI, every tick: see info()
 const AHEAD = 700;             // prepare each handover this long before it (ms)
@@ -47,12 +48,18 @@ const turnMs = () => 4 * beatMs() * S.game.bars;
 const leaderOf = k => { const o = order(); return o[((k % o.length) + o.length) % o.length]; };
 
 // How long after they play you can hear it: their input delay, the slowest
-// recent arrival, and a little headroom.
+// arrival of the last 15 seconds (real internet spikes every few seconds), and
+// headroom. In BARS waiting longer costs nothing, arriving late sounds robotic,
+// so this is generous, and it grows by itself if their audio still arrives late.
 function delayFor(id){
   const p = room.peers.get(id); if(!p) return 150;
   const ages = [...(p.ages || [])].sort((a, b) => a - b);
-  const age = ages.length > 20 ? ages[Math.floor(ages.length * 0.98)] : (p.rtt || 150) / 2 + 20;
-  return Math.min(2000, Math.max(20, (p.inMs || 0) + age + 30));   // generous: in BARS a few ms more costs nothing, a late block clicks
+  const recent = ages.length > 20 ? ages[Math.floor(ages.length * 0.98)] : (p.rtt || 150) / 2 + 20;
+  const worst = Math.max(recent, ...(p.maxes || []));
+  const late = ((audio.stats.players || {})[id] || {}).late || 0;
+  if(late > (p.lateSeen || 0)) p.bump = Math.min(400, (p.bump || 0) + 40);   // some arrived late since last turn: wait a bit longer
+  p.lateSeen = late;
+  return Math.min(2000, Math.max(20, (p.inMs || 0) + worst + 60 + (p.bump || 0)));
 }
 // When their band's position 0 sounds, on my clock (they tell everyone; see 'bs').
 const startOf = (id, prev) => { const p = room.peers.get(id), raw = p && (prev ? p.bsPrev : p.bs); return raw == null ? (prev ? null : band.started.base) : raw - p.offset; };

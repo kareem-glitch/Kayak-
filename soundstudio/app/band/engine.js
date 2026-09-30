@@ -99,7 +99,7 @@ export function applyMutes(){
   // Lyria band: the host tells the music model which parts to leave out
   if(isLyria() && me.isHost){ clearTimeout(applyMutes.t); applyMutes.t = setTimeout(lyria.update, 250); }
   if(isStems()) stems.applySeats();   // a taken seat silences its part on this device
-  if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.volume.value = s.human ? -Infinity : dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
+  if(!E) return; S.seats.forEach(s=>{ E[s.id].ch.volume.value = s.human || stems.localOff.has(s.id) ? -Infinity : dbOrOff((S.levels||{})[s.id]||0); }); E.gDist.wet.value = S.arr && S.arr.guitar==='power' ? .65 : 0; }
 
 // Start this device's band at wall-clock time atLocal (ms) with the 16th-note
 // counter at startCounter (-16 = one bar of count-in), early by the output
