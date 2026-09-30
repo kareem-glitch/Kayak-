@@ -10,6 +10,7 @@ use cpal::{BufferSize, Device, FromSample, SampleFormat, SampleRate, SizedSample
 use ssengine::blocks::{peak, Blocker, InputChannel};
 use ssengine::mixer::{Mixer, PlayerStats};
 use ssengine::player::{Feel, TIGHT};
+use ssengine::resample::{RateOut, Resampler};
 use ssengine::RATE;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering::Relaxed};
 use std::sync::{Arc, Mutex};
@@ -91,15 +92,18 @@ pub fn find(id: &str, input: bool) -> Option<Device> {
 /// and the smallest buffer the device allows (down to WANT_BUFFER).
 fn pick(d: &Device, input: bool) -> Result<(StreamConfig, SampleFormat), String> {
     let ranges: Vec<_> = if input { d.supported_input_configs().map_err(|e| e.to_string())?.collect() } else { d.supported_output_configs().map_err(|e| e.to_string())?.collect() };
-    let ok = ranges.into_iter().filter(|r| r.min_sample_rate().0 <= RATE && r.max_sample_rate().0 >= RATE);
-    let best = ok.max_by_key(|r| {
+    // 48 kHz if the device offers it; otherwise the nearest rate it runs at, converted
+    // to and from 48 kHz (resample.rs), rather than no sound at all
+    let rate_of = |r: &cpal::SupportedStreamConfigRange| RATE.clamp(r.min_sample_rate().0, r.max_sample_rate().0);
+    let best = ranges.into_iter().max_by_key(|r| {
         let ch = r.channels();
         let ch_score = if ch == 2 { 3 } else if ch == 1 { 2 } else { 1 };   // 2 best, then mono, then multichannel
         let fmt_score = match r.sample_format() { SampleFormat::F32 => 3, SampleFormat::I32 => 2, SampleFormat::I16 => 1, _ => 0 };
-        (ch_score, fmt_score)
-    }).ok_or_else(|| format!("{} doesn't run at 48 kHz. Set it to 48 kHz in your sound settings.", name(d)))?;
-    let buffer_size = match best.buffer_size() { SupportedBufferSize::Range { min, max } => BufferSize::Fixed(WANT_BUFFER.clamp(*min, *max)), SupportedBufferSize::Unknown => BufferSize::Default };
-    Ok((StreamConfig { channels: best.channels(), sample_rate: SampleRate(RATE), buffer_size }, best.sample_format()))
+        (std::cmp::Reverse(rate_of(r).abs_diff(RATE)), ch_score, fmt_score)
+    }).ok_or_else(|| format!("{} has no usable audio format.", name(d)))?;
+    let rate = rate_of(&best);
+    let buffer_size = match best.buffer_size() { SupportedBufferSize::Range { min, max } => BufferSize::Fixed((WANT_BUFFER * rate / RATE).clamp(*min, *max)), SupportedBufferSize::Unknown => BufferSize::Default };
+    Ok((StreamConfig { channels: best.channels(), sample_rate: SampleRate(rate), buffer_size }, best.sample_format()))
 }
 
 fn err_fn(e: cpal::StreamError) { eprintln!("audio stream error: {e}") }
@@ -124,9 +128,15 @@ fn input<T: SizedSample>(d: &Device, cfg: &StreamConfig, channel: InputChannel, 
     let chans = cfg.channels as usize;
     let mut blocker = Blocker::new(channel);
     let mut buf: Vec<f32> = Vec::with_capacity(8192);
+    let mut rs = (cfg.sample_rate.0 != RATE).then(|| Resampler::new(cfg.sample_rate.0, RATE, chans));
+    let mut buf48: Vec<f32> = Vec::with_capacity(8192);
     d.build_input_stream(cfg, move |data: &[T], info: &cpal::InputCallbackInfo| {
         if sh.plugin_live.load(Relaxed) { return; }   // your DAW (through the plugin) is the input right now
         buf.clear(); buf.extend(data.iter().map(|s| <f32 as FromSample<T>>::from_sample_(*s)));
+        if let Some(rs) = rs.as_mut() {   // device isn't at 48 kHz: convert
+            rs.push(&buf); buf48.resize(rs.available() * chans, 0.0);
+            let k = rs.pull(&mut buf48); buf48.truncate(k * chans); std::mem::swap(&mut buf, &mut buf48);
+        }
         let ts = info.timestamp();
         let lat = ts.callback.duration_since(&ts.capture).map(|d| d.as_secs_f64() * 1000.0).unwrap_or(0.0);
         set(&sh.in_lat, lat as f32);
@@ -166,6 +176,8 @@ fn output<T: SizedSample + FromSample<f32>>(d: &Device, cfg: &StreamConfig, sh: 
     mixer.set_limit(*sh.limit.lock().unwrap()); mixer.set_feel(*sh.feel.lock().unwrap());
     let (mut l, mut r) = (vec![0f32; 8192], vec![0f32; 8192]);
     let mut quanta = 0u32;
+    // device isn't at 48 kHz: mix at 48 kHz, convert to the device's rate
+    let mut rate_out = (cfg.sample_rate.0 != RATE).then(|| RateOut::new(cfg.sample_rate.0));
     d.build_output_stream(cfg, move |data: &mut [T], info: &cpal::OutputCallbackInfo| {
         while let Ok(c) = sh.cmd_rx.try_recv() {
             match c {
@@ -182,10 +194,15 @@ fn output<T: SizedSample + FromSample<f32>>(d: &Device, cfg: &StreamConfig, sh: 
         set(&sh.out_lat, (lat + mixer.pending() as f64 * 1000.0 / RATE as f64) as f32);
         let heard = epoch_ms() + lat;              // when data[0] reaches your ears
         let rec = sh.rec.load(Relaxed);
-        mixer.render(&mut l[..frames], &mut r[..frames], |ql, qr, start| {
+        let on_q = |ql: &[f32], qr: &[f32], start: usize| {
             quanta += 1;
             if rec { let _ = sh.out_tx.send(Out::RecOut { at_ms: heard + start as f64 * 1000.0 / RATE as f64, data: ql.iter().zip(qr).map(|(a, b)| (a + b) / 2.0).collect() }); }
-        });
+        };
+        if let Some(ro) = rate_out.as_mut() {
+            ro.render(&mut mixer, &mut l[..frames], &mut r[..frames], on_q);
+        } else {
+            mixer.render(&mut l[..frames], &mut r[..frames], on_q);
+        }
         for i in 0..frames {
             let o = i * chans;
             data[o] = <T as FromSample<f32>>::from_sample_(l[i]);

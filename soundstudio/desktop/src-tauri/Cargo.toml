@@ -1,6 +1,6 @@
 [package]
 name = "soundstudio"
-version = "0.4.0"
+version = "0.5.1"
 edition = "2021"
 description = "air.band desktop: the jam room with native, low-latency audio"
 publish = false
