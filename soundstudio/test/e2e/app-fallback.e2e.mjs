@@ -58,6 +58,8 @@ test('desktop app: a working engine stays native', { timeout: 60000 }, async () 
     await h.join(A, h.base, 'Host'); await inRoom(A);
     assert.ok(!await usingBrowserAudio(A), 'still on the app engine');
     assert.doesNotMatch(await A.textContent('body'), /uses browser audio/);
+    // the stand-in engine only ever sends digital silence: as if the Mac blocks the mic
+    await A.waitForFunction(() => /Nothing is coming in from your mic/.test(document.body.textContent), null, { timeout: 12000 });
     assert.deepEqual(h.errors, []);
   } finally { wss.close(); await h.close(); }
 });

@@ -133,6 +133,7 @@ function showConnection(){
   const c = room.connectionStats();
   $('#connDebug').textContent = `me ${me.id.slice(0,6)} · ${room.isOwner() ? 'room creator' : 'joined'} · ${c.debug}`;
   // input level: shows whether your mic or instrument is reaching the app
+  noteInput(audio.stats.inPeak || 0);
   const pk = audio.stats.inPeak || 0, db = pk > 0 ? 20 * Math.log10(pk) : -Infinity, pct = d => Math.max(0, Math.min(100, (d + 60) / 60 * 100));
   const hold = showConnection.hold || { db: -Infinity, t: 0 }, now = Date.now();
   if(db >= hold.db || now - hold.t > 1500){ hold.db = db; hold.t = now; } showConnection.hold = hold;   // peak hold for 1.5 s
@@ -157,11 +158,23 @@ function showConnection(){
 
 const ROUTE = { direct: 'direct', 'direct-tcp': 'direct (TCP)', relay: 'via relay', 'relay-tcp': 'via relay (TCP)' };
 // ---- setup check: plain-language tips for the tightest feel ----
+// Exact digital silence from your input (not even a hiss) almost always means the
+// computer is blocking the mic for this app or browser. Say so, once, plainly.
+let heardInput = false, joinedAt = 0, silenceTold = false;
+const blockedMicTip = () => audio.IN_APP
+  ? (/Mac/.test(navigator.userAgent) ? 'Nothing is coming in from your mic or interface. On a Mac: System Settings → Privacy & Security → Microphone → turn on air.band, then restart the app.' : 'Nothing is coming in from your mic or interface. On Windows: Settings → Privacy → Microphone → turn on “Let desktop apps access your microphone”, then restart the app.')
+  : 'Nothing is coming in from your mic or interface. Check the browser allows the microphone (the icon in the address bar) and the right input is picked in Audio settings.';
+function noteInput(pk){
+  if(pk > 0) heardInput = true;
+  if(!joinedAt) joinedAt = performance.now();
+  if(!heardInput && !silenceTold && audio.micEnabled() && !(audio.pluginLive && audio.pluginLive()) && performance.now() - joinedAt > 8000){ silenceTold = true; ui.status(blockedMicTip()); }
+}
 function checkSetup(c){
   const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
   const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
   const relayed = c.players.filter(p => p.route && p.route !== 'direct');
   if(relayed.length) tips.push(['warn', `Your audio with ${relayed.map(p => p.name.replace(/[<&]/g, '')).join(', ')} goes ${relayed.some(p => /tcp/.test(p.route)) ? 'through a relay over TCP, which adds delay and stutters' : 'through a relay server, which adds delay'}. A home network (not work, hotel or phone hotspot) usually connects you directly.`]);
+  if(silenceTold && !heardInput) tips.push(['warn', blockedMicTip()]);
   if(engineFellBack) tips.push(['warn', `Desktop app: using browser audio because the app’s engine had a problem (${engineWhy}).`]);
   if(audio.NATIVE){
     tips.push(['ok', `Desktop app: native audio (input ${audio.inputLatencyMs()} ms, output ${audio.outputLatencyMs()} ms).`]);
