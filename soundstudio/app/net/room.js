@@ -178,6 +178,8 @@ export async function open({ join, broker, videoStream }){
   return me.id;
 }
 export function leave(){ try{ peers.forEach(p => p.conn.close()); peer && peer.destroy(); }catch(e){} }
+// Closing the tab or window counts as leaving straight away (the others don't wait for the connection to time out).
+addEventListener('pagehide', leave);
 
 // Snapshot for the connection panel.
 export function connectionStats(){

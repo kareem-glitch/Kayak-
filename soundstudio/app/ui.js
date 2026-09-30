@@ -55,9 +55,9 @@ const phone = () => matchMedia('(max-width:860px)').matches;
 export function placeSpots(){
   const grid = $('#players'); if(!grid) return;
   const a = S.arr, list = [];
-  tiles.forEach((t, id) => {
-    const s = S.seats.find(x => x.human && x.who === t.dataset.name);
-    list.push({ key: s ? 'seat:' + s.id : 'free:' + id, seat: s, person: [id, t] });
+  tiles.forEach((t, id) => {   // everyone in the room, on their part (any number per part) or none
+    const s = S.seats.find(x => session.holders(x).includes(t.dataset.name));
+    list.push({ key: (s ? 'seat:' + s.id + ':' : 'free:') + id, seat: s, person: [id, t] });
   });
   S.seats.forEach(s => {
     if(!s.human && a && S.hostId && partDesc(s.id) !== null && ((S.levels || {})[s.id] ?? 0) > -30) list.push({ key: 'seat:' + s.id, seat: s });   // the AI plays it (turned all the way off: it's gone)
@@ -79,9 +79,9 @@ export function placeSpots(){
       sp.dataset.seat = s.id;
       label(sp, m.person ? m.person[1].dataset.name : part, m.person ? (mine ? 'YOU' : '') : 'AI');
       sp.querySelector('.inst').textContent = m.person ? part : '';
-      sp.title = m.person ? (mine ? 'Hand ' + part.toLowerCase() + ' back to the AI' : 'Played by ' + s.who) : 'Play ' + part.toLowerCase() + ' (the AI steps out)';
+      sp.title = m.person ? (mine ? 'Stop playing ' + part.toLowerCase() : me.isHost ? 'Take ' + m.person[1].dataset.name + ' off ' + part.toLowerCase() : 'Played by ' + m.person[1].dataset.name) : 'Play ' + part.toLowerCase() + ' (the AI steps out)';
       sp.disabled = !S.hostId || (!!m.person && !mine && !me.isHost);
-      sp.onclick = () => session.toggleSeat(s.id);
+      sp.onclick = () => m.person && !mine ? session.setSeat(s.id, false, m.person[1].dataset.name) : session.toggleSeat(s.id);
     } else {
       delete sp.dataset.seat; label(sp, m.person[1].dataset.name, mine ? 'YOU' : ''); sp.querySelector('.inst').textContent = '';
     }
@@ -153,13 +153,13 @@ export function render(){
     const head = document.createElement('div');
     const nm = document.createElement('span'); nm.className = 'strip-name'; nm.textContent = s.label;
     const st = document.createElement('span'); st.className = 'strip-status';
-    st.textContent = s.human ? 'Played by ' + (s.who || 'a human') : !a ? 'Waiting for the band' : off ? 'Sitting out in this style' : 'AI playing ' + d;
+    st.textContent = s.human ? 'Played by ' + session.holders(s).join(', ') : !a ? 'Waiting for the band' : off ? 'Sitting out in this style' : 'AI playing ' + d;
     head.append(nm, st);
     const btn = document.createElement('button'); btn.className = 'seat';
-    const mine = s.human && s.who === me.name;
-    btn.textContent = s.human ? (mine || me.isHost ? 'Hand back to AI' : 'Taken') : "I'll play this";
-    btn.disabled = !S.hostId || (s.human && !mine && !me.isHost);
-    btn.onclick = () => session.toggleSeat(s.id);
+    const mine = session.holders(s).includes(me.name);   // anyone can join a part others play too
+    btn.textContent = mine ? 'Stop playing' : me.isHost && s.human ? 'Hand back to AI' : "I'll play this";
+    btn.disabled = !S.hostId;
+    btn.onclick = () => !mine && me.isHost && s.human ? session.clearSeat(s.id) : session.toggleSeat(s.id);
     el.append(head, btn);
     if(me.isHost){
       const v = document.createElement('label'); v.className = 'vol'; v.textContent = 'Level';

@@ -134,14 +134,30 @@ function sendCatchUp(id){
   room.send({ t:'start', at:bandT0 + k * barMs, counter:bandCounter0 + k * 16 }, id);
 }
 
+// A part can be played by any number of people (four guitarists is fine): who
+// is the first, also the rest. While anyone plays it, the AI's version steps out.
+export const holders = s => [s.who, ...(s.also || [])].filter(Boolean);
+function setHolders(s, list){ s.who = list[0] || ''; s.also = list.slice(1); s.human = list.length > 0; }
+// One player joins (human) or leaves a part.
 export function setSeat(id, human, who){
   const s = S.seats.find(x => x.id === id); if(!s) return;
-  s.human = !!human; s.who = String(who || '').slice(0, 40);
+  const n = String(who || '').slice(0, 40), list = holders(s).filter(x => x !== n);
+  if(human && n) list.push(n);
+  setHolders(s, list);
   band.applyMutes(); broadcastState(); hooks.onChange();
+}
+// The host hands a part back to the AI: everyone on it steps off.
+export function clearSeat(id){ const s = S.seats.find(x => x.id === id); if(!s) return; setHolders(s, []); band.applyMutes(); broadcastState(); hooks.onChange(); }
+// Someone left the room: they're no longer on any part.
+export function playerLeft(name){
+  if(!me.isHost || !name) return;
+  let changed = false;
+  S.seats.forEach(s => { const l = holders(s); if(l.includes(name)){ setHolders(s, l.filter(x => x !== name)); changed = true; } });
+  if(changed){ band.applyMutes(); broadcastState(); hooks.onChange(); }
 }
 export function toggleSeat(id){
   const s = S.seats.find(x => x.id === id); if(!s) return;
-  const human = !s.human, who = human ? me.name : '';
+  const human = !holders(s).includes(me.name), who = me.name;
   if(me.isHost) setSeat(id, human, who);
   else if(S.hostId) room.send({ t:'seat', id, human, who }, S.hostId);
 }
@@ -180,5 +196,5 @@ export function handleMessage(m, id){
 export function peerLeft(id){
   if(S.hostId !== id) return;
   S.hostId = null; S.hostName = ''; band.stopLocal(); lyria.stopLocal(); stems.stop();
-  S.seats.forEach(s => { s.human = false; s.who = ''; }); band.applyMutes();
+  S.seats.forEach(s => setHolders(s, [])); band.applyMutes();
 }

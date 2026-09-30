@@ -37,7 +37,7 @@ if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.set
 room.events.onStatus = ui.status;
 room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
-room.events.onLeave = id => { ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
+room.events.onLeave = id => { const t = ui.tiles.get(id); if(t) session.playerLeft(t.dataset.name); ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
 room.events.onMessage = (m, id) => trade.handle(m, id) || avatar.handle(m, id) || session.handleMessage(m, id);
 trade.hooks.onTurn = ui.showTurn; trade.start();
 
@@ -248,9 +248,8 @@ showPart();
 function autoSeat(){
   if(seated || part === 'none' || !S.hostId || $('#roomView').hidden) return;
   seated = true;
-  if(S.seats.some(s => s.human && s.who === me.name)) return;
-  const mine = S.seats.find(s => s.id === part);
-  if(mine && !mine.human) session.toggleSeat(part);   // taken already (say, two guitarists)? you just play, no part: the band stays whole
+  if(S.seats.some(s => session.holders(s).includes(me.name))) return;
+  if(S.seats.some(s => s.id === part)) session.toggleSeat(part);   // someone else on it already (two guitarists)? you both are
 }
 // Your player, picked on the start screen like an arcade game: one of four characters, or your camera.
 let look = store.get('ss.look') ?? (store.get('ss.avatar') === '0' ? 'cam' : '0');
@@ -450,4 +449,5 @@ window.jamAudioCtx = audio.context;
 window.jamRoundTrip = (n, fake) => audio.measureRoundTrip(n, fake);
 window.jamSynthOut = () => synth.outNode();
 window.jamLevel = id => room.levelNow(id);
+window.jamState = S;
 window.jamRecord = toggleRecording;

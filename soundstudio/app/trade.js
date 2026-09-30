@@ -14,6 +14,7 @@ import * as band from './band/engine.js';
 import * as room from './net/room.js';
 import * as stems from './band/stems.js';
 import * as soloist from './band/soloist.js';
+import * as session from './session.js';
 
 export const hooks = { onTurn: () => {} };   // UI, every tick: see info()
 const AHEAD = 700;             // prepare each handover this long before it (ms)
@@ -33,7 +34,7 @@ export function order(){
 export const nameOf = id => id === AI ? 'The band' : id === me.id ? me.name : ((room.peers.get(id) || {}).name || '');
 // On your turn the AI's version of your seat drops out; the rest of the time it covers for you.
 let current = null;
-stems.seatRule.playing = s => s.human && (!active() || current === null || nameOf(current) === s.who);
+stems.seatRule.playing = s => s.human && (!active() || current === null || session.holders(s).includes(nameOf(current)));
 function onLeader(lead){
   if(lead === current) return;
   current = lead;

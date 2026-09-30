@@ -90,7 +90,7 @@ function palette(i){
   return { H: c.H, S: c.S, E: '#1b1b1b', M: '#a33a3a', T: c.T, D: shade(c.T, 0.72), P: c.P, B: '#1b1b1b', C: c.C, c: c.c,
     R: c.R, k: '#1d1c1a', w: '#f4f1ea', n: '#e2b46a', p: '#c9ced6', W: '#f4f1ea', X: '#26241f', Y: '#e8c14d', G: '#5a5650', V: '#15161a', v: '#8fe8ff', bg: c.T };
 }
-export const seatOf = name => { const s = S.seats.find(x => x.human && x.who === name); return s ? s.id : null; };
+export const seatOf = name => { const s = S.seats.find(x => x.human && [x.who, ...(x.also || [])].includes(name)); return s ? s.id : null; };
 export const charFor = (id, name) => { const l = looks.get(id); return l && Number.isInteger(l.char) ? charOf(l.char) : hash(name) % CHARS.length; };
 
 // Draws a character on a transparent canvas, one sprite pixel = canvas.width / 20.
