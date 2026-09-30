@@ -152,13 +152,16 @@ function showConnection(){
   if(!c.live) return;
   $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
   // per player: estimated time from their instrument to your ears
-  $('#latList').innerHTML = c.players.map(p => `<li><span><b>${p.name.replace(/[<&]/g, '')}</b> → you</span><span>≈ ${p.totalMs} ms <span class="muted">(arrives ${p.arriveMs} after they play, network ${p.netMs}, buffer ${p.bufferMs})</span></span></li>`).join('');
+  $('#latList').innerHTML = c.players.map(p => `<li><span><b>${p.name.replace(/[<&]/g, '')}</b> → you</span><span>≈ ${p.totalMs} ms <span class="muted">(arrives ${p.arriveMs} after they play, network ${p.netMs}${p.route ? ' ' + ROUTE[p.route] : ''}, buffer ${p.bufferMs})</span></span></li>`).join('');
 }
 
+const ROUTE = { direct: 'direct', 'direct-tcp': 'direct (TCP)', relay: 'via relay', 'relay-tcp': 'via relay (TCP)' };
 // ---- setup check: plain-language tips for the tightest feel ----
 function checkSetup(c){
   const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
   const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
+  const relayed = c.players.filter(p => p.route && p.route !== 'direct');
+  if(relayed.length) tips.push(['warn', `Your audio with ${relayed.map(p => p.name.replace(/[<&]/g, '')).join(', ')} goes ${relayed.some(p => /tcp/.test(p.route)) ? 'through a relay over TCP, which adds delay and stutters' : 'through a relay server, which adds delay'}. A home network (not work, hotel or phone hotspot) usually connects you directly.`]);
   if(engineFellBack) tips.push(['warn', `Desktop app: using browser audio because the app’s engine had a problem (${engineWhy}).`]);
   if(audio.NATIVE){
     tips.push(['ok', `Desktop app: native audio (input ${audio.inputLatencyMs()} ms, output ${audio.outputLatencyMs()} ms).`]);
@@ -472,7 +475,7 @@ function showHud(c){
   const lines = c.players.map(p => {
     const h = hudHist.get(p.name) || []; h.push(p.totalMs); if(h.length > 10) h.shift(); hudHist.set(p.name, h);
     const spark = h.map(v => BARS8[Math.max(0, Math.min(7, Math.round(v / 120 * 7)))]).join('');
-    return row(p.name, p.totalMs, `<span class="hud-spark">${spark}</span>`);
+    return row(p.name, p.totalMs, `<span class="hud-spark">${spark}</span>${p.route && p.route !== 'direct' ? '<span class="hud-spark hud-note">relay</span>' : ''}`);
   });
   const mine = audio.inputLatencyMs() + audio.outputLatencyMs();
   lines.push(row('You', mine, `<span class="hud-spark hud-note">in ${audio.inputLatencyMs()} · out ${audio.outputLatencyMs()}</span>`));

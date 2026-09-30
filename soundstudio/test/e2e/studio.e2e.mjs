@@ -25,6 +25,7 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     assert.match(a.formats[0], /^(1|2)ch\/32bit$/, `Kareem receives Wife's studio-quality audio (${a.formats})`);
     assert.equal(b[0], '1ch/16bit', 'Wife receives Kareem’s standard audio');
     assert.match(a.latency, /Wife → you\s*≈ \d+ ms/, `latency estimate shown (${a.latency})`);
+    assert.match(a.latency, /network \d+ direct,/, `the path is shown: direct between the two browsers (${a.latency})`);
     const arrive = +(a.latency.match(/arrives (-?\d+)/) || [])[1];
     assert.ok(arrive >= 0 && arrive < 60, `audio measured arriving soon after it's played (${a.latency})`);
     assert.ok(a.buffers.length === 1 && a.buffers[0] >= 5.3 && a.buffers[0] <= 21.4, `automatic buffer within limits (${a.buffers})`);

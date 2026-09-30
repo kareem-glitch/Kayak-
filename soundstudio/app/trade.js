@@ -89,8 +89,12 @@ function tick(){
   if(trading() && order().includes(AI)) soloist.prepare();   // load its amp before its first turn
   if(st !== lastStarted){ lastStarted = st; prepared = null; follow.clear(); }   // a new song or restart
   const now = clk(), pos = now - st.zero, seg = trading() ? turnMs() : 4 * beatMs();
-  const k = pos < 0 ? 0 : Math.floor(pos / seg) + 1, key = S.game.mode + S.game.bars + ':' + k;
-  if(st.zero + k * seg - now < AHEAD && prepared !== key){ prepared = key; prepare(k, k * seg); }
+  const cur = pos < 0 ? -1 : Math.floor(pos / seg), k = cur + 1, mk = S.game.mode + S.game.bars;
+  if(!prepared || prepared.mk !== mk) prepared = { mk, k: -1 };
+  // already inside a turn this device never lined up for (the band started late here,
+  // or the game just changed): line up now, or the soloist isn't heard for the whole turn
+  if(cur >= 0 && prepared.k < cur){ prepared.k = cur; prepare(cur, cur * seg); }
+  if(st.zero + k * seg - now < AHEAD && prepared.k < k){ prepared.k = k; prepare(k, k * seg); }
   const t = info(); onLeader(t.leader || null);
   hooks.onTurn(t);
 }

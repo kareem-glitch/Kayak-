@@ -28,6 +28,7 @@ export const events = {
 };
 export const peers = new Map();   // id -> { conn, audio, name, rtt, offset, samples, lastSeq, recv, lost, video }
 window.jamPeers = peers;          // for automated tests
+window.jamNet = { setFakeLoss: s => setFakeLoss(s), setMaxFill: n => setMaxFill(n) };
 let peer = null, video = null, joinId = null, seq = 0, roomFull = false;
 // What you send: 16-bit is CD quality; 32-bit float ("Studio quality") has more
 // headroom and doubles the bandwidth. Channels follow the input (mono or stereo).
@@ -49,6 +50,21 @@ export const taps = { local: null, remote: null, listen: null };   // listen: th
 // "Pretend we're far apart" (testing at home): every player's audio arrives this much later, as if across the world.
 let fakeDelay = 0;
 export const setFakeDelay = ms => { fakeDelay = ms; peers.forEach(p => { p.ages = []; }); };
+let fakeLoss = 0;   // tests: drop this share of incoming audio packets, like a lossy long-distance link
+export const setFakeLoss = share => { fakeLoss = share; };
+// A lost block (or a few) would leave the other player's buffer short, so it runs
+// dry soon after and has to grow (more delay). Fill the gap with the last block,
+// fading, so the timing holds and the buffer can stay small. (Packet-loss concealment.)
+let MAX_FILL = 4;
+export const setMaxFill = n => { MAX_FILL = n; };   // tests
+function conceal(last, k){
+  const out = [];
+  for(let j = 0; j < k; j++){
+    const a = Math.pow(0.6, j), b = Math.pow(0.6, j + 1);
+    out.push(last.map(pl => { const n = pl.length, o = new Float32Array(n); for(let i = 0; i < n; i++) o[i] = pl[i] * (a + (b - a) * i / n); return o; }));
+  }
+  return out;
+}
 // Trade bars (trade.js) decides what happens to each incoming block: undefined =
 // play now (free jam), null = drop (not their turn), a time = play then (wall-clock ms).
 export let route = () => undefined;
@@ -128,10 +144,11 @@ function wireConn(c, newcomer){
   c.on('open', () => {
     p.audio = c.peerConnection.createDataChannel('audio', { negotiated:true, id:7, ordered:false, maxRetransmits:0 });
     p.audio.binaryType = 'arraybuffer';
-    p.audio.onmessage = e => { if(fakeDelay) setTimeout(() => onAudio(e), fakeDelay); else onAudio(e); };
+    p.audio.onmessage = e => { if(fakeLoss && Math.random() < fakeLoss) return; if(fakeDelay) setTimeout(() => onAudio(e), fakeDelay); else onAudio(e); };
     const onAudio = e => {
       const pk = decodePacket(new Uint8Array(e.data)); if(!pk || peers.get(id) !== p) return;
-      if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1) p.lost += d - 1; }
+      let gap = 0;
+      if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1){ p.lost += d - 1; gap = d - 1; } }
       // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
       if(p.samples.length){
         const age = clk() - (pk.timeUs / 1000 - p.offset);
@@ -145,6 +162,9 @@ function wireConn(c, newcomer){
       const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p);
       if(at === null){ p.muted = (p.muted || 0) + 1; return; }
       const g = gains.get(id); if(g != null && g !== 1) scale(pk.planes, g);
+      // at set: blocks land at fixed times, so a gap is already silence in the right place
+      if(gap && gap <= MAX_FILL && at === undefined && p.last){ for(const f of conceal(p.last, gap)) audio.deliver(id, f); p.filled = (p.filled || 0) + gap; }
+      p.last = pk.planes;
       audio.deliver(id, pk.planes, at); if(taps.remote) taps.remote(id, pk.planes);
       if(taps.listen) taps.listen(id, pk.planes, at == null ? clk() : at);
       noteLevel(id, at == null ? clk() : at, peakOf(pk.planes[0]));
@@ -198,6 +218,24 @@ export function leave(){ try{ peers.forEach(p => p.conn.close()); peer && peer.d
 addEventListener('pagehide', leave);
 
 // Snapshot for the connection panel.
+// Which path each person's audio takes: straight between the two devices, or
+// through the relay server (slower; over TCP it also stutters). From WebRTC's stats.
+async function checkRoute(p){
+  const pc = p.conn && p.conn.peerConnection; if(!pc || !pc.getStats) return;
+  try{
+    const st = await pc.getStats(); let pair = null;
+    st.forEach(r => { if(r.type === 'transport' && r.selectedCandidatePairId) pair = st.get(r.selectedCandidatePairId); });
+    if(!pair) st.forEach(r => { if(r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r; });
+    if(!pair) return;
+    const loc = st.get(pair.localCandidateId), rem = st.get(pair.remoteCandidateId);
+    const relay = [loc, rem].some(c => c && c.candidateType === 'relay');
+    const tcp = [loc, rem].some(c => c && (c.protocol === 'tcp' || c.relayProtocol === 'tcp' || c.relayProtocol === 'tls'));
+    p.route = relay ? (tcp ? 'relay-tcp' : 'relay') : (tcp ? 'direct-tcp' : 'direct');
+    if(pair.currentRoundTripTime) p.pathRtt = pair.currentRoundTripTime * 1000;
+  }catch(e){}
+}
+setInterval(() => peers.forEach(p => { if(p.name) checkRoute(p); }), 2000);
+
 export function connectionStats(){
   const live = [...peers.values()].filter(p => p.name && p.recv);
   const recv = live.reduce((a, p) => a + p.recv, 0), lost = live.reduce((a, p) => a + p.lost, 0);
@@ -211,7 +249,7 @@ export function connectionStats(){
       const net = p.rtt === null ? 0 : p.rtt / 2, buf = (bufs[id] || {}).bufferMs || 0;
       // measured: their capture -> arrival here (typical of the last second), else the estimate
       const age = p.ages.length > 50 ? [...p.ages].sort((a, b) => a - b)[p.ages.length >> 1] : FRAMES / RATE * 1000 + net;
-      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut) };
+      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: p.route || null };
     }),
     lossPct: recv ? 100 * lost / (recv + lost) : 0,
     debug: [...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet',
