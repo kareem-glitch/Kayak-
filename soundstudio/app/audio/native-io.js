@@ -9,7 +9,7 @@ export const isPhone = () => false;
 export const stats = { under: 0, players: {}, inPeak: 0 };
 
 let ws = null, onBlock = () => {}, q = 0, inLat = 0, outLat = 0, inputName = '', inChannels = 1, channel = '1', micOn = true;
-let statsSeen = 0;
+let statsSeen = 0, blocksIn = 0;
 let recording = false, recStartedAt = 0, recDone = null;
 const replies = new Map();
 const store = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
@@ -33,6 +33,7 @@ function onMessage(e){
   }
   const buf = e.data, dv = new DataView(buf), tag = dv.getUint8(0);
   if(tag === 1){
+    blocksIn++;
     const n = dv.getUint8(1), at = dv.getFloat64(8, true), planes = [];
     for(let c = 0; c < n; c++) planes.push(new Float32Array(buf, 16 + c * FRAMES * 4, FRAMES));
     onBlock(planes, toClk(at));
@@ -67,15 +68,17 @@ export async function start(stream, blockHandler){
   });
   await request({ t: 'start', input: store('ss.inDev') || '', output: store('ss.outDev') || '', channel });
 }
-// Is the engine really playing? Its output callback sets outLat, so a stats
-// message with outLat > 0 means sound is going to the speakers.
+// Is the engine really working? Its output callback sets outLat (sound is going
+// to the speakers) and its input sends blocks (your instrument is being heard).
+// Resolves '' when both run, else what's wrong.
 export function alive(ms = 3000){
   return new Promise(res => {
-    const t0 = performance.now(), seen0 = statsSeen;
+    const t0 = performance.now(), seen0 = statsSeen, in0 = blocksIn;
     const check = () => {
-      if(!ws || ws.readyState !== 1) return res(false);
-      if(statsSeen > seen0 && outLat > 0) return res(true);
-      if(performance.now() - t0 > ms) return res(false);
+      if(!ws || ws.readyState !== 1) return res('the app’s audio engine closed');
+      const out = statsSeen > seen0 && outLat > 0, inp = blocksIn > in0 + 20 || stats.plugin;
+      if(out && inp) return res('');
+      if(performance.now() - t0 > ms) return res(!out && !inp ? 'no sound in or out' : !out ? 'no sound out' : 'no input from your mic or interface');
       setTimeout(check, 100);
     };
     check();

@@ -24,12 +24,12 @@ test('desktop app: no engine to talk to -> browser audio', { timeout: 60000 }, a
   } finally { await h.close(); }
 });
 
-test('desktop app: engine starts but never plays -> browser audio', { timeout: 60000 }, async () => {
+test('desktop app: engine plays but your input never arrives -> browser audio', { timeout: 60000 }, async () => {
   const h = await startServers();
   const wss = new WebSocketServer({ port: 0, host: '127.0.0.1' });
   wss.on('connection', ws => {
     ws.on('message', d => { const m = JSON.parse(String(d)); if(m.q) ws.send(JSON.stringify({ q: m.q, ok: true, input: 'Mic', inChannels: 1 })); });
-    const t = setInterval(() => ws.send(JSON.stringify({ t: 'stats', under: 0, players: {}, peak: 0, inLat: 0, outLat: 0 })), 200);   // outLat 0: the output never ran
+    const t = setInterval(() => ws.send(JSON.stringify({ t: 'stats', under: 0, players: {}, peak: 0, inLat: 0, outLat: 6 })), 200);   // output runs, but no input blocks ever come
     ws.on('close', () => clearInterval(t));
   });
   await new Promise(r => wss.on('listening', r));
@@ -37,7 +37,27 @@ test('desktop app: engine starts but never plays -> browser audio', { timeout: 6
     const A = await h.page('Host'); await pretendApp(A, wss.address().port);
     await h.join(A, h.base, 'Host'); await inRoom(A);
     assert.ok(await usingBrowserAudio(A), 'switched to Web Audio');
-    assert.match(await A.textContent('body'), /browser audio/);
+    assert.match(await A.textContent('body'), /no input from your mic/);
+    assert.deepEqual(h.errors, []);
+  } finally { wss.close(); await h.close(); }
+});
+
+test('desktop app: a working engine stays native', { timeout: 60000 }, async () => {
+  const h = await startServers();
+  const wss = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  wss.on('connection', ws => {
+    ws.on('message', (d, bin) => { if(bin) return; const m = JSON.parse(String(d)); if(m.q) ws.send(JSON.stringify({ q: m.q, ok: true, input: 'Mic', inChannels: 1 })); });
+    const block = Buffer.alloc(16 + 128 * 4); block[0] = 1; block[1] = 1;
+    const b = setInterval(() => { block.writeDoubleLE(Date.now(), 8); ws.send(block); }, 3);
+    const t = setInterval(() => ws.send(JSON.stringify({ t: 'stats', under: 0, players: {}, peak: 0, inLat: 3, outLat: 6 })), 200);
+    ws.on('close', () => { clearInterval(t); clearInterval(b); });
+  });
+  await new Promise(r => wss.on('listening', r));
+  try{
+    const A = await h.page('Host'); await pretendApp(A, wss.address().port);
+    await h.join(A, h.base, 'Host'); await inRoom(A);
+    assert.ok(!await usingBrowserAudio(A), 'still on the app engine');
+    assert.doesNotMatch(await A.textContent('body'), /uses browser audio/);
     assert.deepEqual(h.errors, []);
   } finally { wss.close(); await h.close(); }
 });

@@ -20,7 +20,7 @@ const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
 let joinId = params.get('join');
 try{ if(joinId && sessionStorage.getItem('ss.hostId') === joinId){ joinId = null; history.replaceState(null, '', location.pathname); } }catch(e){}
-let inviteLink = null, media = null, cameraProblem = null, engineFellBack = false;
+let inviteLink = null, media = null, cameraProblem = null, engineFellBack = false, engineWhy = '';
 // Invite links always point at the website, which the desktop app's rooms share
 // (the app's own page address means nothing to anyone else).
 const SITE = audio.IN_APP ? 'https://air.band/' : location.origin + location.pathname;
@@ -70,8 +70,9 @@ async function join(){
     try{ await startAudio(); }
     catch(e){ audioProblem = e; console.error('audio setup failed', e); }
     // In the desktop app: if its native engine won't start or never plays, use the browser's audio instead
-    if(audio.IN_APP && audio.NATIVE && (audioProblem || !await audio.alive())){
-      console.warn('app audio engine not playing, switching to browser audio', audioProblem);
+    const why = audio.IN_APP && audio.NATIVE ? (audioProblem ? audioProblem.message || String(audioProblem) : await audio.alive()) : '';
+    if(why){
+      engineWhy = why; console.warn('app audio engine: ' + why + '; switching to browser audio');
       await audio.useWeb(); audioProblem = null; engineFellBack = true; $('#speaker').closest('label').hidden = false;
       try{
         const a = await navigator.mediaDevices.getUserMedia({ audio:Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {}) });
@@ -99,7 +100,7 @@ async function join(){
     if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; $('#synthSet').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
     if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
-    if(engineFellBack && !audioProblem) ui.status('The app’s audio engine didn’t play, so this jam uses browser audio (a little more delay). Audio settings → Sound engine to try again.');
+    if(engineFellBack && !audioProblem) ui.status('The app’s audio engine had a problem (' + engineWhy + '), so this jam uses browser audio (a little more delay). Audio settings → Sound engine to try again.');
     else if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
     else if(cameraProblem) ui.status('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
     setInterval(showConnection, 250);
@@ -158,6 +159,7 @@ function showConnection(){
 function checkSetup(c){
   const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
   const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
+  if(engineFellBack) tips.push(['warn', `Desktop app: using browser audio because the app’s engine had a problem (${engineWhy}).`]);
   if(audio.NATIVE){
     tips.push(['ok', `Desktop app: native audio (input ${audio.inputLatencyMs()} ms, output ${audio.outputLatencyMs()} ms).`]);
     tips.push(['info', 'The band plays through your computer’s default output. Set that to the same headphones or interface.']);

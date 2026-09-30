@@ -16,7 +16,7 @@ function bind(x){
     deliver, forget, setFeel, setBufferLimit, connectMic, setInputChannel, useInput, currentInputId, setMicEnabled, micEnabled,
     canChooseOutput, useOutput, listDevices, inputLatencyMs, inputSampleRate, echoCancelling, outputLatencyMs,
     canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip } = x);
-  alive = x.alive || (async () => true);
+  alive = x.alive || (async () => '');
 }
 bind(m);
 export async function useWeb(){
