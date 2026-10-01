@@ -8,12 +8,18 @@ import * as room from './net/room.js';
 import { $ } from './util.js';
 
 let rec = null;
+export const hooks = { screenEnded: () => {} };   // the screen share was stopped from the browser's bar
 const pick = types => types.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
 const VIDEO = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm'];
 const AUDIO = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
 export const supported = () => !!window.MediaRecorder;
 
-export async function start({ video }){
+// screen: record this browser tab (everyone's tiles, the keys you press, the turn
+// bar) instead of drawing the tiles. Asked for first, while the click still counts.
+export async function start({ video, screen = false }){
+  if(screen && !(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) throw new Error('screen recording isn’t supported here');
+  if(!window.MediaRecorder) throw new Error('MediaRecorder isn’t supported here');
+  const shot = screen ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' }) : null;
   const ctx = new AudioContext({ sampleRate: 48000 });
   await ctx.audioWorklet.addModule(new URL('./audio/worklet.js', import.meta.url));
   const mix = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
@@ -27,16 +33,17 @@ export async function start({ video }){
   try{ bandDest = Tone.getContext().rawContext.createMediaStreamDestination(); Tone.connect(Tone.getDestination(), bandDest); ctx.createMediaStreamSource(bandDest.stream).connect(dest); }catch(e){ console.warn('band not recorded', e); }
   const tracks = [...dest.stream.getAudioTracks()];
   let canvas = null, draw = null;
-  if(video){
+  if(shot){ tracks.unshift(...shot.getVideoTracks()); shot.getVideoTracks()[0].onended = () => { if(rec && rec.shot === shot) hooks.screenEnded(); }; }
+  else if(video){
     canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720;
     const g = canvas.getContext('2d');
     draw = () => { paint(g, canvas); rec && rec.video && (rec.raf = requestAnimationFrame(draw)); };
     tracks.unshift(...canvas.captureStream(30).getVideoTracks());
   }
-  const mimeType = pick(video ? VIDEO : AUDIO);
+  const mimeType = pick(video || screen ? VIDEO : AUDIO);
   const mr = new MediaRecorder(new MediaStream(tracks), mimeType ? { mimeType, audioBitsPerSecond: 192000, videoBitsPerSecond: 4000000 } : {});
   const parts = []; mr.ondataavailable = e => e.data.size && parts.push(e.data);
-  rec = { ctx, mix, mr, parts, video, bandDest, raf: 0 };
+  rec = { ctx, mix, mr, parts, video: video || screen, bandDest, raf: 0, shot };
   mr.start(1000); if(draw) draw();
 }
 
@@ -47,6 +54,7 @@ export function stop(){
   return new Promise(res => {
     r.mr.onstop = () => {
       try{ Tone.getDestination().disconnect(r.bandDest); }catch(e){}
+      if(r.shot) r.shot.getTracks().forEach(t => t.stop());   // end the screen share
       r.ctx.close();
       const type = r.mr.mimeType || (r.video ? 'video/webm' : 'audio/webm');
       const blob = new Blob(r.parts, { type });

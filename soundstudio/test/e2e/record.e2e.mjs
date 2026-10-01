@@ -8,6 +8,8 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
   const h = await startServers();
   try{
     const A = await h.page('Kareem'), B = await h.page('Wife');
+    // the screen picker can't be clicked in a test: "this tab" is a moving canvas
+    await A.addInitScript(() => { navigator.mediaDevices.getDisplayMedia = async () => { const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 720; const g = cv.getContext('2d'); let x = 0; setInterval(() => { g.fillStyle = '#0f1011'; g.fillRect(0, 0, 1280, 720); g.fillStyle = '#ffcc00'; g.fillRect(x = (x + 9) % 1200, 300, 80, 80); }, 33); window.__screenShared = true; return cv.captureStream(30); }; });
     await h.join(A, h.base, 'Kareem');
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Wife');
@@ -54,6 +56,9 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     await A.uncheck('#recTracks');
     const vid = await take('video', 5);
     assert.match(vid.name, /\.(webm|mp4)$/); assert.equal(vid.tag, 'VIDEO'); assert.match(vid.label, /Download video/); assert.ok(vid.size > 50000, `video file has content (${vid.size})`);
+    const scr = await take('screen', 4);
+    assert.equal(scr.tag, 'VIDEO'); assert.ok(scr.size > 50000, `screen recording has content (${scr.size})`);
+    assert.ok(await A.evaluate(() => window.__screenShared), 'it asked to share the screen');
     const dims = await A.evaluate(async () => { const v = document.querySelector('#recMedia video'); if(!v.videoWidth) await new Promise(r => v.addEventListener('loadedmetadata', r, { once:true })); return [v.videoWidth, v.videoHeight]; });
     assert.deepEqual(dims, [1280, 720], 'video is 1280x720');
     assert.deepEqual(h.errors, [], 'no page errors');

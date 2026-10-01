@@ -522,6 +522,7 @@ async function toggleRecording(){
   btn.disabled = false; $('#recWhat').disabled = $('#recTracks').disabled = false; btn.setAttribute('aria-pressed', 'false'); 
 }
 $('#recBtn').onclick = toggleRecording;
+recording.onScreenEnded(() => { if(recTimer) toggleRecording(); });   // stopped sharing the screen: the take ends there
 // The latency counter: always on screen, like a game's FPS counter. One line per
 // player (their instrument to your ears), coloured, with the last few seconds as a
 // tiny graph; plus your own device's delay. On/off in Connection.

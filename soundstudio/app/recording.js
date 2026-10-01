@@ -23,10 +23,11 @@ let split = false, mixFailed = null;
 export async function start(kind, alsoTracks = false){
   what = kind; split = alsoTracks && kind !== 'me'; mixFailed = null;
   if(kind !== 'me') tracks.start(id => (room.peers.get(id) || {}).name); audio.startRecording();   // always: the exact capture behind the timing check
-  if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video' }); }catch(e){ console.warn('mix recording unavailable', e); mixFailed = e; } }
+  if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video', screen: what === 'screen' }); }catch(e){ console.warn('mix recording unavailable', e); mixFailed = e; } }
   return what;
 }
 export const seconds = () => audio.recordedSeconds();
+export const onScreenEnded = fn => { mixrec.hooks.screenEnded = fn; };
 
 export async function stop(){
   const mix = what === 'me' || mixFailed ? null : mixrec.stop();
@@ -56,7 +57,9 @@ export async function stop(){
   const mixed = mix && await mix;
   const t = what !== 'me' ? await tracks.stop({ zip: split, mix: !mixed }) : null;
   const tracksUrl = t && t.zipUrl, wavMix = !mixed && t && t.mixUrl;
-  const note = mixFailed ? (what === 'video' ? 'Video recording isn’t available in this browser/app (' + (mixFailed.message || mixFailed) + '), so this is the whole jam as audio. Chrome records video.' : '') : '';
+  const why = mixFailed && (mixFailed.name === 'NotAllowedError' ? 'the screen share was cancelled' : mixFailed.message || mixFailed);
+  const note = mixFailed ? (what === 'video' ? 'Video recording isn’t available in this browser/app (' + why + '), so this is the whole jam as audio. Chrome records video.'
+    : what === 'screen' ? 'The screen wasn’t recorded (' + why + '), so this is the whole jam as audio. Chrome records the screen: pick "This tab" when it asks.' : '') : '';
   split = false;
   const take = mixed || (wavMix ? { url: wavMix, type: 'audio/wav', ext: 'wav', video: false, note } : { url: URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false });
   return { take, timingUrl, tracksUrl, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
