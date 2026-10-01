@@ -15,7 +15,7 @@ export function tileFor(p){
   let t = tiles.get(p.identity);
   if(!t){
     t = document.createElement('div'); t.className = 'tile' + (p.identity === me.id ? ' me' : '');
-    t.innerHTML = '<div class="vid"></div><div class="initial"></div><span class="tname"></span>';
+    t.innerHTML = '<div class="vid"></div><div class="person" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="37" r="17"/><path d="M16 94c2-22 17-35 34-35s32 13 34 35z"/></svg></div><div class="initial"></div><span class="tname"></span>';   // person: shown when the camera is off
     tiles.set(p.identity, t);
   }
   const n = p.name || p.identity;

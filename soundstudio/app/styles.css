@@ -137,15 +137,17 @@ button.badge{border:0;cursor:pointer}
 .tag .inst{font:400 .62rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 /* a player's camera fills their tile (a character when it's off) */
 .spot:has(.tile:not(.avatar)) .fig{left:0;top:0;width:100%;height:100%;transform:none}
-.spot:has(.tile:not(.avatar)) .floor{display:none}
+.spot:has(.tile) .floor{display:none}
 .tile{position:absolute;inset:0;background:none;border:0}
 .tile .vid{position:absolute;inset:0;overflow:hidden;background:#26313a}
 .tile video{width:100%;height:100%;object-fit:cover;display:block}
 .tile.me video{transform:scaleX(-1)}
 .tile .initial,.tile .tname{display:none}
-.tile .sprite{display:none}
-.tile.avatar .sprite{display:block}
-.tile.avatar .vid{visibility:hidden}
+/* camera off (or none): a person icon in their part's colour, never a pixel character (those are the AI band) */
+.tile .person{display:none;position:absolute;inset:0;place-items:center;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--pad,#8b8c91) 22%,#1c1d20),#141517 70%)}
+.tile .person svg{width:46%;max-width:150px;fill:color-mix(in srgb,var(--pad,#8b8c91) 70%,#ececea)}
+.tile.nocam .person{display:grid}
+.tile.nocam .vid{visibility:hidden}
 
 /* rail + drawers */
 .side{display:flex;min-height:0;border-left:1px solid var(--line);background:var(--surface)}
@@ -306,10 +308,6 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 #micBtn[aria-pressed="false"]{background:var(--bad);border-color:var(--bad);color:#fff;box-shadow:none}
 #micBtn[aria-pressed="false"] .off{display:inline}
 #micBtn:disabled{opacity:.6;cursor:default}
-.ctl .me-face{display:none;width:30px;height:30px;image-rendering:pixelated}
-#avatarBtn[aria-pressed="true"]{padding:0;overflow:hidden;border-color:var(--amber)}
-#avatarBtn[aria-pressed="true"] svg{display:none}
-#avatarBtn[aria-pressed="true"] .me-face{display:block;width:100%;height:100%;border-radius:11px}
 #synthBtn[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:var(--amber-ink)}
 .ctl.leave{color:#ff6a52}
 .ctl.leave:hover{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -384,3 +382,6 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 .b-legend{display:flex;flex-wrap:wrap;gap:4px 10px;font:.74rem var(--mono);color:var(--muted)}
 .b-key::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:5px}
 .b-fix{margin:0;font-size:.82rem;color:var(--ink)}
+
+#camToggle[aria-pressed="false"]{color:var(--muted)}
+#camToggle[aria-pressed="false"] .off{display:inline;stroke:var(--bad)}

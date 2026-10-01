@@ -67,9 +67,8 @@ function paint(g, c){
     const x = gap + (i % cols) * (w + gap), y = gap + Math.floor(i / cols) * (h + gap);
     g.save(); g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, 16) : g.rect(x, y, w, h); g.clip();
     g.fillStyle = '#1f2f34'; g.fillRect(x, y, w, h);
-    const v = t.querySelector('video'), sprite = t.classList.contains('avatar') && t.querySelector('canvas.sprite');
-    if(sprite){ const s = Math.max(w / sprite.width, h / sprite.height); g.imageSmoothingEnabled = false; g.drawImage(sprite, x + (w - sprite.width * s) / 2, y + (h - sprite.height * s) / 2, sprite.width * s, sprite.height * s); }
-    else if(v && v.videoWidth){   // cover-fit, mirrored for yourself like on screen
+    const v = !t.classList.contains('nocam') && t.querySelector('video');
+    if(v && v.videoWidth){   // cover-fit, mirrored for yourself like on screen
       const s = Math.max(w / v.videoWidth, h / v.videoHeight), vw = v.videoWidth * s, vh = v.videoHeight * s;
       if(t.classList.contains('me')){ g.translate(x + w, y); g.scale(-1, 1); g.drawImage(v, (w - vw) / 2, (h - vh) / 2, vw, vh); g.setTransform(1, 0, 0, 1, 0, 0); }
       else g.drawImage(v, x + (w - vw) / 2, y + (h - vh) / 2, vw, vh);

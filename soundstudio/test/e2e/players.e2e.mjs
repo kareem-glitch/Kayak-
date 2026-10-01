@@ -1,42 +1,34 @@
-// End-to-end: pick your player on the start screen (arcade style): one of four
-// characters, or your camera. The others see your character, with its colours.
+// End-to-end: people are their camera, or a person icon with it off (picked on
+// the start screen, toggled in the room); the pixel characters are the AI band's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startServers } from './harness.mjs';
 
 const SHOTS = process.env.SHOTS;   // a folder to save screenshots in, when looking at the design
-// Is any pixel of `hex` in the sprite on the tile named `name`?
-const hasColour = (p, name, hex) => p.evaluate(([name, hex]) => {
-  const t = [...document.querySelectorAll('.tile')].find(t => t.querySelector('.tname').textContent === name), cv = t && t.querySelector('canvas.sprite');
-  if(!cv) return false;
-  const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
-  for(let i = 0; i < d.length; i += 4) if(d[i] === r && d[i + 1] === g && d[i + 2] === b) return true;
-  return false;
-}, [name, hex]);
-
-test('pick a player: the room sees your character, or your camera', { timeout: 90000 }, async () => {
+test('camera on/off: the room sees your camera or a person icon; characters are the AI band', { timeout: 90000 }, async () => {
   const h = await startServers();
   try{
     const A = await h.page('Host'), B = await h.page('Guest');
     await A.goto(h.base);
-    assert.equal(await A.locator('#lookPick button').count(), 5, 'four players and the camera');
-    assert.equal(await A.getAttribute('[data-look="cam"]', 'aria-checked'), 'true', 'the camera, as picked last time');
-    await A.click('[data-look="1"]');
-    assert.equal(await A.getAttribute('[data-look="1"]', 'aria-checked'), 'true', 'Juno picked');
-    if(SHOTS) await A.screenshot({ path: SHOTS + '/players-pick.png' });
+    assert.equal(await A.getAttribute('[data-cam="1"]', 'aria-checked'), 'true', 'camera on by default');
+    await A.click('[data-cam="0"]');   // join with the camera off
     await A.fill('#nameInput', 'Host'); await A.click('#joinBtn');
     await A.waitForFunction(() => window.getInvite && window.getInvite());
     await h.join(B, await A.evaluate(() => location.href), 'Guest');
-    await B.waitForFunction(() => document.querySelectorAll('.tile.avatar').length === 1, null, { timeout: 30000 });
-    assert.equal(await A.getAttribute('#avatarBtn', 'aria-label'), 'Juno', 'your player is on the character button');
-    await B.waitForFunction(() => document.querySelector('.tile.avatar canvas.sprite'), null, { timeout: 5000 });
-    await new Promise(r => setTimeout(r, 300));
-    assert.ok(await hasColour(B, 'Host', '#7b4fd6'), 'the guest sees Juno (purple hair)');
-    assert.ok(!await hasColour(B, 'Host', '#d8322a'), '…not Blaze');
-    if(SHOTS) await B.screenshot({ path: SHOTS + '/players-room.png' });
+    const iconFor = (p, name) => p.evaluate(name => { const t = [...document.querySelectorAll('.tile')].find(t => t.dataset.name === name); return t && t.classList.contains('nocam') && getComputedStyle(t.querySelector('.person')).display !== 'none'; }, name);
+    await B.waitForFunction(() => [...document.querySelectorAll('.tile.nocam')].some(t => t.dataset.name === 'Host'), null, { timeout: 30000 });
+    assert.ok(await iconFor(B, 'Host'), 'the guest sees a person icon for the host (camera off)');
+    assert.ok(!await iconFor(B, 'Guest'), '... and their own camera');
+    assert.equal(await B.locator('.tile canvas.sprite').count(), 0, 'no pixel characters for people');
+    assert.equal(await A.getAttribute('#camToggle', 'aria-pressed'), 'false');
+    if(SHOTS){ await B.waitForTimeout(1500); await B.screenshot({ path: SHOTS + '/players-room.png' }); await A.screenshot({ path: SHOTS + '/players-host.png' }); }
+    await A.click('#camToggle');   // camera back on in the room
+    await B.waitForFunction(() => !document.querySelector('.tile.nocam'), null, { timeout: 5000 });
+    assert.equal(await A.evaluate(() => localStorage.getItem('ss.cam')), '1', 'remembered for next time');
     // only who's really there stands in the circle: no band yet, so just the two of them
     const spots = () => B.evaluate(() => [...document.querySelectorAll('.spot')].map(sp => sp.querySelector('.who').textContent + (sp.classList.contains('muted') ? ' (muted)' : '')));
     assert.ok((await spots()).includes('Drums'), 'the band is loaded: its parts stand there too');
+    await B.waitForFunction(() => document.querySelector('.spot.ai canvas.sprite'), null, { timeout: 5000 });   // the AI players are characters
     // tap an AI player to mute it, just for you
     await B.click('.spot.ai[data-seat="drums"]');
     assert.ok((await spots()).includes('Drums (muted)'), 'tapping the AI drummer mutes it for the guest');
@@ -56,10 +48,6 @@ test('pick a player: the room sees your character, or your camera', { timeout: 9
     await B.waitForFunction(() => [...document.querySelectorAll('.spot.muted .who')].some(e => e.textContent === 'Host'), null, { timeout: 5000 });
     assert.deepEqual((await spots()).sort(), ['Guest', 'Host (muted)'], 'muting greys you out for the others');
     await A.click('#micBtn');
-    // back to the camera in the room
-    await A.click('#avatarBtn');
-    await B.waitForFunction(() => !document.querySelector('.tile.avatar'), null, { timeout: 5000 });
-    assert.equal(await A.evaluate(() => localStorage.getItem('ss.look')), 'cam', 'remembered for next time');
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });

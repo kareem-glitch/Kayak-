@@ -1,26 +1,24 @@
-// Characters: a little pixel player instead of your camera. You pick one of
-// four on the start screen (or keep your camera); it bobs on the beat and switches to its "playing" frame
-// when you play, timed to when the others actually hear you (so in Trade bars
-// it moves with your delayed audio, not ahead of it).
+// Characters: the AI band's players, little pixel musicians that bob on the beat
+// and switch to their "playing" frame when their part sounds. People are their
+// camera, or a person icon when it's off (ui.js); this module also tells the room
+// whether your camera is on and whether your mic is muted.
 import { S, me } from './state.js';
 import * as room from './net/room.js';
 import { tiles, placeSpots } from './ui.js';
 import { muted } from './presence.js';
 
-const looks = new Map();   // id -> { on, char } for each player
-let mine = false, myChar = 0, myMuted = false, lastBeat = 0;
-export const isOn = () => mine;
+const cams = new Map();   // id -> camera on (for each person)
+let myCam = true, myMuted = false, lastBeat = 0;
 export const beat = () => { lastBeat = performance.now(); };
 
-// Turn yours on/off (and pick your player) and tell the room. Returns the new state.
-const look = () => ({ t:'look', avatar:mine, char:myChar, muted:myMuted });
-export function setMine(on, char = myChar){ mine = on; myChar = char; looks.set(me.id, { on, char }); room.send(look()); return on; }
-// Your mic muted (you show greyed out for everyone).
+// Your camera on/off and your mic muted, told to the room.
+const look = () => ({ t:'look', cam:myCam, muted:myMuted });
+export function setCam(on){ myCam = on; cams.set(me.id, on); room.send(look()); placeSpots(); return on; }
 export function setMuted(on){ myMuted = on; if(on) muted.add(me.id); else muted.delete(me.id); room.send(look()); placeSpots(); }
-export const tellNewcomer = id => { if(mine || myMuted) room.send(look(), id); };
+export const tellNewcomer = id => { if(!myCam || myMuted) room.send(look(), id); };
 export function handle(m, id){
   if(m.t !== 'look') return false;
-  looks.set(id, { on:!!m.avatar, char:m.char });
+  cams.set(id, m.cam !== undefined ? !!m.cam : !m.avatar);   // older pages sent avatar:true for "no camera picture"
   if(m.muted) muted.add(id); else muted.delete(id);
   placeSpots(); return true;
 }
@@ -83,15 +81,12 @@ function compose(inst, playing, hair = {}, ai = false){
 }
 
 const shade = (hex, f) => '#' + [1, 3, 5].map(i => Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * f))).toString(16).padStart(2, '0')).join('');
-const hash = s => { let h = 2166136261; for(const c of String(s)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; };
 
 function palette(i){
   const c = CHARS[charOf(i)];
   return { H: c.H, S: c.S, E: '#1b1b1b', M: '#a33a3a', T: c.T, D: shade(c.T, 0.72), P: c.P, B: '#1b1b1b', C: c.C, c: c.c,
     R: c.R, k: '#1d1c1a', w: '#f4f1ea', n: '#e2b46a', p: '#c9ced6', W: '#f4f1ea', X: '#26241f', Y: '#e8c14d', G: '#5a5650', V: '#15161a', v: '#8fe8ff', bg: c.T };
 }
-export const seatOf = name => { const s = S.seats.find(x => x.human && [x.who, ...(x.also || [])].includes(name)); return s ? s.id : null; };
-export const charFor = (id, name) => { const l = looks.get(id); return l && Number.isInteger(l.char) ? charOf(l.char) : hash(name) % CHARS.length; };
 
 // Draws a character on a transparent canvas, one sprite pixel = canvas.width / 20.
 export function draw(canvas, char, inst, playing, bob, ai = false){
@@ -108,14 +103,13 @@ const sprite = holder => {
   return cv;
 };
 
-// ~12 frames a second: every player shown as a character (anyone without a
-// camera picture, or who chose a character) and the AI band's players.
+// ~12 frames a second: people without a camera picture get the person icon;
+// the AI band's players are drawn as characters.
 setInterval(() => {
   const beatNow = performance.now() - lastBeat < 120;
   tiles.forEach((t, id) => {
-    const l = looks.get(id), on = !!(l && l.on) || !t.querySelector('video'); t.classList.toggle('avatar', on); if(!on) return;
-    const name = id === me.id ? me.name : ((room.peers.get(id) || {}).name || '');
-    draw(sprite(t), charFor(id, name), seatOf(name) || 'guitar', room.levelNow(id === me.id ? 'me' : id) > 0.06, beatNow);
+    const v = t.querySelector('video'), off = cams.get(id) === false || !v || !v.srcObject || !v.srcObject.getVideoTracks().length;
+    t.classList.toggle('nocam', off);
   });
   document.querySelectorAll('.spot.ai').forEach(sp => {
     const seat = sp.dataset.seat, out = sp.classList.contains('off');
@@ -124,20 +118,3 @@ setInterval(() => {
   });
 }, 80);
 
-// ---- the start screen: pick your player, arcade style ----
-// A tight 24 x 24 portrait (one canvas pixel per sprite pixel; CSS scales it up crisply).
-export function portrait(canvas, char, playing, bob){
-  const g = canvas.getContext('2d'), c = palette(char);
-  canvas.width = canvas.height = 24;
-  g.fillStyle = '#1c1d20'; g.fillRect(0, 0, 24, 24);
-  g.fillStyle = shade(c.bg, 0.45); g.fillRect(4, 20, 16, 2);   // their spot on the floor
-  compose('guitar', playing, CHARS[charOf(char)].hair).forEach((row, y) => row.forEach((k, x) => { if(k !== '.' && c[k]){ g.fillStyle = c[k]; g.fillRect(2 + x, 2 + y - (bob ? 1 : 0), 1, 1); } }));
-}
-// The "keep my camera" choice: a little pixel camera.
-const CAM = ['....kkkk........', '..kkkkkkkkkkk.kk', '..kwwkkkkkkkkkrk', '..kkkkgggkkkkkkk', '..kkkgbbbgkkkkkk', '..kkkgbwbgkkkkkk', '..kkkgbbbgkkkkkk', '..kkkkgggkkkkkkk', '..kkkkkkkkkkkkkk'];
-export function cameraIcon(canvas, on){
-  const g = canvas.getContext('2d'), col = { k:'#3a3b40', w:'#f4f4f2', g:'#8b8c91', b:'#10151b', r: on ? '#e8321c' : '#5d5e63' };
-  canvas.width = canvas.height = 24;
-  g.fillStyle = '#1c1d20'; g.fillRect(0, 0, 24, 24);
-  CAM.forEach((row, y) => [...row].forEach((k, x) => { if(k !== '.'){ g.fillStyle = col[k]; g.fillRect(3 + x, 7 + y, 1, 1); } }));
-}

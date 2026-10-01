@@ -21,7 +21,7 @@ test('trade bars: turns alternate, only the soloist is heard, on the beat', { ti
     await A.waitForFunction(() => /Indie rock/.test(document.getElementById('genStatus').textContent), null, { timeout: 20000 });
     await A.click('[data-game="4"]');
     await B.waitForFunction(() => document.querySelector('[data-game="4"]').getAttribute('aria-checked') === 'true', null, { timeout: 5000 });
-    await B.click('#avatarBtn');   // the guest plays as a pixel character
+    await B.click('#camToggle');   // the guest turns their camera off
     await A.click('#playBtn');
     await B.waitForFunction(() => window.jamStems.playing(), null, { timeout: 15000 });
 
@@ -51,8 +51,8 @@ test('trade bars: turns alternate, only the soloist is heard, on the beat', { ti
       assert.match(t.a.mine ? t.a.line : t.b.line, /Your 4 bars/);
       assert.deepEqual(listener.glow.length, 1, `turn ${k}: the soloist's tile glows for the listener`);
     });
-    const avatars = await A.evaluate(() => [...document.querySelectorAll('.tile.avatar .tname')].map(e => e.textContent));
-    assert.deepEqual(avatars, ['Guest'], 'the host sees the guest as an avatar');
+    const icons = await A.evaluate(() => [...document.querySelectorAll('.tile.nocam')].map(t => t.dataset.name));
+    assert.deepEqual(icons, ['Guest'], 'the host sees the guest as a person icon (camera off)');
     if(process.env.SHOT) await A.screenshot({ path: process.env.SHOT });
     const last = turns[2];
     assert.ok(last.a.muted > 100 && last.b.muted > 100, `off-turn playing isn't heard (${last.a.muted}, ${last.b.muted} blocks held back)`);
