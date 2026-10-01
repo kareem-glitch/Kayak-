@@ -49,6 +49,10 @@ function showRoomStatus(){
   ui.status(names.length ? `In the room: you, ${names.join(', ')} (${room.roomCount()}/${room.MAX_ROOM})` : (room.isOwner() ? 'Send this invite link to up to 3 friends:' : 'Connecting…'));
 }
 
+// iPhone Safari: two quick taps anywhere zoom the page (fast playing looks just like
+// that). Swallow the second tap of a quick pair, except in text fields.
+{ let lastTap = -1e9; document.addEventListener('touchend', e => { const now = performance.now(); if(now - lastTap < 350 && !(e.target.closest && e.target.closest('input, textarea, select')) && e.cancelable) e.preventDefault(); lastTap = now; }, { passive: false }); }
+
 // ---- join ----
 async function join(){
   const name = $('#nameInput').value.trim();

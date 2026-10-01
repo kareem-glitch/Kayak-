@@ -118,7 +118,14 @@ function wire(){
     down('k' + k, midi, e); e.preventDefault();
   });
   window.addEventListener('keyup', e => { if(voice) up('k' + e.key.toLowerCase()); });
-  panel.querySelectorAll('[data-oct]').forEach(b => b.onclick = () => shift(+b.dataset.oct));
+  panel.querySelectorAll('[data-oct]').forEach(b => {
+    b.onclick = () => shift(+b.dataset.oct);
+    b.addEventListener('touchend', e => { e.preventDefault(); shift(+b.dataset.oct); }, { passive: false });   // a tap, without the click iOS would turn into a zoom
+  });
+  // iPhone Safari zooms on quick repeated taps whatever the CSS says: cancel the raw
+  // touches on the keyboard (notes come from pointer events, which still arrive)
+  for(const t of ['touchstart', 'touchend', 'touchmove']) row.addEventListener(t, e => { if(e.cancelable) e.preventDefault(); }, { passive: false });
+  for(const t of ['gesturestart', 'gesturechange', 'dblclick']) panel.addEventListener(t, e => e.preventDefault(), { passive: false });
   document.querySelectorAll('[data-scale]').forEach(b => b.onclick = () => showScaleOnly(b.dataset.scale === 'key'));
   window.addEventListener('resize', () => voice && render());
 }
