@@ -21,7 +21,7 @@ let featured = null;   // BARS: the AI band's turn puts this part up front
 export function feature(name){ featured = name; applySeats(); }
 
 let current = null;          // { id, bpm, buffers: {name: AudioBuffer}, data: {name: base64} (prompted only) }
-let loading = null, gains = {}, master = null, sources = [], start = null, volumeDb = 0;
+let loading = null, gains = {}, master = null, seam = null, sources = [], start = null, volumeDb = 0;
 const ctx = () => Tone.getContext().rawContext;
 const outLat = () => { const c = ctx(); return (c.outputLatency || 0) + (c.baseLatency || 0); };
 const b64ToBuf = s => Uint8Array.from(atob(s), c => c.charCodeAt(0)).buffer;
@@ -69,14 +69,14 @@ function loopLength(){
 function schedule(){
   if(!current || start === null || !Object.keys(current.buffers).length) return;
   const cx = ctx();
-  if(!master){ master = cx.createGain(); Tone.connect(master, Tone.getDestination()); setVolume(volumeDb); }
+  if(!master){ master = cx.createGain(); Tone.connect(master, Tone.getDestination()); setVolume(volumeDb); seam = cx.createGain(); seam.connect(master); }
   const L = loopLength();
   let t0 = cx.currentTime + 0.1;
   let pos = (clk() + (0.1 + outLat()) * 1000 - start) / 1000;   // where in the loop that moment is, for the room
   if(pos < 0){ t0 -= pos; pos = 0; }
   const offset = pos % L;
   for(const [name, buf] of Object.entries(current.buffers)){
-    if(!gains[name]){ gains[name] = cx.createGain(); gains[name].connect(master); }
+    if(!gains[name]){ gains[name] = cx.createGain(); gains[name].connect(seam); }
     const src = cx.createBufferSource(); src.buffer = buf; src.loop = true; src.loopStart = 0; src.loopEnd = L;
     src.connect(gains[name]); src.start(t0, offset); sources.push(src);
   }
@@ -90,6 +90,9 @@ export function shiftAt(boundaryPos, newStart){
   const cx = ctx(), L = loopLength(), toAudio = wall => cx.currentTime + (wall - clk()) / 1000 - outLat();
   const tOld = Math.max(cx.currentTime + 0.02, toAudio(start + boundaryPos)), tNew = Math.max(tOld, toAudio(newStart + boundaryPos));
   const pos = (clk() + (tNew - cx.currentTime + outLat()) * 1000 - newStart) / 1000;   // where the new timing is at tNew
+  // the seam: a quick fade out into the switch and back in on the new timing, so a
+  // handover in BARS sounds like the band stopping for the downbeat, not a click
+  if(seam){ const g = seam.gain; g.cancelScheduledValues(cx.currentTime); g.setValueAtTime(1, Math.max(cx.currentTime, tOld - 0.015)); g.linearRampToValueAtTime(0, tOld); g.setValueAtTime(0, tNew); g.linearRampToValueAtTime(1, tNew + 0.01); }
   sources.forEach(s => { try{ s.stop(tOld); }catch(e){} });
   const old = sources; sources = [];
   for(const [name, buf] of Object.entries(current.buffers)){
