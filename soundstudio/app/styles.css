@@ -363,3 +363,24 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
   .oct{width:24px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+
+/* notices on the stage: something to see or do now */
+.notice{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:20;width:min(760px,calc(100% - 32px));box-shadow:0 8px 30px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;border-radius:12px;background:var(--raised);border:1px solid var(--amber);border-left-width:4px;color:var(--ink);font-size:.9rem;box-sizing:border-box}
+.notice[hidden]{display:none}
+.notice #noticeText{flex:1;min-width:0}
+.notice .btn{padding:7px 12px;white-space:nowrap}
+.notice .close{flex:none}
+
+/* latency budget: one bar per player, 30 ms marker */
+.lat .budget{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.b-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.b-total{font:700 1rem var(--mono)}
+.b-total.ok{color:var(--ok)} .b-total.warn{color:var(--warn)} .b-total.bad{color:var(--bad)}
+.b-bar{position:relative;display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--raised)}
+.b-bar i{display:block;height:100%;min-width:0}
+.b-bar em{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.8}
+.b-in{--c:#2fd3e0} .b-packet{--c:#8b8c91} .b-network{--c:#ffcc00} .b-buffer{--c:#ff7a1a} .b-out{--c:#ff3d8b}
+.b-bar i{background:var(--c)}
+.b-legend{display:flex;flex-wrap:wrap;gap:4px 10px;font:.74rem var(--mono);color:var(--muted)}
+.b-key::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:5px}
+.b-fix{margin:0;font-size:.82rem;color:var(--ink)}

@@ -25,9 +25,10 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     assert.match(a.formats[0], /^(1|2)ch\/32bit$/, `Kareem receives Wife's studio-quality audio (${a.formats})`);
     assert.equal(b[0], '1ch/16bit', 'Wife receives Kareem’s standard audio');
     assert.match(a.latency, /Wife → you\s*≈ \d+ ms/, `latency estimate shown (${a.latency})`);
-    assert.match(a.latency, /network \d+ direct,/, `the path is shown: direct between the two browsers (${a.latency})`);
-    const arrive = +(a.latency.match(/arrives (-?\d+)/) || [])[1];
-    assert.ok(arrive >= 0 && arrive < 60, `audio measured arriving soon after it's played (${a.latency})`);
+    assert.match(a.latency, /network \d+ \(direct\)/, `the path is shown: direct between the two browsers (${a.latency})`);
+    assert.match(a.latency, /their input \d+.*packet 2\.7.*buffer \d+.*your output \d+/, `the latency budget is shown part by part (${a.latency})`);
+    const arrive = await A.evaluate(() => { const ages = [...[...window.jamPeers.values()][0].ages].sort((x, y) => x - y); return ages[ages.length >> 1]; });
+    assert.ok(arrive >= 0 && arrive < 60, `audio measured arriving soon after it's played (${arrive})`);
     assert.ok(a.buffers.length === 1 && a.buffers[0] >= 5.3 && a.buffers[0] <= 21.4, `automatic buffer within limits (${a.buffers})`);
     assert.match(a.tips, /Bluetooth|48 kHz|direct monitoring/, 'setup check shown');
     // Speaker mode: echo cancellation switches on and audio keeps flowing
@@ -44,6 +45,10 @@ test('studio quality stereo, latency and tips, speaker mode', { timeout: 120000 
     await h.drawer(A, 'stats'); await A.check('#farApart'); await sleep(2500);
     const far = await arrival();
     assert.ok(far - near > 120 && far - near < 200, `far apart adds about 150 ms (${near.toFixed(0)} -> ${far.toFixed(0)} ms)`);
+    // that far apart, the room suggests BARS (on the stage, not in a drawer)
+    await A.waitForFunction(() => !document.getElementById('notice').hidden && /too far to play in time/.test(document.getElementById('noticeText').textContent), null, { timeout: 10000 });
+    assert.match(await A.textContent('#latList'), /too far apart to play in time/, 'the budget names the network as the problem');
+    if(process.env.SHOTS) await A.screenshot({ path: process.env.SHOTS + '/budget.png' });
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });

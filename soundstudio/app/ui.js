@@ -222,6 +222,17 @@ export function showTurn(t){
   glow(t.leader, t.next);
 }
 export function status(text){ $('#connStats').textContent = text; }
+// Something you need to see or do, shown on the stage (not in a closed drawer).
+// action: { label, run } for a button; key: the same key replaces, and a dismissed key stays dismissed.
+const dismissed = new Set(); let noticeKey = null;
+export function notice(text, { action = null, key = text } = {}){
+  if(dismissed.has(key)) return;
+  noticeKey = key; $('#noticeText').textContent = text; $('#notice').hidden = false;
+  const b = $('#noticeAct'); b.hidden = !action;
+  if(action){ b.textContent = action.label; b.onclick = () => { clearNotice(key); action.run(); }; }
+}
+export function clearNotice(key){ if(key === undefined || key === noticeKey){ $('#notice').hidden = true; noticeKey = null; } }
+$('#noticeClose').onclick = () => { if(noticeKey) dismissed.add(noticeKey); clearNotice(); };
 export function fillSelect(sel, list, preferred){
   const cur = sel.value || preferred;
   sel.replaceChildren(...list.map(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.label; return o; }));

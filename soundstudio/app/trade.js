@@ -57,7 +57,8 @@ function delayFor(id){
   const recent = ages.length > 20 ? ages[Math.floor(ages.length * 0.98)] : (p.rtt || 150) / 2 + 20;
   const worst = Math.max(recent, ...(p.maxes || []));
   const late = ((audio.stats.players || {})[id] || {}).late || 0;
-  if(late > (p.lateSeen || 0)) p.bump = Math.min(400, (p.bump || 0) + 40);   // some arrived late since last turn: wait a bit longer
+  if(late > (p.lateSeen || 0)) p.bump = Math.min(400, (p.bump || 0) + 40);
+  else p.bump = Math.max(0, (p.bump || 0) - 20);   // a clean turn: give some back, so one bad patch doesn't add delay for good   // some arrived late since last turn: wait a bit longer
   p.lateSeen = late;
   return Math.min(2000, Math.max(20, (p.inMs || 0) + worst + 60 + (p.bump || 0)));
 }

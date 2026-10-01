@@ -249,10 +249,15 @@ export function connectionStats(){
     // Estimated time from their instrument to your ears: their input + one packet
     // + network + your buffer for them + your output.
     players: [...peers.entries()].filter(([, p]) => p.name && p.recv).map(([id, p]) => {
-      const net = p.rtt === null ? 0 : p.rtt / 2, buf = (bufs[id] || {}).bufferMs || 0;
+      const net = (p.rtt === null ? 0 : p.rtt / 2) + fakeDelay, buf = (bufs[id] || {}).bufferMs || 0;   // pretending to be far apart counts as distance
       // measured: their capture -> arrival here (typical of the last second), else the estimate
       const age = p.ages.length > 50 ? [...p.ages].sort((a, b) => a - b)[p.ages.length >> 1] : FRAMES / RATE * 1000 + net;
-      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: p.route || null };
+      // the budget: where the time goes, their instrument -> your ears
+      const sorted = p.ages.length > 50 ? [...p.ages].sort((a, b) => a - b) : null;
+      const jitter = sorted ? Math.max(0, sorted[Math.floor(sorted.length * 0.95)] - sorted[sorted.length >> 1]) : 0;
+      const block = FRAMES / RATE * 1000;
+      const budget = { in: Math.round(p.inMs || 0), packet: Math.round(block * 10) / 10, network: Math.round(net), jitter: Math.round(jitter), buffer: Math.round(buf), out: Math.round(myOut) };
+      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: p.route || null, budget };
     }),
     lossPct: recv ? 100 * lost / (recv + lost) : 0,
     debug: [...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet',

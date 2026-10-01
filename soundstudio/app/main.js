@@ -34,7 +34,7 @@ band.hooks.onChange = ui.render;
 session.hooks.onChange = () => { ui.render(); autoSeat(); };
 session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
-room.events.onStatus = ui.status;
+room.events.onStatus = t => { ui.status(t); ui.notice(t); };
 room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
 room.events.onLeave = id => { const t = ui.tiles.get(id); if(t) session.playerLeft(t.dataset.name); ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
@@ -100,9 +100,9 @@ async function join(){
     if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; $('#synthSet').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
     if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
     ui.render();
-    if(engineFellBack && !audioProblem) ui.status('The app’s audio engine had a problem (' + engineWhy + '), so this jam uses browser audio (a little more delay). Audio settings → Sound engine to try again.');
-    else if(audioProblem) ui.status('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
-    else if(cameraProblem) ui.status('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
+    if(engineFellBack && !audioProblem) ui.notice('The app’s audio engine had a problem (' + engineWhy + '), so this jam uses browser audio (a little more delay). Audio settings → Sound engine to try again.');
+    else if(audioProblem) ui.notice('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
+    else if(cameraProblem) ui.notice('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
     setInterval(showConnection, 250);
   }catch(e){
     $('#joinErr').textContent = 'Couldn’t start: ' + (e.message || e.type || e) + '. Allow camera and microphone, then try again.'; $('#joinBtn').disabled = false;
@@ -153,10 +153,45 @@ function showConnection(){
   if(!c.live) return;
   $('#connStats').innerHTML = `<span>In the room: ${room.roomCount()}/${room.MAX_ROOM}</span><span>Your input ${audio.inputLatencyMs()} ms · output ${audio.outputLatencyMs()} ms</span><span>Lost ${c.lossPct.toFixed(1)}%</span><span>Dropouts ${audio.stats.under}</span>`;
   // per player: estimated time from their instrument to your ears
-  $('#latList').innerHTML = c.players.map(p => `<li><span><b>${p.name.replace(/[<&]/g, '')}</b> → you</span><span>≈ ${p.totalMs} ms <span class="muted">(arrives ${p.arriveMs} after they play, network ${p.netMs}${p.route ? ' ' + ROUTE[p.route] : ''}, buffer ${p.bufferMs})</span></span></li>`).join('');
+  $('#latList').innerHTML = c.players.map(budgetRow).join('');
+  barsHint(c);
 }
 
 const ROUTE = { direct: 'direct', 'direct-tcp': 'direct (TCP)', relay: 'via relay', 'relay-tcp': 'via relay (TCP)' };
+// ---- the latency budget: where the time goes, their instrument -> your ears ----
+// Under 30 ms feels like the same room. Each part is shown, with the one fix that matters most.
+const esc = t => String(t).replace(/[<&]/g, '');
+const PARTS = [['in', 'their input'], ['packet', 'packet'], ['network', 'network'], ['buffer', 'buffer'], ['out', 'your output']];
+function bigFix(p){
+  const b = p.budget, n = esc(p.name);
+  if(b.network > 25) return `${b.network} ms of network alone: too far apart to play in time (under 30 ms needs roughly 1,000 km or less). BARS keeps you both on the beat.`;
+  if(b.jitter > 6 && b.buffer > 8) return `The connection wobbles (±${b.jitter} ms), so the buffer holds ${b.buffer} ms. A cable (or 5 GHz Wi-Fi, close to the router) on both ends shrinks it.`;
+  if(b.in > 10) return `${n}’s sound input adds ${b.in} ms. The desktop app (ASIO on Windows) with a 64–128 sample buffer brings it to 1–3 ms.`;
+  if(b.out > 10) return `Your sound output adds ${b.out} ms. The desktop app${/Windows/.test(navigator.userAgent) ? ' with ASIO' : ''}, wired headphones and a 64–128 sample buffer bring it to 1–3 ms.`;
+  if(p.totalMs <= 30) return 'Under 30 ms: as tight as being in the same room.';
+  return '';
+}
+function budgetRow(p){
+  const b = p.budget, scale = Math.max(60, p.totalMs);
+  const bar = PARTS.map(([k, label]) => `<i class="b-${k}" style="width:${Math.max(0, b[k]) / scale * 100}%" title="${label} ${b[k]} ms"></i>`).join('');
+  const legend = PARTS.map(([k, label]) => `<span class="b-key b-${k}">${label} ${b[k]}${k === 'network' && p.route ? ' (' + ROUTE[p.route] + ')' : ''}${k === 'buffer' && b.jitter ? ' (wobble ±' + b.jitter + ')' : ''}</span>`).join('');
+  const fix = bigFix(p);
+  return `<li class="budget"><div class="b-head"><span><b>${esc(p.name)}</b> → you</span><span class="b-total ${tone(p.totalMs)}">≈ ${p.totalMs} ms</span></div><div class="b-bar">${bar}<em style="left:${Math.min(100, 30 / scale * 100)}%" title="30 ms"></em></div><div class="b-legend">${legend}</div>${fix ? `<p class="b-fix">${fix}</p>` : ''}</li>`;
+}
+// Far apart (the network alone over ~25 ms, for a few seconds) in a free jam: suggest BARS.
+let farSince = 0;
+function barsHint(c){
+  const far = c.players.filter(p => p.budget.network > 25);
+  if(!far.length || S.game.mode !== 'free'){ farSince = 0; ui.clearNotice('bars'); return; }
+  if(!farSince) farSince = performance.now();
+  if(performance.now() - farSince < 5000) return;
+  const who = far.map(p => esc(p.name)).join(' and '), ms = Math.max(...far.map(p => p.budget.network));
+  const canTrade = S.arr && (S.arr.engine === 'stems' || S.arr.engine === 'lyria');
+  const text = `${who} ${far.length > 1 ? 'are' : 'is'} ${ms} ms away on the network alone: too far to play in time together. BARS takes turns so you’re both always on the beat.`;
+  if(me.isHost && canTrade) ui.notice(text, { key: 'bars', action: { label: 'Switch to BARS', run: () => session.setGame({ mode: 'trade', bars: 4 }) } });
+  else ui.notice(text + (me.isHost ? ' Pick a stock track or prompt a band, then BARS in the Band drawer.' : ` Ask ${esc(S.hostName || 'whoever runs the band')} to switch to BARS.`), { key: 'bars' });
+}
+
 // ---- setup check: plain-language tips for the tightest feel ----
 // Exact digital silence from your input (not even a hiss) almost always means the
 // computer is blocking the mic for this app or browser. Say so, once, plainly.
@@ -167,7 +202,7 @@ const blockedMicTip = () => audio.IN_APP
 function noteInput(pk){
   if(pk > 0) heardInput = true;
   if(!joinedAt) joinedAt = performance.now();
-  if(!heardInput && !silenceTold && audio.micEnabled() && !(audio.pluginLive && audio.pluginLive()) && performance.now() - joinedAt > 8000){ silenceTold = true; ui.status(blockedMicTip()); }
+  if(!heardInput && !silenceTold && audio.micEnabled() && !(audio.pluginLive && audio.pluginLive()) && performance.now() - joinedAt > 8000){ silenceTold = true; ui.notice(blockedMicTip()); }
 }
 function checkSetup(c){
   const tips = [], out = $('#outDev').selectedOptions[0], inp = $('#inDev').selectedOptions[0];
@@ -243,7 +278,7 @@ if(audio.canTone()){
   showTone(TONES.some(t => t.id === store.get('ss.tone')) ? store.get('ss.tone') : 'off');
 } else $('#toneSection').hidden = true;   // the desktop app: coming soon
 const showChannels = chans => { $('#inCh').disabled = chans < 2; };
-$('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').checked).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.status('Couldn’t switch input: ' + (e.name || e)));
+$('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').checked).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.notice('Couldn’t switch input: ' + (e.name || e)));
 $('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
 // A short beep through whichever engine is playing: the quickest way to check you can hear the app
 $('#testSound').onclick = () => {
@@ -263,7 +298,7 @@ $('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audi
 // Echo cancellation: on by default for phones (often used on loudspeaker), off for computers.
 if(audio.NATIVE) $('#speaker').closest('label').hidden = true;   // no browser echo cancellation in the app
 $('#speaker').checked = store.get('ss.speaker') !== null ? store.get('ss.speaker') === '1' : audio.isPhone();
-$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(media) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.status('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
+$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(media) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.notice('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
 $('#studio').checked = store.get('ss.studio') === '1'; room.format.bits = $('#studio').checked ? 32 : 16;
 $('#studio').onchange = () => { room.format.bits = $('#studio').checked ? 32 : 16; store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
 if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
