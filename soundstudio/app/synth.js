@@ -124,12 +124,15 @@ function wire(){
 }
 
 let timer = null;
+// Volume: what you hear and what the room gets (dB, 0 = as designed).
+let level = (() => { try{ const v = localStorage.getItem('ss.synthVol'); return v === null ? 1 : Math.pow(10, +v / 20); }catch(e){ return 1; } })();
+export function setVolume(db){ level = db <= -40 ? 0 : Math.pow(10, db / 20); if(voice) voice.out.gain.setTargetAtTime(level, voice.out.context.currentTime, 0.02); }
 // Turn it on: `ctx` is the jam's audio context, `toRoom` where your input goes, `toEars` your headphones.
 export function start(el, ctx, toRoom, toEars){
   if(voice) return;
   if(!panel){ panel = el; wire(); }
   if(inKeyOnly === null){ let saved = null; try{ saved = localStorage.getItem('ss.synthScale'); }catch(e){} inKeyOnly = saved ? saved === 'key' : matchMedia('(pointer:coarse)').matches || innerWidth < 700; }   // phones: big in-key cubes
-  const out = ctx.createGain(); out.connect(toRoom); out.connect(toEars);
+  const out = ctx.createGain(); out.gain.value = level; out.connect(toRoom); out.connect(toEars);
   voice = build(ctx, out); voice.out = out; held = []; lastShown = -1;
   panel.hidden = false;
   keyShown = ''; render(); showDelay(); timer = setInterval(() => { render(); showDelay(); }, 1000);   // follows the song's key

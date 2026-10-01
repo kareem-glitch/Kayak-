@@ -166,6 +166,7 @@ window.__audioContexts = [];
           <div class="level"><span>Your level <span class="small" id="inDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div></div>
           <div class="synth-set" id="synthSet" hidden>
             <h3>Synth</h3>
+            <label class="slider"><span>Synth volume <span id="synthVolDb"></span></span><input type="range" id="synthVol" min="-40" max="12" step="1" value="0" aria-label="Synth volume"></label>
             <div class="modes two" role="radiogroup" aria-label="Which notes"><button type="button" role="radio" data-scale="key">In key</button><button type="button" role="radio" data-scale="all">All notes</button></div>
             <div class="row"><button type="button" class="btn btn-quiet" id="synthTest">Test my delay</button><span class="synth-lat muted small"></span></div>
             <p class="muted small" id="synthNote" hidden></p>

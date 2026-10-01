@@ -48,6 +48,11 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
     assert.ok(quiet < 0.02, `nothing sent before you play: the mic is muted (${quiet})`);
     assert.ok(loud > 0.1, `the host hears the synth (${loud})`);
     assert.ok(after < 0.02, `and silence after you let go (${after})`);
+    // the volume: half as loud (-6 dB) for you and the room
+    await h.drawer(B, 'audio'); await B.$eval('#synthVol', r => { r.value = -6; r.dispatchEvent(new Event('input', { bubbles: true })); }); await B.click('[data-drawer-tab="audio"]');
+    await B.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await B.mouse.down(); await sleep(400);
+    const softer = await walker(); await B.mouse.up(); await sleep(600);
+    assert.ok(softer < loud * 0.7 && softer > loud * 0.3, `synth volume -6 dB: the host hears it about half as loud (${loud.toFixed(2)} -> ${softer.toFixed(2)})`);
     // the delay test: with no speaker -> mic path (a test machine) it says so; the timing itself is sample-exact
     await h.drawer(B, 'audio'); await B.click('#synthTest');
     await B.waitForFunction(() => !document.getElementById('synthTest').disabled, null, { timeout: 15000 });

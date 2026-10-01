@@ -436,6 +436,10 @@ function setSynth(on){
 $('#synthBtn').onclick = () => setSynth(!synth.isOn());
 $('#setBtn').onclick = () => layout.current() ? layout.show(null) : layout.show(layout.last() || 'band');
 // Test your delay: clicks out of the speaker, timed by the mic.
+const synthVol = db => { $('#synthVolDb').textContent = db <= -40 ? '(off)' : '(' + (db > 0 ? '+' : '') + db + ' dB)'; synth.setVolume(db); };
+if(store.get('ss.synthVol') !== null) $('#synthVol').value = store.get('ss.synthVol');
+$('#synthVol').oninput = () => { store.set('ss.synthVol', $('#synthVol').value); synthVol(+$('#synthVol').value); };
+synthVol(+$('#synthVol').value);
 $('#synthTest').onclick = async () => {
   const b = $('#synthTest'), note = $('#synthNote'), go = b;
   b.disabled = true; go.textContent = 'Listening…'; note.hidden = false; note.textContent = 'Stay quiet for a second: your phone is clicking through its speaker and listening with its mic.';
