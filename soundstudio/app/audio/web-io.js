@@ -73,7 +73,7 @@ function epochToFrame(t){
 export function deliver(id, planes, at){ if(!node) return; if(at == null) node.port.postMessage({ id, planes }); else node.port.postMessage({ id, planes, at: epochToFrame(at) }); }
 export function forget(id){ node && node.port.postMessage({ gone:id }); }
 // Upper limit for each player's adaptive buffer, in 128-frame blocks.
-// Feel: 'tight' | 'balanced' | 'smooth' (see FEELS in worklet.js).
+// Feel: 'live' | 'tight' | 'balanced' | 'smooth' (see FEELS in worklet.js).
 export function setFeel(name){ node && node.port.postMessage({ feel:name }); }
 export function setBufferLimit(blocks){ node && node.port.postMessage({ limit:blocks * FRAMES }); }
 

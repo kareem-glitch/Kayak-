@@ -61,6 +61,15 @@ test('feel: tight keeps less buffer than balanced, smooth keeps more and drops o
   assert.equal(s.clicks, 0);
 });
 
+test('feel: live (timing first) keeps the least buffer, and dropouts fade instead of clicking', () => {
+  const steady = simulate({ arrive: i => i, seconds: 30, feel: FEELS.live }), tight = simulate({ arrive: i => i, seconds: 30, feel: FEELS.tight });
+  assert.ok(steady.bufferMs <= 4.1 && steady.bufferMs < tight.bufferMs, `steady link: ${steady.bufferMs} ms (tight ${tight.bufferMs})`);
+  assert.equal(steady.dropouts, 0);
+  const j = simulate({ arrive: jitter(6, 7), seconds: 40, feel: FEELS.live }), jt = simulate({ arrive: jitter(6, 7), seconds: 40, feel: FEELS.tight });
+  assert.ok(j.bufferMs <= jt.bufferMs + 0.5 && j.dropouts <= jt.dropouts + 2, `jittery link: live ${j.bufferMs} ms / ${j.dropouts} dropouts vs tight ${jt.bufferMs} ms / ${jt.dropouts}`);
+  assert.equal(j.clicks, 0, 'dropouts are faded');
+});
+
 // Far-apart playback (Trade bars): blocks play at the exact frame they're scheduled for.
 const { DelayPlayer } = await import('../app/audio/worklet.js');
 test('scheduled player: plays each block at its frame, smooth through drift, drops the too-late', () => {

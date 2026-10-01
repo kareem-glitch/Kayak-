@@ -10,11 +10,13 @@ const WINDOW: u32 = 375;
 
 /// How the buffer trades delay for smoothness (same values as FEELS in worklet.js).
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Feel { pub margin: f64, pub min: f64, pub hold: u32, pub shrink: f64 }
-pub const TIGHT: Feel = Feel { margin: 16.0, min: 256.0, hold: 8, shrink: 24.0 };
-pub const BALANCED: Feel = Feel { margin: 48.0, min: 272.0, hold: 10, shrink: 16.0 };
-pub const SMOOTH: Feel = Feel { margin: 128.0, min: 512.0, hold: 30, shrink: 8.0 };
-pub fn feel_named(name: &str) -> Feel { match name { "tight" => TIGHT, "smooth" => SMOOTH, _ => BALANCED } }
+pub struct Feel { pub margin: f64, pub min: f64, pub hold: u32, pub shrink: f64, pub step: f64 }
+/// Timing first (the default on computers): smallest buffer that holds, small steps up, quick back down.
+pub const LIVE: Feel = Feel { margin: 24.0, min: 192.0, hold: 8, shrink: 32.0, step: 64.0 };
+pub const TIGHT: Feel = Feel { margin: 16.0, min: 256.0, hold: 8, shrink: 24.0, step: 128.0 };
+pub const BALANCED: Feel = Feel { margin: 48.0, min: 272.0, hold: 10, shrink: 16.0, step: 128.0 };
+pub const SMOOTH: Feel = Feel { margin: 128.0, min: 512.0, hold: 30, shrink: 8.0, step: 128.0 };
+pub fn feel_named(name: &str) -> Feel { match name { "live" => LIVE, "tight" => TIGHT, "smooth" => SMOOTH, _ => BALANCED } }
 
 pub struct Player {
     l: Vec<f32>, r: Vec<f32>,
@@ -30,13 +32,13 @@ pub struct Player {
 impl Player {
     pub fn new(limit: f64, feel: Feel) -> Self {
         Player { l: vec![0.0; RING], r: vec![0.0; RING], w: 0, rd: 0.0,
-            target: feel.min.max(256.0), limit, feel, playing: false, low: f64::INFINITY, n: 0,
+            target: feel.min.max(192.0), limit, feel, playing: false, low: f64::INFINITY, n: 0,
             fade: 0.0, last_l: 0.0, last_r: 0.0, gain: 1.0, under: 0, rate: 1.0, hold: 0, pkt: FRAMES }
     }
     pub fn fill(&self) -> f64 { self.w as f64 - self.rd }
     /// The smallest target: the feel's, less what smaller packets save (a late
     /// 64-frame packet costs half as much to cover as a 128-frame one).
-    fn floor(&self) -> f64 { self.feel.min - FRAMES.saturating_sub(self.pkt) as f64 }
+    fn floor(&self) -> f64 { (self.feel.min - FRAMES.saturating_sub(self.pkt) as f64).max(160.0) }   // never under one render quantum plus a little
     /// Append one block: mono, or left + right.
     pub fn push(&mut self, left: &[f32], right: Option<&[f32]>) {
         let n = left.len(); self.pkt = n;
@@ -59,7 +61,7 @@ impl Player {
         self.rate = 1.0 + (err * 0.01).clamp(-MAX_RATE_DEV, MAX_RATE_DEV);
         if f < n as f64 * self.rate + 2.0 {
             self.under += 1; self.playing = false;
-            self.target = self.limit.min(self.target + 128.0); self.hold = self.feel.hold;
+            self.target = self.limit.min(self.target + self.feel.step); self.hold = self.feel.hold;
             self.conceal(out_l, out_r); return true;
         }
         for i in 0..n {

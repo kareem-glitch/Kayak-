@@ -412,7 +412,17 @@ $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; }
 $('#bpm').addEventListener('change', () => session.setTempo(clamp(Math.round(+$('#bpm').value || S.arr.bpm), 50, 200)));
 // Latency first, always: the smallest buffer that stays glitch-free to the ear.
 // Laptops get the tight setting; phones (jumpier audio timing) a little more room.
-const feel = audio.isPhone() ? 'balanced' : 'tight', BUFFER_LIMIT = audio.isPhone() ? 12 : 8;   // limit in 128-frame blocks
+// Timing first on computers ('live': the smallest buffer that holds, capped at 16 ms; a
+// dropout is faded, not a click). "Smoother sound" trades a few ms for fewer dropouts.
+// Phones keep 'balanced': their Wi-Fi and audio are too uneven for the smallest buffer.
+const smoother = () => store.get('ss.smooth') === '1';
+let feel = audio.isPhone() ? 'balanced' : smoother() ? 'tight' : 'live', BUFFER_LIMIT = audio.isPhone() ? 12 : smoother() ? 8 : 6;   // limit in 128-frame blocks
+$('#smoother').checked = smoother(); $('#smoother').closest('label').hidden = audio.isPhone();
+$('#smoother').onchange = () => {
+  store.set('ss.smooth', $('#smoother').checked ? '1' : '0');
+  feel = $('#smoother').checked ? 'tight' : 'live'; BUFFER_LIMIT = $('#smoother').checked ? 8 : 6;
+  audio.setFeel(feel); audio.setBufferLimit(BUFFER_LIMIT);
+};
 const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeText(inviteLink); const t = btn.textContent; btn.textContent = done; setTimeout(() => btn.textContent = t, 2000); }catch(e){ prompt('Copy this invite link', inviteLink); } };
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
 $('#leaveBtn').onclick = () => { room.leave(); location.href = location.pathname; };

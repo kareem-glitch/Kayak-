@@ -17,6 +17,7 @@ impl DelayPlayer {
     pub fn push(&mut self, left: &[f32], right: Option<&[f32]>, at: i64, now: i64) {
         let n = left.len() as i64;
         let mut e = match self.e {
+            Some(e) if e - at > 256 && at >= now => { self.drift = 0.0; at }   // more than 5 ms behind schedule: jump back on time (timing over smoothness)
             Some(e) if (at - e).abs() <= 1200 && e >= now => {
                 self.drift = self.drift * 0.98 + (at - e) as f64 * 0.02;
                 if self.drift > 48.0 { let k = (e as usize) & (DRING - 1); self.l[k] = left[0]; self.r[k] = right.map_or(left[0], |r| r[0]); self.drift -= 1.0; e + 1 }   // falling behind: repeat a sample

@@ -23,7 +23,11 @@ const WINDOW = 375;            // render quanta per adaptation step (~1 s)
 //  hold:   adaptation steps (~1 s each) to keep the size after a dropout
 //  shrink: max samples the target shrinks per step (grow fast, shrink slowly)
 // Laptops use tight, phones balanced (set by the page; not a user option).
+//  step:   how much the target grows after a dropout
+// live: timing first (the default on computers): the smallest buffer that holds,
+// smaller steps up after a dropout, quick back down; dropouts are faded, not clicks.
 export const FEELS = {
+  live:     { margin: 24,  min: 192, hold: 8,  shrink: 32, step: 64 },
   tight:    { margin: 16,  min: 256, hold: 8,  shrink: 24 },
   balanced: { margin: 48,  min: 272, hold: 10, shrink: 16 },
   smooth:   { margin: 128, min: 512, hold: 30, shrink: 8 },
@@ -34,7 +38,7 @@ class Player {
     this.feel = feel;
     this.l = new Float32Array(RING); this.r = new Float32Array(RING);
     this.w = 0; this.rd = 0;                 // write index (int), read position (float)
-    this.target = Math.max(256, feel.min); this.limit = limit;   // samples (the target starts at ~5 ms)
+    this.target = Math.max(192, feel.min); this.limit = limit;   // samples (the target starts at ~4-5 ms)
     this.playing = false; this.low = Infinity; this.n = 0;
     this.fade = 0; this.lastL = 0; this.lastR = 0; this.gain = 1;
     this.under = 0; this.rate = 1; this.hold = 0;
@@ -59,7 +63,7 @@ class Player {
     this.rate = 1 + Math.max(-MAX_RATE_DEV, Math.min(MAX_RATE_DEV, err * 0.01));
     if(f < N * this.rate + 2){   // not enough audio: conceal, re-prime, aim higher
       this.under++; this.playing = false;
-      this.target = Math.min(this.limit, this.target + 128); this.hold = this.feel.hold;
+      this.target = Math.min(this.limit, this.target + (this.feel.step || 128)); this.hold = this.feel.hold;
       this.conceal(outL, outR); return true;
     }
     for(let i = 0; i < N; i++){
@@ -100,6 +104,7 @@ class DelayPlayer {
     at = Math.round(at);
     if(this.e === null || Math.abs(at - this.e) > 1200 || this.e < now){ this.e = at; this.drift = 0; }
     else {
+      if(this.e - at > 256 && at >= now){ this.e = at; this.drift = 0; }   // running more than 5 ms behind schedule: jump back on time (timing over smoothness)
       this.drift = this.drift * 0.98 + (at - this.e) * 0.02;
       if(this.drift > 48){ const k = this.e & (DRING - 1); this.l[k] = L[0]; this.r[k] = R[0]; this.e++; this.drift--; }   // falling behind: repeat a sample
       else if(this.drift < -48){ this.e--; this.drift++; }                                                          // ahead: overwrite one

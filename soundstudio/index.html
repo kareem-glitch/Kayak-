@@ -186,6 +186,7 @@ window.__audioContexts = [];
         <select id="engine" class="devsel" hidden><option value="native">App engine (lowest delay)</option><option value="web">Browser engine (backup)</option></select>
         <p class="muted small" id="outNote" hidden>This browser uses your computer’s sound output. To choose here, use Chrome or Edge.</p>
         <label class="check small"><input type="checkbox" id="speaker"> Echo cancellation (turn on if you’re not using headphones)</label>
+        <label class="check small"><input type="checkbox" id="smoother"> Smoother sound (fewer dropouts, a few ms more delay)</label>
         <label class="check small"><input type="checkbox" id="studio"> Studio quality (32-bit audio, about twice the bandwidth)</label>
         </section>
         <section class="pane" data-drawer="record" hidden>
