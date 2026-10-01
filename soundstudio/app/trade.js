@@ -127,7 +127,7 @@ const seedOf = k => { let h = 2166136261; for(const c of String((S.arr.pack && S
 
 function tick(){
   const st = band.started;
-  if(!S.playing || !st || !S.arr){ prepared = null; follow.clear(); onLeader(null); soloist.stop(); hooks.onTurn(null); return; }
+  if(!S.playing || !st || !S.arr){ room.setDirectPlay(true); prepared = null; follow.clear(); onLeader(null); soloist.stop(); hooks.onTurn(null); return; }
   if(trading() && order().includes(AI)) soloist.prepare();   // load its amp before its first turn
   if(st !== lastStarted){ lastStarted = st; prepared = null; follow.clear(); }   // a new song or restart
   const now = clk(), pos = now - st.zero, seg = trading() ? turnMs() : 4 * beatMs();
@@ -139,6 +139,7 @@ function tick(){
   if(st.zero + k * seg - now < AHEAD && prepared.k < k){ prepared.k = k; prepare(k, k * seg); }
   if(trading() && cur >= 0) fillDropped(cur, leaderOf(cur), st);
   if(filling && (!trading() || cur !== filling.k)) filling = null;
+  room.setDirectPlay(!active());   // app-to-app audio: the engine plays it at once in a free jam; in BARS the page times it
   const t = info(); onLeader(t.leader || null);
   hooks.onTurn(t);
 }

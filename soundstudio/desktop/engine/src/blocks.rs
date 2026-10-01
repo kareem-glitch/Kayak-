@@ -8,14 +8,16 @@ impl InputChannel {
     pub fn parse(s: &str) -> Self { match s { "2" => Self::Two, "mix" => Self::Mix, "stereo" => Self::Stereo, _ => Self::One } }
 }
 
-pub struct Blocker { l: Vec<f32>, r: Vec<f32>, pub channel: InputChannel, first_frame: u64, pub frames: u64 }
+pub struct Blocker { l: Vec<f32>, r: Vec<f32>, pub channel: InputChannel, first_frame: u64, pub frames: u64, size: usize }
 
 /// A finished block: planes (1 or 2) and the index of its first frame since start.
 pub struct Block { pub planes: Vec<Vec<f32>>, pub first_frame: u64 }
 
 impl Blocker {
-    pub fn new(channel: InputChannel) -> Self {
-        Blocker { l: Vec::with_capacity(FRAMES), r: Vec::with_capacity(FRAMES), channel, first_frame: 0, frames: 0 }
+    pub fn new(channel: InputChannel) -> Self { Self::with_size(channel, FRAMES) }
+    /// Blocks of `size` frames (the direct app-to-app path uses 64: 1.3 ms).
+    pub fn with_size(channel: InputChannel, size: usize) -> Self {
+        Blocker { l: Vec::with_capacity(size), r: Vec::with_capacity(size), channel, first_frame: 0, frames: 0, size }
     }
     /// Feed interleaved samples with `chans` channels; `emit` gets each full block.
     pub fn feed(&mut self, data: &[f32], chans: usize, gain: f32, mut emit: impl FnMut(Block)) {
@@ -30,9 +32,9 @@ impl Blocker {
                 InputChannel::Stereo => { self.l.push(a * gain); self.r.push(b * gain); }
             }
             self.frames += 1;
-            if self.l.len() == FRAMES {
-                let mut planes = vec![std::mem::replace(&mut self.l, Vec::with_capacity(FRAMES))];
-                if self.channel == InputChannel::Stereo && chans > 1 { planes.push(std::mem::replace(&mut self.r, Vec::with_capacity(FRAMES))); }
+            if self.l.len() == self.size {
+                let mut planes = vec![std::mem::replace(&mut self.l, Vec::with_capacity(self.size))];
+                if self.channel == InputChannel::Stereo && chans > 1 { planes.push(std::mem::replace(&mut self.r, Vec::with_capacity(self.size))); }
                 self.r.clear();
                 emit(Block { planes, first_frame: self.first_frame });
             }
@@ -52,6 +54,11 @@ mod tests {
         b.feed(&data[..200], 2, 1.0, |x| out.push(x)); b.feed(&data[200..], 2, 1.0, |x| out.push(x));
         assert_eq!(out.len(), 2);
         assert_eq!(out[1].first_frame, 128); assert_eq!(out[1].planes.len(), 1); assert_eq!(out[1].planes[0][0], -128.0);
+    }
+    #[test] fn smaller_blocks_for_the_direct_path() {
+        let mut out = vec![];
+        Blocker::with_size(InputChannel::One, 64).feed(&vec![0.5; 200], 1, 1.0, |x| out.push((x.planes[0].len(), x.first_frame)));
+        assert_eq!(out, vec![(64, 0), (64, 64), (64, 128)]);
     }
     #[test] fn stereo_gives_two_planes_mono_device_gives_one() {
         let mut out = vec![];

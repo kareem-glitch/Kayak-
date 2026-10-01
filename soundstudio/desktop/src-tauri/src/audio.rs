@@ -22,6 +22,8 @@ const WANT_BUFFER: u32 = 64;
 pub enum Cmd { Deliver(String, Vec<f32>, Option<Vec<f32>>), Gone(String), Limit(f64), Feel(Feel) }
 pub enum Out {
     Block { at_ms: f64, planes: Vec<Vec<f32>> },
+    /// Another app's audio that came in directly (direct.rs), for the page.
+    Remote { id: String, seq: u32, time_ms: f64, rx_ms: f64, bits: u8, planes: Vec<Vec<f32>> },
     RecStart, RecMic { at_ms: f64, data: Vec<f32> }, RecOut { at_ms: f64, data: Vec<f32> }, RecStop,
     Text(String),
 }
@@ -40,6 +42,10 @@ pub struct Shared {
     pub channel: AtomicU32,
     pub stats: Mutex<Stats>,
     pub limit: Mutex<f64>, pub feel: Mutex<Feel>,
+    /// Your input for the direct app-to-app path (direct.rs): 64-frame blocks and
+    /// when each was ready (wall-clock ms), only while some peer is reachable.
+    pub direct_tx: Sender<(Vec<Vec<f32>>, f64)>, pub direct_rx: Receiver<(Vec<Vec<f32>>, f64)>,
+    pub direct_active: AtomicBool,
 }
 fn f(a: &AtomicU32) -> f32 { f32::from_bits(a.load(Relaxed)) }
 fn set(a: &AtomicU32, v: f32) { a.store(v.to_bits(), Relaxed) }
@@ -48,9 +54,10 @@ pub fn epoch_ms() -> f64 { SystemTime::now().duration_since(UNIX_EPOCH).map(|d| 
 impl Shared {
     pub fn new(out_tx: Sender<Out>) -> Arc<Self> {
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded();
+        let (direct_tx, direct_rx) = crossbeam_channel::bounded(512);
         Arc::new(Shared { cmd_tx, cmd_rx, out_tx, mic_gain: AtomicU32::new(1f32.to_bits()), peak: AtomicU32::new(0),
             in_lat: AtomicU32::new(0), out_lat: AtomicU32::new(0), rec: AtomicBool::new(false), plugin_live: AtomicBool::new(false), channel: AtomicU32::new(0),
-            stats: Mutex::new(Stats::default()), limit: Mutex::new(8.0 * 128.0), feel: Mutex::new(TIGHT) })
+            stats: Mutex::new(Stats::default()), limit: Mutex::new(8.0 * 128.0), feel: Mutex::new(TIGHT), direct_tx, direct_rx, direct_active: AtomicBool::new(false) })
     }
     pub fn set_mic(&self, on: bool) { set(&self.mic_gain, if on { 1.0 } else { 0.0 }) }
     pub fn in_lat(&self) -> f32 { f(&self.in_lat) }
@@ -169,6 +176,7 @@ fn open_input(d: &Device, asio: bool, channel: InputChannel, sh: &Arc<Shared>) -
 fn input<T: SizedSample>(d: &Device, cfg: &StreamConfig, channel: InputChannel, sh: Arc<Shared>) -> Result<Stream, String> where f32: FromSample<T> {
     let chans = cfg.channels as usize;
     let mut blocker = Blocker::new(channel);
+    let mut fast = Blocker::with_size(channel, 64);   // the direct path's smaller packets
     let mut buf: Vec<f32> = Vec::with_capacity(8192);
     let mut rs = (cfg.sample_rate.0 != RATE).then(|| Resampler::new(cfg.sample_rate.0, RATE, chans));
     let mut buf48: Vec<f32> = Vec::with_capacity(8192);
@@ -193,6 +201,10 @@ fn input<T: SizedSample>(d: &Device, cfg: &StreamConfig, channel: InputChannel, 
             // time-stamped like the browser's blocks: when the block was ready to send
             let _ = sh.out_tx.send(Out::Block { at_ms: at + lat, planes: b.planes });
         });
+        if sh.direct_active.load(Relaxed) {
+            let f0 = fast.frames as f64;
+            fast.feed(&buf, chans, gain, |b| { let _ = sh.direct_tx.try_send((b.planes, captured + (b.first_frame as f64 - f0) * 1000.0 / RATE as f64 + lat)); });
+        }
     }, err_fn, None).map_err(|e| e.to_string())
 }
 

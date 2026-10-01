@@ -7,6 +7,7 @@
 mod audio;
 mod native;
 mod plugin;
+mod direct;
 
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 

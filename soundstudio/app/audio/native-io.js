@@ -27,6 +27,7 @@ const tell = msg => { if(ws && ws.readyState === 1) ws.send(JSON.stringify(msg))
 function onMessage(e){
   if(typeof e.data === 'string'){
     const m = JSON.parse(e.data);
+    if(m.t === 'direct'){ direct.onState(m.id, m.send, m.recv); return; }
     if(m.t === 'stats'){ statsSeen++; stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; stats.plugin = !!m.plugin; inLat = m.inLat; outLat = m.outLat; }
     else if(m.q && replies.has(m.q)){ replies.get(m.q).res(m); replies.delete(m.q); }
     return;
@@ -37,6 +38,11 @@ function onMessage(e){
     const n = dv.getUint8(1), at = dv.getFloat64(8, true), planes = [];
     for(let c = 0; c < n; c++) planes.push(new Float32Array(buf, 16 + c * FRAMES * 4, FRAMES));
     onBlock(planes, toClk(at));
+  } else if(tag === 4){   // another app's audio, straight from it (direct path)
+    const idn = dv.getUint8(1), n = dv.getUint8(2), bits = dv.getUint8(3), seq = dv.getUint32(4, true), timeMs = dv.getFloat64(8, true), rx = dv.getFloat64(16, true);
+    const id = new TextDecoder().decode(new Uint8Array(buf, 24, idn)), o = (24 + idn + 3) & ~3, frames = (buf.byteLength - o) / 4 / Math.max(1, n), planes = [];
+    for(let c = 0; c < n; c++) planes.push(new Float32Array(buf, o + c * frames * 4, frames));
+    direct.onBlock(id, { seq, timeMs, bits, planes, arrived: toClk(rx) });
   } else if(tag === 2 && recDone){
     const n = dv.getUint32(4, true), heard = dv.getFloat64(8, true);
     // native gives the mic on the heard timeline; recording.js expects it captured
@@ -49,6 +55,17 @@ function onMessage(e){
 }
 
 export const context = () => null;
+// Direct audio, app to app over UDP (desktop/src-tauri/src/direct.rs), from app 0.6.0.
+export const direct = { onState: () => {}, onBlock: () => {} };
+export const canDirect = () => newer((window.__SS_NATIVE || {}).version || '0', '0.6.0');
+export const directInfo = () => request({ t: 'directInfo' }).then(r => ({ token: r.token, addrs: r.addrs }));
+export const directPeer = (id, token, addrs) => tell({ t: 'directPeer', id, token: String(token), addrs });
+export const directGone = id => tell({ t: 'directGone', id });
+export const setDirectPlay = on => tell({ t: 'directPlay', on });
+export const setDirectGain = (id, g) => tell({ t: 'directGain', id, g });
+export const setDirectBits = bits => tell({ t: 'directBits', bits });
+// packets carry times on this page's clock: tell the engine how it differs from wall-clock time
+const tellClock = () => tell({ t: 'clk', off: performance.timeOrigin + performance.now() - Date.now() });
 // The air.band plugin (in your DAW) streams to the app; while it does, it's your input.
 // Apps before 0.4.0 don't have it.
 const newer = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return true; };
@@ -67,6 +84,7 @@ export async function start(stream, blockHandler){
     ws.onopen = res; ws.onerror = () => rej(new Error('Couldn’t reach the audio engine')); ws.onmessage = onMessage;
   });
   await request({ t: 'start', input: store('ss.inDev') || '', output: store('ss.outDev') || '', channel });
+  tellClock(); setInterval(tellClock, 10000);
 }
 // Is the engine really working? Its output callback sets outLat (sound is going
 // to the speakers) and its input sends blocks (your instrument is being heard).

@@ -16,6 +16,11 @@ export const stats = { under: 0, players: {} };   // players: id -> { bufferMs, 
 let onBlock = () => {};   // called with each captured block: [mono] or [left, right]
 
 export const context = () => ctx;
+// Direct app-to-app audio is a desktop-app feature (native-io.js); the browser uses WebRTC.
+export const direct = { onState: () => {}, onBlock: () => {} };
+export const canDirect = () => false;
+export const directInfo = async () => { throw new Error('desktop app only'); };
+export const directPeer = () => {}, directGone = () => {}, setDirectPlay = () => {}, setDirectGain = () => {}, setDirectBits = () => {};
 export async function start(stream, blockHandler){
   onBlock = blockHandler;
   // Computers: ask for the smallest audio buffer the browser allows. Phones keep

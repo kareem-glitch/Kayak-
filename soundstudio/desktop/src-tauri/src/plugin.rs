@@ -63,6 +63,7 @@ fn run(sock: &UdpSocket, sh: &Shared) {
                     let at = (t0 + ms(blk.first_frame + ssengine::FRAMES as u64)).max(last_at);
                     last_at = at;
                     if rec { let _ = sh.out_tx.send(Out::RecMic { at_ms: at - p.latency_ms as f64, data: blk.planes[0].clone() }); }
+                    if sh.direct_active.load(Relaxed) { let _ = sh.direct_tx.try_send((blk.planes.clone(), at)); }   // the direct app-to-app path too
                     let _ = sh.out_tx.send(Out::Block { at_ms: at, planes: blk.planes });
                 });
             }

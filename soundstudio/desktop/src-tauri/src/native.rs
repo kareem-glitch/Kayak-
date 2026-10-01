@@ -10,12 +10,17 @@
 // Page -> app, text (JSON, with a request number `q` for replies):
 //   {t:'start', input, output, channel} {t:'input', id} {t:'output', id} {t:'channel', ch}
 //   {t:'devices'} {t:'mic', on} {t:'limit', samples} {t:'feel', name} {t:'gone', id} {t:'rec', on} {t:'installPlugin'}
+//   direct app-to-app audio (direct.rs): {t:'directInfo'} -> {token, addrs}; {t:'directPeer', id, token, addrs}
+//   {t:'directGone', id} {t:'directPlay', on} {t:'directGain', id, g} {t:'directBits', bits} {t:'clk', off}
 // Page -> app, binary: another player's block
 //   [0]=3 [1]=id length [2]=planes, id bytes, then f32 little-endian samples per plane
 // App -> page, binary (header padded so the samples start 8-byte aligned):
 //   your block:   [0]=1 [1]=planes, [8..16] f64 captured-at (epoch ms), samples from 16
 //   a recording:  [0]=2, [4..8] u32 n, [8..16] f64 heard-at of sample 0 (epoch ms), then mic n f32, out n f32
+//   direct audio: [0]=4 [1]=id length [2]=planes [3]=bits, [4..8] u32 seq, [8..16] f64 when played (their page clock),
+//                 [16..24] f64 when it arrived (epoch ms), id bytes padded to 4, then f32 samples per plane
 // App -> page, text: {t:'stats', ..., plugin} every 0.5 s (plugin: your DAW is the input), and replies {q, ok, ...}
+//   {t:'direct', id, send, recv}: the direct path to a player came up or went down
 use crate::audio::{self, Cmd, Out, Shared};
 use serde_json::{json, Value};
 use ssengine::blocks::InputChannel;
@@ -38,14 +43,15 @@ pub fn serve() -> std::io::Result<(u16, String)> {
     let (out_tx, out_rx) = crossbeam_channel::unbounded::<Out>();
     let shared = Shared::new(out_tx);
     crate::plugin::listen(shared.clone());   // the air.band plugin in your DAW (plugin.rs)
+    let direct = crate::direct::Direct::start(shared.clone()).ok();   // app-to-app audio (direct.rs); without it, WebRTC only
     let writer: Writer = Arc::new(Mutex::new(None));
     { let (w, sh) = (writer.clone(), shared.clone()); std::thread::spawn(move || hub(out_rx, w, sh)); }
     let tok = token.clone();
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
-            let (w, sh, tok) = (writer.clone(), shared.clone(), tok.clone());
+            let (w, sh, tok, dr) = (writer.clone(), shared.clone(), tok.clone(), direct.clone());
             std::thread::spawn(move || {
-                if is_websocket(&stream) { if let Err(e) = client(stream, &tok, w, sh) { eprintln!("audio link closed: {e}"); } }
+                if is_websocket(&stream) { if let Err(e) = client(stream, &tok, w, sh, dr) { eprintln!("audio link closed: {e}"); } }
                 else if let Err(e) = proxy(stream) { eprintln!("page request failed: {e}"); }
             });
         }
@@ -100,7 +106,7 @@ fn proxy(mut stream: TcpStream) -> Result<(), String> {
     stream.write_all(head.as_bytes()).and_then(|_| stream.write_all(&out)).map_err(|e| e.to_string())
 }
 
-fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>) -> Result<(), String> {
+fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>, direct: Option<Arc<crate::direct::Direct>>) -> Result<(), String> {
     stream.set_nodelay(true).ok();
     let check = |req: &Request, resp: Response| -> Result<Response, ErrorResponse> {
         if req.uri().query().map_or(false, |q| q.split('&').any(|kv| kv == format!("t={token}"))) { Ok(resp) }
@@ -109,7 +115,8 @@ fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>) -> Re
     let write_half = stream.try_clone().map_err(|e| e.to_string())?;
     let mut ws = tungstenite::accept_hdr(stream, check).map_err(|e| e.to_string())?;
     *writer.lock().unwrap() = Some(WebSocket::from_raw_socket(write_half, Role::Server, None));
-    let mut a = Session { input: None, output: None, in_name: String::new(), out_name: String::new(), in_chans: 1, channel: InputChannel::One, sh: sh.clone() };
+    if let Some(d) = &direct { d.forget_all(); }   // a new page: its players have new ids
+    let mut a = Session { input: None, output: None, in_name: String::new(), out_name: String::new(), in_chans: 1, channel: InputChannel::One, sh: sh.clone(), direct };
     loop {
         let msg = match ws.read() { Ok(m) => m, Err(_) => break };
         if msg.is_binary() {
@@ -136,7 +143,7 @@ fn deliver(b: &[u8], sh: &Shared) {
     let _ = sh.cmd_tx.send(Cmd::Deliver(id, left, right));
 }
 
-struct Session { input: Option<cpal::Stream>, output: Option<cpal::Stream>, in_name: String, out_name: String, in_chans: u16, channel: InputChannel, sh: Arc<Shared> }
+struct Session { input: Option<cpal::Stream>, output: Option<cpal::Stream>, in_name: String, out_name: String, in_chans: u16, channel: InputChannel, sh: Arc<Shared>, direct: Option<Arc<crate::direct::Direct>> }
 
 impl Session {
     // An ASIO driver drives the interface's input and output together, so picking
@@ -179,6 +186,16 @@ impl Session {
             "limit" => { let n = v.get("samples").and_then(|x| x.as_f64()).unwrap_or(1024.0); *self.sh.limit.lock().unwrap() = n; let _ = self.sh.cmd_tx.send(Cmd::Limit(n)); return None; }
             "feel" => { let f = feel_named(&s("name")); *self.sh.feel.lock().unwrap() = f; let _ = self.sh.cmd_tx.send(Cmd::Feel(f)); return None; }
             "gone" => { let _ = self.sh.cmd_tx.send(Cmd::Gone(s("id"))); return None; }
+            "directInfo" => match &self.direct {
+                Some(d) => Ok(json!({ "ok": true, "token": d.token.to_string(), "addrs": d.candidates_soon() })),
+                None => Err("Direct audio isn't available on this computer".to_string()),
+            },
+            "directPeer" => { if let (Some(d), Ok(t)) = (&self.direct, s("token").parse::<u64>()) { let addrs: Vec<String> = v.get("addrs").and_then(|a| a.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default(); d.add_peer(&s("id"), t, &addrs); } return None; }
+            "directGone" => { if let Some(d) = &self.direct { d.forget(&s("id")); } return None; }
+            "directPlay" => { if let Some(d) = &self.direct { d.set_play(v.get("on").and_then(|x| x.as_bool()).unwrap_or(true)); } return None; }
+            "directGain" => { if let Some(d) = &self.direct { d.set_gain(&s("id"), v.get("g").and_then(|x| x.as_f64()).unwrap_or(1.0) as f32); } return None; }
+            "directBits" => { if let Some(d) = &self.direct { d.set_bits(v.get("bits").and_then(|x| x.as_u64()).unwrap_or(16) as u8); } return None; }
+            "clk" => { if let Some(d) = &self.direct { d.set_clock(v.get("off").and_then(|x| x.as_f64()).unwrap_or(0.0)); } return None; }
             "rec" => {
                 let on = v.get("on").and_then(|x| x.as_bool()).unwrap_or(false);
                 if on { let _ = self.sh.out_tx.send(Out::RecStart); }
@@ -203,6 +220,14 @@ fn hub(rx: crossbeam_channel::Receiver<Out>, writer: Writer, sh: Arc<Shared>) {
         match rx.recv_timeout(Duration::from_millis(100)) {
             Ok(Out::Block { at_ms, planes }) => {
                 let mut b = vec![0u8; 16]; b[0] = 1; b[1] = planes.len() as u8; b[8..16].copy_from_slice(&at_ms.to_le_bytes());
+                for p in &planes { for x in p { b.extend_from_slice(&x.to_le_bytes()); } }
+                send(Message::Binary(b.into()));
+            }
+            Ok(Out::Remote { id, seq, time_ms, rx_ms, bits, planes }) => {
+                let idb = id.as_bytes(); let at = (24 + idb.len() + 3) & !3;
+                let mut b = vec![0u8; at]; b[0] = 4; b[1] = idb.len() as u8; b[2] = planes.len() as u8; b[3] = bits;
+                b[4..8].copy_from_slice(&seq.to_le_bytes()); b[8..16].copy_from_slice(&time_ms.to_le_bytes()); b[16..24].copy_from_slice(&rx_ms.to_le_bytes());
+                b[24..24 + idb.len()].copy_from_slice(idb);
                 for p in &planes { for x in p { b.extend_from_slice(&x.to_le_bytes()); } }
                 send(Message::Binary(b.into()));
             }

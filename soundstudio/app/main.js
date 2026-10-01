@@ -157,7 +157,7 @@ function showConnection(){
   barsHint(c);
 }
 
-const ROUTE = { direct: 'direct', 'direct-tcp': 'direct (TCP)', relay: 'via relay', 'relay-tcp': 'via relay (TCP)' };
+const ROUTE = { app: 'app to app', direct: 'direct', 'direct-tcp': 'direct (TCP)', relay: 'via relay', 'relay-tcp': 'via relay (TCP)' };
 // ---- the latency budget: where the time goes, their instrument -> your ears ----
 // Under 30 ms feels like the same room. Each part is shown, with the one fix that matters most.
 const esc = t => String(t).replace(/[<&]/g, '');
@@ -299,8 +299,8 @@ $('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audi
 if(audio.NATIVE) $('#speaker').closest('label').hidden = true;   // no browser echo cancellation in the app
 $('#speaker').checked = store.get('ss.speaker') !== null ? store.get('ss.speaker') === '1' : audio.isPhone();
 $('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(media) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.notice('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
-$('#studio').checked = store.get('ss.studio') === '1'; room.format.bits = $('#studio').checked ? 32 : 16;
-$('#studio').onchange = () => { room.format.bits = $('#studio').checked ? 32 : 16; store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
+$('#studio').checked = store.get('ss.studio') === '1'; room.setBits($('#studio').checked ? 32 : 16);
+$('#studio').onchange = () => { room.setBits($('#studio').checked ? 32 : 16); store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
 if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
 
 // ---- controls ----
@@ -467,7 +467,7 @@ function showMix(){
     if(!row){
       row = document.createElement('label'); row.className = 'slider'; row.dataset.mix = id;
       row.innerHTML = '<span><b></b> <i></i></span><input type="range" min="-30" max="12" step="1">';
-      const r = row.querySelector('input'), key = 'ss.gain.' + p.name, set = db => { row.querySelector('i').textContent = db <= -30 ? '(muted)' : '(' + (db > 0 ? '+' : '') + db + ' dB)'; room.gains.set(id, db <= -30 ? 0 : Math.pow(10, db / 20)); };
+      const r = row.querySelector('input'), key = 'ss.gain.' + p.name, set = db => { row.querySelector('i').textContent = db <= -30 ? '(muted)' : '(' + (db > 0 ? '+' : '') + db + ' dB)'; room.setGain(id, db <= -30 ? 0 : Math.pow(10, db / 20)); };
       r.value = store.get(key) ?? 0; r.setAttribute('aria-label', p.name + ' volume');
       r.oninput = () => { set(+r.value); store.set(key, r.value); }; set(+r.value);
       box.appendChild(row);

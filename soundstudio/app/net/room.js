@@ -98,6 +98,7 @@ export function sendBlock(planes, capturedAt){
   if(taps.tracks) taps.tracks('me', planes, (capturedAt || clk()) - audio.inputLatencyMs());
   let n = 0;
   for(const p of peers.values()){
+    if(p.directSend) continue;   // their app gets yours straight from your app (direct path)
     if(!p.audio || p.audio.readyState !== 'open') continue;
     // Never let audio queue up behind a slow connection: late audio is useless, drop it.
     if(p.audio.bufferedAmount > 16 * 1100){ p.dropped = (p.dropped || 0) + 1; continue; }
@@ -119,6 +120,7 @@ function onData(m, id){
   if(m.pong !== undefined){ clockSample(p, m.pong, m.at); return; }
   if(m.t === 'hello'){
     p.name = m.name; p.version = m.v; p.inMs = m.inMs; p.outMs = m.outMs;
+    if(m.direct && !p.directOffered){ p.directOffered = true; offerDirect(id); }   // both are 0.6.0+ apps: try app to app
     events.onMember(id, m.name);
     if(p.video) events.onVideo(id, p.video);
     // the owner introduces a newcomer to everyone else already here
@@ -126,17 +128,72 @@ function onData(m, id){
   }
   else if(m.t === 'members'){ m.ids.forEach(x => { if(x !== me.id && !peers.has(x)) dial(x, false); }); return; }
   else if(m.t === 'lat'){ p.inMs = m.inMs; p.outMs = m.outMs; return; }
+  else if(m.t === 'direct'){ if(audio.directPeer) audio.directPeer(id, m.token, m.addrs); return; }
   else if(m.t === 'full'){ roomFull = true; events.onStatus('This room is full (4 players max). Ask the others to make space, or start a new room.'); return; }
   events.onMessage(m, id);
 }
 
 function removePeer(id){
   if(!peers.has(id)) return;
-  peers.delete(id); audio.forget(id);
+  peers.delete(id); audio.forget(id); if(audio.directGone) audio.directGone(id);
   events.onLeave(id);
 }
 
 // One reliable control connection + one raw audio channel per person.
+// One block of another player's audio, from WebRTC or straight from their app
+// (direct: the engine already played it if it's a free jam). arrived: when it
+// got here, on this page's clock.
+function receive(id, p, pk, direct, arrived){
+  const sk = direct ? 'dSeq' : 'lastSeq';
+  let gap = 0;
+  if(p[sk] != null){ const d = seqDelta(p[sk], pk.seq); if(d <= 0) return; if(d > 1){ p.lost += d - 1; gap = d - 1; } }
+  // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
+  if(p.samples.length){
+    const age = arrived - (pk.timeUs / 1000 - p.offset);
+    p.ages.push(age); if(p.ages.length > 375) p.ages.shift();
+    // the slowest arrival of each of the last 15 seconds (BARS sizes its wait on these, not one second's worth)
+    const sec = Math.floor(arrived / 1000);
+    if(p.maxSec !== sec){ p.maxSec = sec; p.maxes = (p.maxes || []).concat(age).slice(-15); }
+    else if(age > p.maxes[p.maxes.length - 1]) p.maxes[p.maxes.length - 1] = age;
+  }
+  p[sk] = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`; p.frames = pk.planes[0].length;
+  const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p, pk.planes);
+  if(at === null){ p.muted = (p.muted || 0) + 1; p.last = null; return; }
+  const played = direct && at === undefined && directPlay;   // the app's engine has it already
+  const g = gains.get(id); if(g != null && g !== 1) scale(pk.planes, g);
+  // with `at` (BARS, far apart) each fill goes exactly where the lost block would have played
+  if(gap && gap <= MAX_FILL && p.last && !played){
+    const blockMs = pk.planes[0].length / RATE * 1000;
+    conceal(p.last, gap).forEach((f, j) => audio.deliver(id, f, at == null ? at : at - (gap - j) * blockMs));
+    p.filled = (p.filled || 0) + gap;
+  }
+  p.last = pk.planes;
+  if(!played) audio.deliver(id, pk.planes, at);
+  if(taps.remote) taps.remote(id, pk.planes);
+  if(taps.listen) taps.listen(id, pk.planes, at == null ? clk() : at);
+  if(taps.tracks) taps.tracks(id, pk.planes, at == null ? clk() + (((audio.stats.players || {})[id] || {}).bufferMs || 0) : at);   // when you heard it
+  noteLevel(id, at == null ? clk() : at, peakOf(pk.planes[0]));
+}
+
+// ---- the direct path: app to app over UDP (desktop app 0.6.0+ on both ends) ----
+// The apps swap addresses and tokens over this encrypted control channel, punch
+// through their routers, and once a path works both ways audio skips WebRTC.
+// In a free jam the receiving engine plays it at once; in BARS this page still
+// decides when each block plays (setDirectPlay follows trade.js).
+export let directPlay = true;
+export function setDirectPlay(on){ if(on === directPlay) return; directPlay = on; if(audio.setDirectPlay) audio.setDirectPlay(on); }
+export function setGain(id, g){ if(g === 1) gains.delete(id); else gains.set(id, g); if(audio.setDirectGain) audio.setDirectGain(id, g); }
+export function setBits(bits){ format.bits = bits; if(audio.setDirectBits) audio.setDirectBits(bits); }
+function offerDirect(id){
+  if(!audio.canDirect || !audio.canDirect()) return;
+  audio.setDirectBits(format.bits);
+  audio.directInfo().then(info => send({ t:'direct', token:info.token, addrs:info.addrs }, id)).catch(e => console.warn('direct audio unavailable', e));
+}
+if(audio.direct){
+  audio.direct.onState = (id, sendOk, recvOk) => { const p = peers.get(id); if(p){ p.directSend = sendOk; p.directRecv = recvOk; } };
+  audio.direct.onBlock = (id, b) => { const p = peers.get(id); if(!p) return; p.directAt = clk(); receive(id, p, { seq:b.seq, timeUs:b.timeMs * 1000, planes:b.planes, bits:b.bits }, true, b.arrived); };
+}
+
 function wireConn(c, newcomer){
   const id = c.peer, old = peers.get(id);
   if(old && old.conn !== c){ try{ old.conn.close(); }catch(e){} }
@@ -147,36 +204,13 @@ function wireConn(c, newcomer){
     p.audio.binaryType = 'arraybuffer';
     p.audio.onmessage = e => { if(fakeLoss && Math.random() < fakeLoss) return; if(fakeDelay) setTimeout(() => onAudio(e), fakeDelay); else onAudio(e); };
     const onAudio = e => {
+      if(clk() - (p.directAt || 0) < 300) return;   // their audio is arriving app to app (direct path): ignore the backup copy
       const pk = decodePacket(new Uint8Array(e.data)); if(!pk || peers.get(id) !== p) return;
-      let gap = 0;
-      if(p.lastSeq !== null){ const d = seqDelta(p.lastSeq, pk.seq); if(d <= 0) return; if(d > 1){ p.lost += d - 1; gap = d - 1; } }
-      // age: from their capture to arriving here, on the shared clock (offset = their clock - mine)
-      if(p.samples.length){
-        const age = clk() - (pk.timeUs / 1000 - p.offset);
-        p.ages.push(age); if(p.ages.length > 375) p.ages.shift();
-        // the slowest arrival of each of the last 15 seconds (BARS sizes its wait on these, not one second's worth)
-        const sec = Math.floor(clk() / 1000);
-        if(p.maxSec !== sec){ p.maxSec = sec; p.maxes = (p.maxes || []).concat(age).slice(-15); }
-        else if(age > p.maxes[p.maxes.length - 1]) p.maxes[p.maxes.length - 1] = age;
-      }
-      p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
-      const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p, pk.planes);
-      if(at === null){ p.muted = (p.muted || 0) + 1; p.last = null; return; }
-      const g = gains.get(id); if(g != null && g !== 1) scale(pk.planes, g);
-      // with `at` (BARS, far apart) each fill goes exactly where the lost block would have played
-      if(gap && gap <= MAX_FILL && p.last){
-        conceal(p.last, gap).forEach((f, j) => audio.deliver(id, f, at == null ? at : at - (gap - j) * FRAMES / RATE * 1000));
-        p.filled = (p.filled || 0) + gap;
-      }
-      p.last = pk.planes;
-      audio.deliver(id, pk.planes, at); if(taps.remote) taps.remote(id, pk.planes);
-      if(taps.listen) taps.listen(id, pk.planes, at == null ? clk() : at);
-      if(taps.tracks) taps.tracks(id, pk.planes, at == null ? clk() + (((audio.stats.players || {})[id] || {}).bufferMs || 0) : at);   // when you heard it
-      noteLevel(id, at == null ? clk() : at, peakOf(pk.planes[0]));
+      receive(id, p, pk, false, clk());
     };
     const pc = c.peerConnection;
     pc.addEventListener('iceconnectionstatechange', () => { if(pc.iceConnectionState === 'failed') events.onStatus(BLOCKED); });
-    send({ t:'hello', v:PROTOCOL_VERSION, id:me.id, name:me.name, newcomer, inMs:audio.inputLatencyMs(), outMs:audio.outputLatencyMs() }, id);
+    send({ t:'hello', v:PROTOCOL_VERSION, id:me.id, name:me.name, newcomer, inMs:audio.inputLatencyMs(), outMs:audio.outputLatencyMs(), direct:!!(audio.canDirect && audio.canDirect()) }, id);
     for(let i = 0; i < 8; i++) setTimeout(() => send({ ping:clk() }, id), 150 * i);   // quick initial clock sync
   });
   c.on('data', m => onData(m, id));
@@ -258,8 +292,8 @@ export function connectionStats(){
       const sorted = p.ages.length > 50 ? [...p.ages].sort((a, b) => a - b) : null;
       const jitter = sorted ? Math.max(0, sorted[Math.floor(sorted.length * 0.95)] - sorted[sorted.length >> 1]) : 0;
       const block = FRAMES / RATE * 1000;
-      const budget = { in: Math.round(p.inMs || 0), packet: Math.round(block * 10) / 10, network: Math.round(net), jitter: Math.round(jitter), buffer: Math.round(buf), out: Math.round(myOut) };
-      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: p.route || null, budget };
+      const budget = { in: Math.round(p.inMs || 0), packet: Math.round((clk() - (p.directAt || 0) < 1000 ? (p.frames || 64) / RATE * 1000 : block) * 10) / 10, network: Math.round(net), jitter: Math.round(jitter), buffer: Math.round(buf), out: Math.round(myOut) };
+      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: clk() - (p.directAt || 0) < 1000 ? 'app' : p.route || null, budget };
     }),
     lossPct: recv ? 100 * lost / (recv + lost) : 0,
     debug: [...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet',

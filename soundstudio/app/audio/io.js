@@ -10,12 +10,14 @@ let m = await import(IN_APP && saved !== 'web' ? './native-io.js' : './web-io.js
 export let NATIVE, RATE, FRAMES, BLOCK_MS, micOptions, isPhone, stats, context, start, startRecording, stopRecording, recordedSeconds,
   deliver, forget, setFeel, setBufferLimit, connectMic, setInputChannel, useInput, currentInputId, setMicEnabled, micEnabled,
   canChooseOutput, useOutput, listDevices, inputLatencyMs, inputSampleRate, echoCancelling, outputLatencyMs,
-  canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip, alive;
+  canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip, alive,
+  direct, canDirect, directInfo, directPeer, directGone, setDirectPlay, setDirectGain, setDirectBits;
 function bind(x){
   ({ NATIVE, RATE, FRAMES, BLOCK_MS, micOptions, isPhone, stats, context, start, startRecording, stopRecording, recordedSeconds,
     deliver, forget, setFeel, setBufferLimit, connectMic, setInputChannel, useInput, currentInputId, setMicEnabled, micEnabled,
     canChooseOutput, useOutput, listDevices, inputLatencyMs, inputSampleRate, echoCancelling, outputLatencyMs,
-    canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip } = x);
+    canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip,
+    direct, canDirect, directInfo, directPeer, directGone, setDirectPlay, setDirectGain, setDirectBits } = x);
   alive = x.alive || (async () => '');
 }
 bind(m);
