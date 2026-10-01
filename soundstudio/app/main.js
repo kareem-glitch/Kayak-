@@ -19,7 +19,9 @@ import * as toneIcons from './tone-icons.js';
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
 let joinId = params.get('join');
-try{ if(joinId && sessionStorage.getItem('ss.hostId') === joinId){ joinId = null; history.replaceState(null, '', location.pathname); } }catch(e){}
+// Your own old room's link (from a reload, a reopened tab, history): start a fresh jam instead of joining a room that's gone.
+const myRooms = () => { try{ return JSON.parse(localStorage.getItem('ss.myRooms') || '[]'); }catch(e){ return []; } };
+try{ if(joinId && (sessionStorage.getItem('ss.hostId') === joinId || myRooms().includes(joinId))){ joinId = null; history.replaceState(null, '', location.pathname); } }catch(e){}
 let inviteLink = null, media = null, cameraProblem = null, engineFellBack = false, engineWhy = '';
 // Invite links always point at the website, which the desktop app's rooms share
 // (the app's own page address means nothing to anyone else).
@@ -34,7 +36,8 @@ band.hooks.onChange = ui.render;
 session.hooks.onChange = () => { ui.render(); autoSeat(); };
 session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
-room.events.onStatus = t => { ui.status(t); ui.notice(t); };
+room.events.onStatus = (t, o = {}) => { ui.status(t); if(!o.progress) ui.notice(t); };   // progress ('Connecting…') stays out of the notice bar
+room.events.onRoomGone = () => ui.notice('This jam has ended: an invite link only works while the person who started the jam is still in it.', { key: 'gone', action: { label: 'Start a new jam', run: () => { location.href = location.pathname; } } });
 room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
 room.events.onLeave = id => { const t = ui.tiles.get(id); if(t) session.playerLeft(t.dataset.name); ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
@@ -87,7 +90,7 @@ async function join(){
     else {
       inviteLink = SITE + '?join=' + me.id + '&g=' + gamePick + (params.get('broker') ? '&broker=' + params.get('broker') : '');
       if(!audio.IN_APP) history.replaceState(null, '', inviteLink);   // copying the address bar works too
-      try{ sessionStorage.setItem('ss.hostId', me.id); }catch(e){}
+      try{ sessionStorage.setItem('ss.hostId', me.id); localStorage.setItem('ss.myRooms', JSON.stringify([me.id, ...myRooms()].slice(0, 20))); }catch(e){}
       showRoomStatus();
     }
     if(!audioProblem){

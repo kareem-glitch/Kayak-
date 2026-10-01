@@ -21,6 +21,7 @@ const BLOCKED = 'Couldn’t connect to someone: a network is blocking direct con
 
 export const events = {
   onStatus: () => {},          // (text) plain-language connection status
+  onRoomGone: () => {},        // the room you tried to join isn't there (its creator left)
   onMember: () => {},          // (id, name) someone is now in the room
   onVideo: () => {},           // (id, stream) their camera
   onLeave: () => {},           // (id)
@@ -48,7 +49,7 @@ export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id)
 // Recording taps (mixrec.js): every block you send and every block you receive.
 export const taps = { local: null, remote: null, listen: null, tracks: null };   // listen: the AI soloist's ear (id or 'me', planes, when played); tracks: separate-track recording (same)
 // "Pretend we're far apart" (testing at home): every player's audio arrives this much later, as if across the world.
-let fakeDelay = 0;
+let fakeDelay = 0, roomGone = false;
 export const setFakeDelay = ms => { fakeDelay = ms; peers.forEach(p => { p.ages = []; }); };
 let fakeLoss = 0;   // tests: drop this share of incoming audio packets, like a lossy long-distance link
 export const setFakeLoss = share => { fakeLoss = share; };
@@ -242,7 +243,14 @@ export async function open({ join, broker, videoStream }){
   const [bh, bp] = (broker || '').split(':');
   peer = new Peer(Object.assign({ config:{ iceServers:ICE } }, broker ? { host:bh, port:+bp, path:'/', secure:false } : {}));
   me.id = await new Promise((res, rej) => { peer.on('open', res); peer.on('error', rej); });
-  peer.on('error', e => events.onStatus(e.type === 'peer-unavailable' ? (peers.size ? 'Someone in the room couldn’t be reached.' : 'That invite link has expired (it changes whenever the room’s creator reloads). Ask for a fresh one.') : 'Connection problem: ' + (e.type || e.message)));
+  peer.on('error', e => {
+    if(e.type !== 'peer-unavailable') return events.onStatus('Connection problem: ' + (e.type || e.message));
+    // someone who has already left (an old id): nothing to tell anyone. The room you
+    // came to join (its creator is gone, or reloaded): say so, and offer a new jam.
+    const id = (String(e.message || '').match(/peer\s+(\S+)/i) || [])[1];
+    if(id && id !== joinId){ removePeer(id); return; }
+    if(!roomGone){ roomGone = true; removePeer(joinId); events.onRoomGone(); }
+  });
   peer.on('connection', c => {
     if(roomCount() >= MAX_ROOM && !peers.has(c.peer)){ c.on('open', () => { const tell = setInterval(() => c.open && c.send({ t:'full' }), 400); setTimeout(() => { clearInterval(tell); c.close(); }, 6000); }); return; }
     wireConn(c, false);
@@ -250,13 +258,13 @@ export async function open({ join, broker, videoStream }){
   // A video call can arrive just before its control connection; wait briefly for it.
   peer.on('call', call => { let n = 0; const answer = () => { if(peers.has(call.peer)){ call.answer(video); call.on('stream', s => gotVideo(call.peer, s)); } else if(n++ < 25) setTimeout(answer, 200); }; answer(); });
   if(joinId){
-    dial(joinId, true); events.onStatus('Connecting…');
+    dial(joinId, true); events.onStatus('Connecting…', { progress: true });
     let tries = 1;
     const retry = setInterval(() => {
       const o = peers.get(joinId);
-      if((o && o.name) || roomFull){ clearInterval(retry); return; }
-      if(tries >= 3){ clearInterval(retry); setTimeout(() => { const o2 = peers.get(joinId); if(!(o2 && o2.name) && !roomFull) events.onStatus('Couldn’t join this room. It may be full (4 players max), or the person who created it has left.'); }, 8000); return; }
-      tries++; events.onStatus(`Still connecting… (attempt ${tries})`); dial(joinId, true);
+      if((o && o.name) || roomFull || roomGone){ clearInterval(retry); return; }
+      if(tries >= 3){ clearInterval(retry); setTimeout(() => { const o2 = peers.get(joinId); if(!(o2 && o2.name) && !roomFull && !roomGone) events.onStatus('Couldn’t join this room. It may be full (4 players max), or the person who created it has left.'); }, 8000); return; }
+      tries++; events.onStatus(`Still connecting… (attempt ${tries})`, { progress: true }); dial(joinId, true);
     }, 8000);
   }
   setInterval(() => send({ ping:clk() }), 1000);
