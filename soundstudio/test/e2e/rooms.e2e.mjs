@@ -1,11 +1,11 @@
 // End-to-end: links to rooms that are gone. Your own old room's link (a reload,
-// a reopened tab) starts a fresh jam; someone else's dead invite says so plainly
-// with a button to start a new jam, instead of "Someone couldn't be reached".
+// a reopened tab) starts a fresh jam; someone else's ended jam turns into a new
+// one of your own (no dead end, no "Someone couldn't be reached").
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startServers, sleep } from './harness.mjs';
 
-test('dead room links: your own starts fresh, someone else’s says the jam ended', { timeout: 90000 }, async () => {
+test('dead room links: your own starts fresh, someone else’s becomes a new jam of yours', { timeout: 90000 }, async () => {
   const h = await startServers();
   try{
     const A = await h.page('Host');
@@ -23,9 +23,10 @@ test('dead room links: your own starts fresh, someone else’s says the jam ende
     const dead = await C.evaluate(() => window.getInvite()); await C.close(); await sleep(1500);
     await h.join(B, dead, 'Guest');
     await B.waitForFunction(() => !document.getElementById('notice').hidden, null, { timeout: 20000 });
-    assert.match(await B.textContent('#noticeText'), /This jam has ended/);
-    assert.equal(await B.textContent('#noticeAct'), 'Start a new jam');
-    assert.doesNotMatch(await B.textContent('#noticeText'), /couldn’t be reached/);
+    assert.match(await B.textContent('#noticeText'), /That jam had ended, so you’re in a new one of your own/);
+    const mine = await B.evaluate(() => window.getInvite());
+    assert.notEqual(mine, dead, 'your own invite link now');
+    await B.waitForSelector('#hostControls:not([hidden])', { state: 'attached', timeout: 10000 });   // and you run the band
     assert.deepEqual(h.errors, []);
   } finally { await h.close(); }
 });

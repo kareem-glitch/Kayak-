@@ -37,7 +37,7 @@ session.hooks.onChange = () => { ui.render(); autoSeat(); };
 session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
 room.events.onStatus = (t, o = {}) => { ui.status(t); if(!o.progress) ui.notice(t); };   // progress ('Connecting…') stays out of the notice bar
-room.events.onRoomGone = () => ui.notice('This jam has ended: an invite link only works while the person who started the jam is still in it.', { key: 'gone', action: { label: 'Start a new jam', run: () => { location.href = location.pathname; } } });
+room.events.onRoomGone = () => { roomGone().catch(e => console.warn(e)); };
 room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
 room.events.onLeave = id => { const t = ui.tiles.get(id); if(t) session.playerLeft(t.dataset.name); ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
@@ -87,12 +87,7 @@ async function join(){
     $('#joinView').hidden = true; $('#roomView').hidden = false; layout.start();
     const t = ui.tileFor({ identity:me.id, name:me.name }); if(media.getVideoTracks().length) ui.showVideoIn(t, videoOnly);
     if(joinId) inviteLink = SITE + '?join=' + joinId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
-    else {
-      inviteLink = SITE + '?join=' + me.id + '&g=' + gamePick + (params.get('broker') ? '&broker=' + params.get('broker') : '');
-      if(!audio.IN_APP) history.replaceState(null, '', inviteLink);   // copying the address bar works too
-      try{ sessionStorage.setItem('ss.hostId', me.id); localStorage.setItem('ss.myRooms', JSON.stringify([me.id, ...myRooms()].slice(0, 20))); }catch(e){}
-      showRoomStatus();
-    }
+    else ownRoom();
     if(!audioProblem){
       if(audio.canTone() && store.get('ss.tone') && store.get('ss.tone') !== 'off') pickTone(store.get('ss.tone'));
       await fillDevices().catch(() => {});
@@ -101,7 +96,7 @@ async function join(){
     }
     setCam(camOn);
     if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; $('#synthSet').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
-    if(!joinId){ S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; await session.claimBand(); }   // you started the room: you run the band
+    if(!joinId) await runBand();   // you started the room: you run the band
     ui.render();
     if(engineFellBack && !audioProblem) ui.notice('The app’s audio engine had a problem (' + engineWhy + '), so this jam uses browser audio (a little more delay). Audio settings → Sound engine to try again.');
     else if(audioProblem) ui.notice('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
@@ -110,6 +105,23 @@ async function join(){
   }catch(e){
     $('#joinErr').textContent = 'Couldn’t start: ' + (e.message || e.type || e) + '. Allow camera and microphone, then try again.'; $('#joinBtn').disabled = false;
   }
+}
+
+// You're the room's creator: your invite link (also in the address bar), remembered
+// so reopening it later starts a fresh jam instead of joining one that's gone.
+function ownRoom(){
+  inviteLink = SITE + '?join=' + me.id + '&g=' + gamePick + (params.get('broker') ? '&broker=' + params.get('broker') : '');
+  if(!audio.IN_APP) history.replaceState(null, '', inviteLink);   // copying the address bar works too
+  try{ sessionStorage.setItem('ss.hostId', me.id); localStorage.setItem('ss.myRooms', JSON.stringify([me.id, ...myRooms()].slice(0, 20))); }catch(e){}
+  showRoomStatus();
+}
+const runBand = () => { S.game = gamePick === 'free' ? { mode:'free', bars:8 } : { mode:'trade', bars:+gamePick }; return session.claimBand(); };
+// The jam you opened has ended (its creator left): carry on in a new jam of your own, no dead end.
+async function roomGone(){
+  const joining = $('#roomView').hidden;   // still setting up: join() makes it your room when it gets there
+  joinId = null; room.becomeOwner();
+  if(!joining){ ownRoom(); await runBand(); ui.render(); }
+  ui.notice('That jam had ended, so you’re in a new one of your own. Tap Invite to bring people in.', { key: 'gone' });
 }
 
 // ---- the DAW plugin (desktop app): install it, and see when it's your input ----

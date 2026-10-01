@@ -38,6 +38,8 @@ const pkt = new Uint8Array(packetBytes(FRAMES, 2, 32));   // big enough for ster
 
 export const isOwner = () => !joinId;
 export const roomId = () => joinId || me.id;   // the room is named after its creator
+// The room you came to join has ended: from now on this is your own room.
+export function becomeOwner(){ joinId = null; }
 export const roomCount = () => 1 + [...peers.values()].filter(p => p.name).length;
 export const offsetTo = id => (peers.get(id) || {}).offset || 0;   // their clock - mine (ms)
 export const clockSynced = id => ((peers.get(id) || {}).samples || []).length >= 3;
