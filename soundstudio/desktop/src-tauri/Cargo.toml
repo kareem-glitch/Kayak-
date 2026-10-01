@@ -1,6 +1,6 @@
 [package]
 name = "soundstudio"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 description = "air.band desktop: the jam room with native, low-latency audio"
 publish = false
@@ -21,3 +21,7 @@ ssengine = { path = "../engine" }
 opt-level = 3
 lto = true
 codegen-units = 1
+
+# Windows: ASIO, the low-latency driver audio interfaces ship with (audio.rs)
+[target.'cfg(windows)'.dependencies]
+cpal = { version = "0.16", features = ["asio"] }

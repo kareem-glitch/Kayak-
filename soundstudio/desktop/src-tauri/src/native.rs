@@ -139,15 +139,27 @@ fn deliver(b: &[u8], sh: &Shared) {
 struct Session { input: Option<cpal::Stream>, output: Option<cpal::Stream>, in_name: String, out_name: String, in_chans: u16, channel: InputChannel, sh: Arc<Shared> }
 
 impl Session {
+    // An ASIO driver drives the interface's input and output together, so picking
+    // it for one side moves the other side to it too.
     fn open_input(&mut self, id: &str) -> Result<(), String> {
         self.input = None;
         let (s, name, ch) = audio::start_input(id, self.channel, &self.sh)?;
-        self.input = Some(s); self.in_name = name; self.in_chans = ch; Ok(())
+        self.input = Some(s); self.in_name = name; self.in_chans = ch;
+        if audio::is_asio(&self.in_name) && self.output.is_some() && self.out_name != self.in_name {
+            let n = self.in_name.clone(); self.output = None;
+            let (s, name) = audio::start_output(&n, &self.sh)?; self.output = Some(s); self.out_name = name;
+        }
+        Ok(())
     }
     fn open_output(&mut self, id: &str) -> Result<(), String> {
         self.output = None;
         let (s, name) = audio::start_output(id, &self.sh)?;
-        self.output = Some(s); self.out_name = name; Ok(())
+        self.output = Some(s); self.out_name = name;
+        if audio::is_asio(&self.out_name) && self.input.is_some() && self.in_name != self.out_name {
+            let n = self.out_name.clone(); self.input = None;
+            let (s, name, ch) = audio::start_input(&n, self.channel, &self.sh)?; self.input = Some(s); self.in_name = name; self.in_chans = ch;
+        }
+        Ok(())
     }
     fn state(&self) -> Value { json!({ "ok": true, "input": self.in_name, "output": self.out_name, "inChannels": self.in_chans }) }
     fn handle(&mut self, v: &Value) -> Option<Value> {

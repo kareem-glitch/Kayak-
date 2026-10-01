@@ -65,27 +65,60 @@ impl Shared {
     pub fn take_peak(&self) -> f32 { f32::from_bits(self.peak.swap(0, Relaxed)) }
 }
 
-pub fn host() -> cpal::Host { cpal::default_host() }
 fn name(d: &Device) -> String { d.name().unwrap_or_else(|_| "Unknown device".into()) }
 
-/// (name, channels) of every input and output device.
-pub fn devices() -> (Vec<(String, u16)>, Vec<(String, u16)>) {
-    let h = host();
-    let list = |it: Option<Box<dyn Iterator<Item = Device>>>, input: bool| -> Vec<(String, u16)> {
-        it.map(|i| i.map(|d| { let ch = pick(&d, input).map(|(c, _)| c.channels).unwrap_or(0); (name(&d), ch) }).filter(|(_, ch)| *ch > 0).collect()).unwrap_or_default()
-    };
-    (list(h.input_devices().ok().map(|i| Box::new(i) as Box<dyn Iterator<Item = Device>>), true),
-     list(h.output_devices().ok().map(|i| Box::new(i) as Box<dyn Iterator<Item = Device>>), false))
+/// The audio systems to use. On Windows, ASIO first: an interface's own driver,
+/// which skips Windows' audio mixer (10-30 ms less delay) and uses the buffer
+/// size set in the interface's control panel. Then the standard system.
+fn hosts() -> Vec<(cpal::Host, bool)> {
+    #[allow(unused_mut)]
+    let mut v = vec![];
+    #[cfg(windows)]
+    if let Ok(h) = cpal::host_from_id(cpal::HostId::Asio) { v.push((h, true)); }
+    v.push((cpal::default_host(), false));
+    v
+}
+/// What the page shows and sends back as the device id.
+fn label(d: &Device, asio: bool) -> String { if asio { format!("{} (ASIO)", name(d)) } else { name(d) } }
+pub fn is_asio(label: &str) -> bool { label.ends_with(" (ASIO)") }
+/// Catch-all ASIO drivers (wrappers around Windows audio, onboard sound): no gain, so never picked on their own.
+fn generic_asio(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    ["asio4all", "flexasio", "asio2wasapi", "realtek", "generic", "voicemeeter"].iter().any(|g| n.contains(g))
+}
+fn list(h: &cpal::Host, input: bool) -> Vec<Device> {
+    (if input { h.input_devices().map(|i| i.collect()) } else { h.output_devices().map(|i| i.collect()) }).unwrap_or_default()
 }
 
-/// The named device, or the system default if the name is empty or not found.
-pub fn find(id: &str, input: bool) -> Option<Device> {
-    let h = host();
-    if !id.is_empty() {
-        let found = if input { h.input_devices().ok().and_then(|mut i| i.find(|d| name(d) == id)) } else { h.output_devices().ok().and_then(|mut i| i.find(|d| name(d) == id)) };
-        if found.is_some() { return found; }
+/// (label, channels) of every input and output device.
+pub fn devices() -> (Vec<(String, u16)>, Vec<(String, u16)>) {
+    let (mut ins, mut outs) = (vec![], vec![]);
+    for (h, asio) in hosts() {
+        for (input, out) in [(true, &mut ins), (false, &mut outs)] {
+            for d in list(&h, input) {
+                let ch = pick(&d, input).map(|(c, _)| c.channels).unwrap_or(0);
+                if ch > 0 { out.push((label(&d, asio), ch)); }
+            }
+        }
     }
-    if input { h.default_input_device() } else { h.default_output_device() }
+    (ins, outs)
+}
+
+/// The device with this label. Empty (or not found): an audio interface's own
+/// ASIO driver if there is one, else the system default. The bool: it's ASIO.
+pub fn find(id: &str, input: bool) -> Option<(Device, bool)> {
+    let hs = hosts();
+    if !id.is_empty() {
+        for (h, asio) in &hs { if let Some(d) = list(h, input).into_iter().find(|d| label(d, *asio) == id) { return Some((d, *asio)); } }
+    }
+    for (h, asio) in &hs {
+        if *asio { if let Some(d) = list(h, input).into_iter().find(|d| !generic_asio(&name(d))) { return Some((d, true)); } }
+    }
+    system_default(input)
+}
+fn system_default(input: bool) -> Option<(Device, bool)> {
+    let h = cpal::default_host();
+    (if input { h.default_input_device() } else { h.default_output_device() }).map(|d| (d, false))
 }
 
 /// A 48 kHz config with up to 2 channels (prefer 2), float samples if offered,
@@ -98,7 +131,7 @@ fn pick(d: &Device, input: bool) -> Result<(StreamConfig, SampleFormat), String>
     let best = ranges.into_iter().max_by_key(|r| {
         let ch = r.channels();
         let ch_score = if ch == 2 { 3 } else if ch == 1 { 2 } else { 1 };   // 2 best, then mono, then multichannel
-        let fmt_score = match r.sample_format() { SampleFormat::F32 => 3, SampleFormat::I32 => 2, SampleFormat::I16 => 1, _ => 0 };
+        let fmt_score = match r.sample_format() { SampleFormat::F32 => 4, SampleFormat::F64 | SampleFormat::I32 => 3, SampleFormat::I24 => 2, SampleFormat::I16 => 1, _ => 0 };
         (std::cmp::Reverse(rate_of(r).abs_diff(RATE)), ch_score, fmt_score)
     }).ok_or_else(|| format!("{} has no usable audio format.", name(d)))?;
     let rate = rate_of(&best);
@@ -108,20 +141,29 @@ fn pick(d: &Device, input: bool) -> Result<(StreamConfig, SampleFormat), String>
 
 fn err_fn(e: cpal::StreamError) { eprintln!("audio stream error: {e}") }
 
-/// Start the input stream. Returns the stream, the device's name and channel count.
+/// Start the input stream. Returns the stream, the device's label and channel count.
 pub fn start_input(id: &str, channel: InputChannel, sh: &Arc<Shared>) -> Result<(Stream, String, u16), String> {
-    let d = find(id, true).ok_or("No microphone or audio input found.")?;
-    let (mut cfg, fmt) = pick(&d, true)?;
+    let (d, asio) = find(id, true).ok_or("No microphone or audio input found.")?;
+    match open_input(&d, asio, channel, sh) {
+        // an ASIO driver we picked ourselves can be busy (e.g. a DAW has it): use the system's audio instead
+        Err(e) if asio && id.is_empty() => { eprintln!("ASIO input unavailable ({e}), using the system default"); let (d, _) = system_default(true).ok_or(e)?; open_input(&d, false, channel, sh) }
+        r => r,
+    }
+}
+fn open_input(d: &Device, asio: bool, channel: InputChannel, sh: &Arc<Shared>) -> Result<(Stream, String, u16), String> {
+    let (mut cfg, fmt) = pick(d, true)?;
     let build = |cfg: &StreamConfig| match fmt {
-        SampleFormat::F32 => input::<f32>(&d, cfg, channel, sh.clone()),
-        SampleFormat::I32 => input::<i32>(&d, cfg, channel, sh.clone()),
-        SampleFormat::I16 => input::<i16>(&d, cfg, channel, sh.clone()),
-        SampleFormat::U16 => input::<u16>(&d, cfg, channel, sh.clone()),
+        SampleFormat::F32 => input::<f32>(d, cfg, channel, sh.clone()),
+        SampleFormat::F64 => input::<f64>(d, cfg, channel, sh.clone()),
+        SampleFormat::I32 => input::<i32>(d, cfg, channel, sh.clone()),
+        SampleFormat::I24 => input::<cpal::I24>(d, cfg, channel, sh.clone()),
+        SampleFormat::I16 => input::<i16>(d, cfg, channel, sh.clone()),
+        SampleFormat::U16 => input::<u16>(d, cfg, channel, sh.clone()),
         other => Err(format!("Unsupported sample format {other:?}")),
     };
     let s = build(&cfg).or_else(|_| { cfg.buffer_size = BufferSize::Default; build(&cfg) })?;
     s.play().map_err(|e| e.to_string())?;
-    Ok((s, name(&d), cfg.channels))
+    Ok((s, label(d, asio), cfg.channels))
 }
 
 fn input<T: SizedSample>(d: &Device, cfg: &StreamConfig, channel: InputChannel, sh: Arc<Shared>) -> Result<Stream, String> where f32: FromSample<T> {
@@ -154,20 +196,28 @@ fn input<T: SizedSample>(d: &Device, cfg: &StreamConfig, channel: InputChannel, 
     }, err_fn, None).map_err(|e| e.to_string())
 }
 
-/// Start the output stream. Returns the stream and the device's name.
+/// Start the output stream. Returns the stream and the device's label.
 pub fn start_output(id: &str, sh: &Arc<Shared>) -> Result<(Stream, String), String> {
-    let d = find(id, false).ok_or("No speakers or audio output found.")?;
-    let (mut cfg, fmt) = pick(&d, false)?;
+    let (d, asio) = find(id, false).ok_or("No speakers or audio output found.")?;
+    match open_output(&d, asio, sh) {
+        Err(e) if asio && id.is_empty() => { eprintln!("ASIO output unavailable ({e}), using the system default"); let (d, _) = system_default(false).ok_or(e)?; open_output(&d, false, sh) }
+        r => r,
+    }
+}
+fn open_output(d: &Device, asio: bool, sh: &Arc<Shared>) -> Result<(Stream, String), String> {
+    let (mut cfg, fmt) = pick(d, false)?;
     let build = |cfg: &StreamConfig| match fmt {
-        SampleFormat::F32 => output::<f32>(&d, cfg, sh.clone()),
-        SampleFormat::I32 => output::<i32>(&d, cfg, sh.clone()),
-        SampleFormat::I16 => output::<i16>(&d, cfg, sh.clone()),
-        SampleFormat::U16 => output::<u16>(&d, cfg, sh.clone()),
+        SampleFormat::F32 => output::<f32>(d, cfg, sh.clone()),
+        SampleFormat::F64 => output::<f64>(d, cfg, sh.clone()),
+        SampleFormat::I32 => output::<i32>(d, cfg, sh.clone()),
+        SampleFormat::I24 => output::<cpal::I24>(d, cfg, sh.clone()),
+        SampleFormat::I16 => output::<i16>(d, cfg, sh.clone()),
+        SampleFormat::U16 => output::<u16>(d, cfg, sh.clone()),
         other => Err(format!("Unsupported sample format {other:?}")),
     };
     let s = build(&cfg).or_else(|_| { cfg.buffer_size = BufferSize::Default; build(&cfg) })?;
     s.play().map_err(|e| e.to_string())?;
-    Ok((s, name(&d)))
+    Ok((s, label(d, asio)))
 }
 
 fn output<T: SizedSample + FromSample<f32>>(d: &Device, cfg: &StreamConfig, sh: Arc<Shared>) -> Result<Stream, String> {

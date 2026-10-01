@@ -174,6 +174,11 @@ function checkSetup(c){
   const names = [(out && out.textContent) || '', (inp && inp.textContent) || ''].join(' ');
   const relayed = c.players.filter(p => p.route && p.route !== 'direct');
   if(relayed.length) tips.push(['warn', `Your audio with ${relayed.map(p => p.name.replace(/[<&]/g, '')).join(', ')} goes ${relayed.some(p => /tcp/.test(p.route)) ? 'through a relay over TCP, which adds delay and stutters' : 'through a relay server, which adds delay'}. A home network (not work, hotel or phone hotspot) usually connects you directly.`]);
+  if(audio.NATIVE && /Windows/.test(navigator.userAgent)){
+    const asio = [...$('#inDev').options].filter(o => / \(ASIO\)$/.test(o.value));
+    if(inp && / \(ASIO\)$/.test(inp.value)) tips.push(['ok', 'ASIO: your interface’s own driver. Its buffer size (in the interface’s control panel) sets your delay: 64–128 samples is the sweet spot.']);
+    else if(asio.length) tips.push(['warn', `Pick “${asio[0].textContent}” as your Input for 10–30 ms less delay (your interface’s own ASIO driver).`]);
+  }
   if(silenceTold && !heardInput) tips.push(['warn', blockedMicTip()]);
   if(engineFellBack) tips.push(['warn', `Desktop app: using browser audio because the app’s engine had a problem (${engineWhy}).`]);
   if(audio.NATIVE){

@@ -37,6 +37,8 @@ jobs:
           - { os: macos-latest, name: air.band-Mac, targets: 'aarch64-apple-darwin,x86_64-apple-darwin', args: '--target universal-apple-darwin --bundles dmg', files: 'soundstudio/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg' }
           - { os: windows-latest, name: air.band-Windows, targets: '', args: '--bundles nsis', files: 'soundstudio/desktop/src-tauri/target/release/bundle/nsis/*.exe' }
     runs-on: ${{ matrix.os }}
+    # Windows: ASIO support compiles Steinberg's ASIO SDK (downloaded by the build) with LLVM's clang
+    env: { LIBCLANG_PATH: 'C:\Program Files\LLVM\bin' }
     defaults: { run: { working-directory: soundstudio/desktop } }
     steps:
       - uses: actions/checkout@v4
