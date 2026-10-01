@@ -56,15 +56,22 @@ function finishRec(){
 // audio thread): when it would leave the speakers, minus the output delay.
 const captureEpoch = frame => frameToEpoch(frame) - outputLatencyMs();
 // Wall-clock ms at which the audio rendered at `frame` leaves your speakers.
-function frameToEpoch(frame){
+// The browser's output timestamp (when contextTime leaves the speakers), if it's
+// believable: Safari/WebKit reports a performanceTime that drifts seconds away
+// from performance.now(), which would put your audio seconds off. Then: estimate.
+function outputStamp(){
   const ts = ctx.getOutputTimestamp && ctx.getOutputTimestamp();
+  return ts && ts.performanceTime > 0 && Math.abs(ts.performanceTime - performance.now()) < 500 ? ts : null;
+}
+function frameToEpoch(frame){
+  const ts = outputStamp();
   if(ts && ts.performanceTime > 0) return performance.timeOrigin + ts.performanceTime + (frame / RATE - ts.contextTime) * 1000;
   return performance.timeOrigin + performance.now() + (frame / RATE - ctx.currentTime) * 1000 + outputLatencyMs();
 }
 
 // The audio frame that leaves your speakers at wall-clock ms t (inverse of frameToEpoch).
 function epochToFrame(t){
-  const ts = ctx.getOutputTimestamp && ctx.getOutputTimestamp();
+  const ts = outputStamp();
   if(ts && ts.performanceTime > 0) return (ts.contextTime + (t - performance.timeOrigin - ts.performanceTime) / 1000) * RATE;
   return (ctx.currentTime + (t - performance.timeOrigin - performance.now() - outputLatencyMs()) / 1000) * RATE;
 }

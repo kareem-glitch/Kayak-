@@ -516,6 +516,7 @@ async function toggleRecording(){
       + (r.beats >= 4 && (q.you != null || q.them != null) ? row('You', q.you) + row('Others, as you heard them', q.them) : '')
       + (notes.length ? `<p class="muted small">${notes.join(' ')}</p>` : '');
     $('#recStatus').textContent = clock(r.seconds) + ' recorded';
+    if(r.take.note) ui.notice(r.take.note, { key: 'rec-note' });
     $('#recEmpty').hidden = true; layout.show('record');   // the take, ready to play and download
   }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
   btn.disabled = false; $('#recWhat').disabled = $('#recTracks').disabled = false; btn.setAttribute('aria-pressed', 'false'); 

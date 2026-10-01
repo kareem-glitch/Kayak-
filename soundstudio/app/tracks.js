@@ -39,15 +39,19 @@ function place(id, planes, atMs){
   t.end = Math.max(t.end, pos + n);
 }
 
-export async function stop(){
+// Stop. zip: the separate tracks as a .zip; mix: everything mixed to one stereo
+// WAV (the whole jam, made here, for browsers and apps without MediaRecorder).
+export async function stop({ zip: wantZip = true, mix: wantMix = false } = {}){
   if(!rec) return null;
   const r = rec; rec = null; room.taps.tracks = null;
-  const files = [];
+  const files = [], mono = [];
   for(const [id, t] of r.tracks){
     const out = new Float32Array(t.end);
     for(const b of t.blocks) out.set(b.data, b.pos);
-    files.push({ name: safe(id === 'me' ? 'You' : (r.names(id) || id)) + '.wav', data: wav24(out, SR) });
+    mono.push(out);
+    if(wantZip) files.push({ name: safe(id === 'me' ? 'You' : (r.names(id) || id)) + '.wav', data: wav24(out, SR) });
   }
+  let bandL = null, bandR = null;
   if(r.band){
     try{ Tone.getDestination().disconnect(r.band.dest); }catch(e){}
     r.band.ctx.close();
@@ -56,11 +60,21 @@ export async function stop(){
       const l = new Float32Array(n), rr = new Float32Array(n); let o = 0;
       for(const c of b.chunks){ l.set(c[0], o); rr.set(c[1], o); o += c[0].length; }
       const lead = Math.max(0, Math.round((b.startAt - r.t0) / 1000 * SR));
-      files.push({ name: 'Band.wav', data: wav24(pad(resample(l, b.rate), lead), SR, pad(resample(rr, b.rate), lead)) });
+      bandL = pad(resample(l, b.rate), lead); bandR = pad(resample(rr, b.rate), lead);
+      if(wantZip) files.push({ name: 'Band.wav', data: wav24(bandL, SR, bandR) });
     }
   }
-  if(!files.length) return null;
-  return URL.createObjectURL(new Blob([zip(files)], { type: 'application/zip' }));
+  const res = {};
+  if(wantZip && files.length) res.zipUrl = URL.createObjectURL(new Blob([zip(files)], { type: 'application/zip' }));
+  if(wantMix && (mono.length || bandL)){
+    const n = Math.max(0, ...mono.map(x => x.length), bandL ? bandL.length : 0), L = new Float32Array(n), R = new Float32Array(n);
+    for(const x of mono) for(let i = 0; i < x.length; i++){ L[i] += x[i]; R[i] += x[i]; }
+    if(bandL) for(let i = 0; i < bandL.length; i++){ L[i] += bandL[i]; R[i] += bandR[i]; }
+    let pk = 0; for(let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
+    if(pk > 0.99){ const g = 0.99 / pk; for(let i = 0; i < n; i++){ L[i] *= g; R[i] *= g; } }   // no clipping when it all adds up
+    res.mixUrl = URL.createObjectURL(new Blob([wav24(L, SR, R)], { type: 'audio/wav' }));
+  }
+  return res;
 }
 
 const safe = s => String(s).replace(/[^\w\- .]+/g, '').trim().slice(0, 40) || 'Player';

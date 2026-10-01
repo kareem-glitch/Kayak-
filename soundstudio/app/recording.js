@@ -16,18 +16,20 @@ import * as room from './net/room.js';
 export const MAX_SECONDS = 300;   // 5 minutes (the raw capture for the timing check is held in memory)
 // what: 'me' (your instrument, WAV), 'all' (everyone + band, audio file), 'video' (everyone + band + cameras)
 let what = 'me';
-let split = false;
-// split: also keep each player (and the band) as its own track
+let split = false, mixFailed = null;
+// split: also keep each player (and the band) as its own track. The whole jam is
+// also always captured that way, so if this browser/app can't record it as a
+// compressed file (no MediaRecorder), it's mixed here and saved as a WAV instead.
 export async function start(kind, alsoTracks = false){
-  what = kind; split = alsoTracks && kind !== 'me';
-  if(split) tracks.start(id => (room.peers.get(id) || {}).name); audio.startRecording();   // always: the exact capture behind the timing check
-  if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video' }); }catch(e){ console.warn('mix recording unavailable', e); what = 'me'; } }
+  what = kind; split = alsoTracks && kind !== 'me'; mixFailed = null;
+  if(kind !== 'me') tracks.start(id => (room.peers.get(id) || {}).name); audio.startRecording();   // always: the exact capture behind the timing check
+  if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video' }); }catch(e){ console.warn('mix recording unavailable', e); mixFailed = e; } }
   return what;
 }
 export const seconds = () => audio.recordedSeconds();
 
 export async function stop(){
-  const mix = what === 'me' ? null : mixrec.stop();
+  const mix = what === 'me' || mixFailed ? null : mixrec.stop();
   const inMs = audio.inputLatencyMs(), outMs = audio.outputLatencyMs();
   const { mic, out, sampleRate: sr, heardAt } = await audio.stopRecording();
   const n = out.length, you = new Float32Array(n);
@@ -52,7 +54,10 @@ export async function stop(){
   };
   const timingUrl = URL.createObjectURL(new Blob([wav(left, right, sr)], { type: 'audio/wav' }));
   const mixed = mix && await mix;
-  const tracksUrl = split ? await tracks.stop() : null; split = false;
-  const take = mixed || { url: URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false };
+  const t = what !== 'me' ? await tracks.stop({ zip: split, mix: !mixed }) : null;
+  const tracksUrl = t && t.zipUrl, wavMix = !mixed && t && t.mixUrl;
+  const note = mixFailed ? (what === 'video' ? 'Video recording isn’t available in this browser/app (' + (mixFailed.message || mixFailed) + '), so this is the whole jam as audio. Chrome records video.' : '') : '';
+  split = false;
+  const take = mixed || (wavMix ? { url: wavMix, type: 'audio/wav', ext: 'wav', video: false, note } : { url: URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false });
   return { take, timingUrl, tracksUrl, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
 }
