@@ -14,6 +14,7 @@
 //   {t:'directGone', id} {t:'directPlay', on} {t:'directGain', id, g} {t:'directBits', bits} {t:'clk', off}
 // Page -> app, binary: another player's block
 //   [0]=3 [1]=id length [2]=planes, id bytes, then f32 little-endian samples per plane
+//   [0]=5 the same, to be heard at a set moment (BARS): [8..16] f64 when (wall-clock ms), id from 16, samples padded to 4
 // App -> page, binary (header padded so the samples start 8-byte aligned):
 //   your block:   [0]=1 [1]=planes, [8..16] f64 captured-at (epoch ms), samples from 16
 //   a recording:  [0]=2, [4..8] u32 n, [8..16] f64 heard-at of sample 0 (epoch ms), then mic n f32, out n f32
@@ -122,6 +123,7 @@ fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>, direc
         if msg.is_binary() {
             let b = msg.into_data();
             if b.len() > 3 && b[0] == 3 { deliver(&b, &sh); }
+            else if b.len() > 16 && b[0] == 5 { deliver_at(&b, &sh); }
         } else if msg.is_text() {
             let v: Value = match serde_json::from_str(msg.to_text().unwrap_or("")) { Ok(v) => v, Err(_) => continue };
             let reply = a.handle(&v);
@@ -130,6 +132,19 @@ fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>, direc
     }
     sh.rec.store(false, std::sync::atomic::Ordering::Relaxed);
     Ok(())   // dropping the session stops its streams
+}
+
+/// [0]=5 [1]=id length [2]=planes, [8..16] f64 when to be heard (wall-clock ms), id, then f32 samples (from 16 + id, padded to 4)
+fn deliver_at(b: &[u8], sh: &Shared) {
+    let (idn, planes) = (b[1] as usize, b[2] as usize);
+    let o = (16 + idn + 3) & !3;
+    if planes == 0 || b.len() < o { return; }
+    let at = f64::from_le_bytes(b[8..16].try_into().unwrap_or([0; 8]));
+    let id = String::from_utf8_lossy(&b[16..16 + idn]).to_string();
+    let samples: Vec<f32> = b[o..].chunks_exact(4).map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]])).collect();
+    let n = samples.len() / planes; if n == 0 { return; }
+    let right = if planes > 1 { Some(samples[n..2 * n].to_vec()) } else { None };
+    let _ = sh.cmd_tx.send(Cmd::DeliverAt(id, at, samples[..n].to_vec(), right));
 }
 
 fn deliver(b: &[u8], sh: &Shared) {
@@ -254,7 +269,7 @@ fn hub(rx: crossbeam_channel::Receiver<Out>, writer: Writer, sh: Arc<Shared>) {
         if last_stats.elapsed() >= Duration::from_millis(500) {
             last_stats = Instant::now();
             let st = sh.stats.lock().unwrap().clone();
-            let players: serde_json::Map<String, Value> = st.players.iter().map(|p| (p.id.clone(), json!({ "bufferMs": (p.buffer_ms * 10.0).round() / 10.0, "rate": p.rate, "under": p.under }))).collect();
+            let players: serde_json::Map<String, Value> = st.players.iter().map(|p| (p.id.clone(), json!({ "bufferMs": (p.buffer_ms * 10.0).round() / 10.0, "rate": p.rate, "under": p.under, "late": p.late }))).collect();
             send(Message::Text(json!({ "t": "stats", "under": st.under, "players": players, "peak": sh.take_peak(), "inLat": sh.in_lat(), "outLat": sh.out_lat(), "plugin": sh.plugin_live.load(std::sync::atomic::Ordering::Relaxed) }).to_string().into()));
         }
     }
@@ -280,5 +295,15 @@ mod tests {
             let m = ws.read().unwrap();
             if m.is_text() && m.to_text().unwrap().contains("\"q\":1") { assert!(m.to_text().unwrap().contains("\"ok\":true")); break; }
         }
+    }
+
+    #[test]
+    fn a_block_to_play_at_a_moment_reaches_the_mixer_with_its_time() {
+        // what native-io.js sendAt() writes: id "ab", one plane of 3 samples, at 1234.5 ms
+        let mut b = vec![0u8; 20]; b[0] = 5; b[1] = 2; b[2] = 1; b[8..16].copy_from_slice(&1234.5f64.to_le_bytes()); b[16] = b'a'; b[17] = b'b';
+        for x in [0.25f32, -0.5, 1.0] { b.extend_from_slice(&x.to_le_bytes()); }
+        let (tx, _rx) = crossbeam_channel::unbounded(); let sh = crate::audio::Shared::new(tx);
+        super::deliver_at(&b, &sh);
+        match sh.cmd_rx.try_recv() { Ok(crate::audio::Cmd::DeliverAt(id, at, l, r)) => { assert_eq!((id.as_str(), at, l, r), ("ab", 1234.5, vec![0.25, -0.5, 1.0], None)); } _ => panic!("no DeliverAt") }
     }
 }

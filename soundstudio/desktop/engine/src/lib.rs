@@ -6,6 +6,7 @@ pub mod blocks;
 pub mod link;
 pub mod resample;
 pub mod direct;
+pub mod delay;
 
 pub const RATE: u32 = 48_000;
 pub const FRAMES: usize = 128;   // one block / render quantum (2.67 ms), as in the browser

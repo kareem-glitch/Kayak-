@@ -19,7 +19,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// Smallest device buffer we ask for, in frames (1.3 ms at 48 kHz).
 const WANT_BUFFER: u32 = 64;
 
-pub enum Cmd { Deliver(String, Vec<f32>, Option<Vec<f32>>), Gone(String), Limit(f64), Feel(Feel) }
+pub enum Cmd { Deliver(String, Vec<f32>, Option<Vec<f32>>), DeliverAt(String, f64, Vec<f32>, Option<Vec<f32>>), Gone(String), Limit(f64), Feel(Feel) }
 pub enum Out {
     Block { at_ms: f64, planes: Vec<Vec<f32>> },
     /// Another app's audio that came in directly (direct.rs), for the page.
@@ -244,6 +244,7 @@ fn output<T: SizedSample + FromSample<f32>>(d: &Device, cfg: &StreamConfig, sh: 
         while let Ok(c) = sh.cmd_rx.try_recv() {
             match c {
                 Cmd::Deliver(id, a, b) => mixer.deliver(&id, &a, b.as_deref()),
+                Cmd::DeliverAt(id, at, a, b) => mixer.deliver_at(&id, &a, b.as_deref(), at),
                 Cmd::Gone(id) => mixer.forget(&id),
                 Cmd::Limit(s) => mixer.set_limit(s),
                 Cmd::Feel(fl) => mixer.set_feel(fl),
@@ -261,9 +262,9 @@ fn output<T: SizedSample + FromSample<f32>>(d: &Device, cfg: &StreamConfig, sh: 
             if rec { let _ = sh.out_tx.send(Out::RecOut { at_ms: heard + start as f64 * 1000.0 / RATE as f64, data: ql.iter().zip(qr).map(|(a, b)| (a + b) / 2.0).collect() }); }
         };
         if let Some(ro) = rate_out.as_mut() {
-            ro.render(&mut mixer, &mut l[..frames], &mut r[..frames], on_q);
+            ro.render(&mut mixer, heard, &mut l[..frames], &mut r[..frames], on_q);
         } else {
-            mixer.render(&mut l[..frames], &mut r[..frames], on_q);
+            mixer.render_at(heard, &mut l[..frames], &mut r[..frames], on_q);
         }
         for i in 0..frames {
             let o = i * chans;

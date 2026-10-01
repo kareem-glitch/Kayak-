@@ -43,15 +43,17 @@ impl Resampler {
 
 /// The mixer's 48 kHz output converted to a device's rate: fills `l`/`r` (device
 /// frames), calling `on_quantum` like Mixer::render (start = 48 kHz frames rendered so far).
-pub struct RateOut { rs: Resampler, inter: Vec<f32> }
+pub struct RateOut { rs: Resampler, inter: Vec<f32>, rate: u32 }
 impl RateOut {
-    pub fn new(device_rate: u32) -> Self { RateOut { rs: Resampler::new(crate::RATE, device_rate, 2), inter: Vec::with_capacity(16384) } }
-    pub fn render(&mut self, mixer: &mut crate::mixer::Mixer, l: &mut [f32], r: &mut [f32], mut on_quantum: impl FnMut(&[f32], &[f32], usize)) {
+    pub fn new(device_rate: u32) -> Self { RateOut { rs: Resampler::new(crate::RATE, device_rate, 2), inter: Vec::with_capacity(16384), rate: device_rate } }
+    pub fn render(&mut self, mixer: &mut crate::mixer::Mixer, heard_ms: f64, l: &mut [f32], r: &mut [f32], mut on_quantum: impl FnMut(&[f32], &[f32], usize)) {
         let frames = l.len();
         let (mut ql, mut qr) = ([0f32; crate::FRAMES], [0f32; crate::FRAMES]);
         let mut made = 0usize;
         while self.rs.available() < frames {
-            mixer.render(&mut ql, &mut qr, |a, b, _| on_quantum(a, b, made));
+            // when this is heard: after what the converter still holds (the clock smooths the rest)
+            let at = if made == 0 { heard_ms + (self.rs.available() as f64) * 1000.0 / self.rate as f64 } else { f64::NAN };
+            mixer.render_at(at, &mut ql, &mut qr, |a, b, _| on_quantum(a, b, made));
             self.inter.clear();
             for i in 0..crate::FRAMES { self.inter.push(ql[i]); self.inter.push(qr[i]); }
             self.rs.push(&self.inter); made += crate::FRAMES;
@@ -102,7 +104,7 @@ mod tests {
         for k in 0..50 {   // 0.5 s in 10 ms callbacks, the audio arriving as it's played
             for _ in 0..4 { if let Some(b) = blocks.next() { m.deliver("a", b, None); } }   // ~10.7 ms of audio per 10 ms
             if k == 0 { for _ in 0..2 { if let Some(b) = blocks.next() { m.deliver("a", b, None); } } }
-            out.render(&mut m, &mut l, &mut r, |_, _, _| {}); all.extend_from_slice(&l);
+            out.render(&mut m, f64::NAN, &mut l, &mut r, |_, _, _| {}); all.extend_from_slice(&l);
         }
         // count upward zero crossings once playing: 440 Hz for the time that was playing
         let start = all.iter().position(|v| v.abs() > 0.5).unwrap();

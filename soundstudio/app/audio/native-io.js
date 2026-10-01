@@ -103,7 +103,7 @@ export function alive(ms = 3000){
   });
 }
 export function stop(){ if(ws){ ws.onclose = null; try{ ws.close(); }catch(e){} ws = null; } }
-// Far-apart mode (at = wall-clock ms it should be heard): held here and handed
+// Apps before 0.6.0, far-apart mode (at = wall-clock ms it should be heard): held here and handed
 // to the engine just before it's due, less the engine's own output delay.
 const held = []; let pump = null;
 function release(){
@@ -113,8 +113,17 @@ function release(){
 }
 export function deliver(id, planes, at){
   if(at == null) return send(id, planes);
+  if(canDirect()) return sendAt(id, planes, at);   // 0.6.0+: the engine plays it at that moment, to the sample (delay.rs)
   let i = held.length; while(i && held[i - 1].at > at) i--; held.splice(i, 0, { id, planes, at });
   if(!pump) pump = setInterval(release, 2);
+}
+function sendAt(id, planes, at){
+  if(!ws || ws.readyState !== 1) return;
+  const idb = new TextEncoder().encode(id), n = planes[0].length, o = (16 + idb.length + 3) & ~3, b = new Uint8Array(o + planes.length * n * 4);
+  b[0] = 5; b[1] = idb.length; b[2] = planes.length; b.set(idb, 16);
+  const dv = new DataView(b.buffer); dv.setFloat64(8, at - (performance.timeOrigin + performance.now() - Date.now()), true);   // page clock -> wall clock
+  let k = o; for(const p of planes) for(let i = 0; i < n; i++, k += 4) dv.setFloat32(k, p[i], true);
+  ws.send(b);
 }
 function send(id, planes){
   if(!ws || ws.readyState !== 1) return;
