@@ -33,6 +33,8 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
       });
     }
     const me = await take('me', 4);
+    const look = await A.evaluate(() => { const s = getComputedStyle(document.getElementById('recDownload')); return [s.color, s.backgroundColor]; });
+    assert.notEqual(look[0], look[1], `the download button's label is readable (${look})`);
     assert.match(me.name, /\.wav$/); assert.equal(me.tag, 'AUDIO'); assert.ok(me.size > 44 + 3.5 * 48000 * 4, `WAV holds ~4 s (${me.size})`);
     assert.ok(me.timing, 'timing file offered too');
     const all = await take('all', 4);

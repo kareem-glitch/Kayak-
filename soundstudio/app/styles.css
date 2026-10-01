@@ -247,6 +247,7 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 .lat li{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
 .rec-result{display:grid;gap:8px}
 .rec-result a{color:var(--amber)}
+.rec-result a.btn-primary{color:var(--amber-ink)} .rec-result a.btn-quiet{color:var(--ink)}   /* the download buttons keep their own colours */
 .rec-media video,.rec-media audio{width:100%;border-radius:10px;display:block}
 .rec-media video{background:#000;aspect-ratio:16/9}
 .rec-dl{text-align:center;text-decoration:none}
@@ -385,3 +386,8 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 
 #camToggle[aria-pressed="false"]{color:var(--muted)}
 #camToggle[aria-pressed="false"] .off{display:inline;stroke:var(--bad)}
+
+/* phones: no double-tap zoom anywhere (fast playing on the synth looked like double taps);
+   pinch-zoom still works */
+html{touch-action:manipulation}
+.synth,.synth *{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
