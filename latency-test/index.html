@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round-trip test</title>
+<style>
+:root{--bg:#0f1011;--fg:#ececea;--muted:#8b8c91;--line:#2c2d31;--accent:#ffcc00}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.4rem;margin:0 0 4px} h2{font-size:1.05rem;margin:28px 0 6px}
+p,li{color:var(--fg)} .muted{color:var(--muted)} code{background:#1c1d20;padding:1px 5px;border-radius:4px}
+button{font:700 1rem system-ui;padding:12px 22px;border:0;border-radius:10px;background:var(--accent);color:#0f1011;cursor:pointer}
+#big{font:700 3rem ui-monospace,monospace;margin:14px 0 2px} #log{font:13px ui-monospace,monospace;color:var(--muted);white-space:pre-wrap}
+ol{padding-left:20px} a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<h1>Round-trip latency test</h1>
+<p class="muted">The same measurement for JackTrip and air.band. This page plays a click from your speakers and listens on your mic. It hears the click once straight away, then again after it has gone to the other person's computer and been sent straight back. The gap between the two is the round trip.</p>
+
+<button id="go">Start</button>
+<div id="big">– ms</div>
+<div class="muted" id="sub">round trip (median). One way ≈ half.</div>
+<div id="log"></div>
+
+<h2>Your side (the one measuring)</h2>
+<ol>
+<li>Use <b>speakers, not headphones</b>, so the mic hears the clicks. Turn the volume up a bit.</li>
+<li>Connect to the other person with the tool you're testing (below), with your mic as its input and your speakers as its output.</li>
+<li>Press <b>Start</b> here and leave it for 20 seconds. Write down the number. Then test the other tool the same way.</li>
+</ol>
+
+<h2>Test 1: JackTrip</h2>
+<p><b>Both:</b> install JackTrip (free) from <a href="https://www.jacktrip.org/" target="_blank" rel="noopener">jacktrip.org</a> or <a href="https://github.com/jacktrip/jacktrip/releases" target="_blank" rel="noopener">its GitHub releases</a>. In JackTrip's audio settings: 48 kHz, buffer 128 (or 64).</p>
+<p><b>The other person (the echo side):</b></p>
+<ol>
+<li>Open JackTrip in <b>Classic mode</b>, choose <b>Hub Server</b>, and set patching to <b>Client loopback</b>, so whatever you send them comes straight back. Press Start.</li>
+<li>On their router, forward these ports to their computer: <b>TCP 4464</b>, <b>UDP 4464</b>, and <b>UDP 61002–61012</b>. JackTrip needs this; air.band doesn't.</li>
+<li>Send you their public IP address: <b id="ip">…</b> (this page shows each person their own).</li>
+</ol>
+<p><b>You:</b> JackTrip, Classic mode, <b>Hub Client</b>, enter their IP address, connect. Then press Start here.</p>
+
+<h2>Test 2: air.band</h2>
+<p><b>Both:</b> use the desktop app 0.6.1 or newer (<a href="https://air.band" target="_blank" rel="noopener">air.band</a>), in the same room.</p>
+<p><b>The other person:</b> Connection panel (the light at the top) → tick <b>Echo test</b>.</p>
+<p><b>You:</b> Audio settings → Echo cancellation <b>off</b>. Then press Start here.</p>
+
+<h2>Reading it</h2>
+<p class="muted">The round trip is your input + network there + their buffer + network back + your output. It's the same for both tools, so the difference between the two numbers is the difference between the tools. One way is about half. Under 30 ms one way feels like the same room. UK↔Dubai is about 55 ms one way on the network alone.</p>
+</main>
+<script>
+const SR = 48000, EVERY = 1.5;   // a click every 1.5 s
+let ctx = null, results = [], timer = null;
+fetch('https://api.ipify.org?format=json').then(r => r.json()).then(j => { document.getElementById('ip').textContent = j.ip; }).catch(() => { document.getElementById('ip').textContent = '(search "what is my IP")'; });
+
+document.getElementById('go').onclick = async () => {
+  if(ctx){ ctx.close(); ctx = null; clearInterval(timer); document.getElementById('go').textContent = 'Start'; return; }
+  // ?selftest=40: no mic; the "mic" hears the click and a copy 40 ms later (checks the maths)
+  const self = +new URLSearchParams(location.search).get('selftest') || 0;
+  const stream = self ? null : await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  ctx = new AudioContext({ sampleRate: SR, latencyHint: 0 });
+  // record the mic, sample by sample, with the frame each chunk starts at
+  const src = `registerProcessor('rec', class extends AudioWorkletProcessor { process(i){ const c = i[0][0]; if(c) this.port.postMessage({ f: currentFrame, d: c.slice(0) }); return true; } });`;
+  await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  const rec = new AudioWorkletNode(ctx, 'rec', { numberOfOutputs: 0 });
+  let fake = null;
+  if(stream) ctx.createMediaStreamSource(stream).connect(rec);
+  else { fake = ctx.createGain(); fake.connect(rec); const d = ctx.createDelay(1); d.delayTime.value = self / 1000; const h = ctx.createGain(); h.gain.value = 0.5; fake.connect(d).connect(h).connect(rec); }
+  const buf = new Float32Array(SR * 30); let base = null;   // a rolling 30 s of mic
+  rec.port.onmessage = e => { if(base === null) base = e.data.f; const o = (e.data.f - base) % buf.length; buf.set(e.data.d.subarray(0, Math.min(e.data.d.length, buf.length - o)), o); };
+  const at = frame => buf[((frame - base) % buf.length + buf.length) % buf.length];
+  results = []; document.getElementById('go').textContent = 'Stop'; document.getElementById('log').textContent = '';
+  const click = t => {   // 3 ms of 3 kHz, sharp edges are what we time
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 3000; g.gain.value = 0.9;
+    o.connect(g).connect(fake || ctx.destination); o.start(t); o.stop(t + 0.003);
+  };
+  let next = ctx.currentTime + 0.5;
+  const pending = [];
+  timer = setInterval(() => {
+    while(next < ctx.currentTime + 0.2){ click(next); pending.push(next); next += EVERY; }
+    // analyse clicks once 1.2 s of mic after them is in
+    while(pending.length && base !== null && ctx.currentTime > pending[0] + 1.25){
+      const t = pending.shift(), f0 = Math.round(t * SR);
+      let noise = 0; for(let i = -4800; i < -240; i++) noise = Math.max(noise, Math.abs(at(f0 + i)));
+      let peak = 0; for(let i = 0; i < SR * 1.2; i++) peak = Math.max(peak, Math.abs(at(f0 + i)));
+      const th = Math.max(noise * 4, peak * 0.25, 0.01), onsets = [];
+      let quiet = 0;
+      for(let i = 0; i < SR * 1.2; i++){
+        const v = Math.abs(at(f0 + i));
+        if(v > th && quiet > 240){ onsets.push(i); }   // something new after 5 ms of quiet
+        quiet = v > th ? 0 : quiet + 1;
+        if(onsets.length >= 2) break;
+      }
+      const log = document.getElementById('log');
+      if(onsets.length < 2 || onsets[0] > SR * 0.2){ log.textContent = 'click ' + (results.length + 1) + ': no echo heard (louder speakers? is the other side echoing?)\n' + log.textContent; continue; }
+      const rtt = (onsets[1] - onsets[0]) / SR * 1000;
+      results.push(rtt);
+      const s = [...results].sort((a, b) => a - b), med = s[s.length >> 1];
+      document.getElementById('big').textContent = Math.round(med) + ' ms';
+      document.getElementById('sub').textContent = `round trip (median of ${results.length}). One way ≈ ${Math.round(med / 2)} ms.`;
+      log.textContent = `click ${results.length}: ${rtt.toFixed(1)} ms\n` + log.textContent;
+    }
+  }, 50);
+};
+</script>
+</body>
+</html>

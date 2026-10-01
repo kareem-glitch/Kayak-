@@ -549,6 +549,7 @@ function showHud(c){
   lines.push(row('You', mine, `<span class="hud-spark hud-note">in ${audio.inputLatencyMs()} · out ${audio.outputLatencyMs()}</span>`));
   hud.innerHTML = lines.join('');
 }
+$('#echoTest').onchange = () => room.setEcho($('#echoTest').checked);
 // testing at home: make the other devices sound as if they were across the world
 $('#farApart').checked = store.get('ss.far') === '1'; room.setFakeDelay($('#farApart').checked ? 150 : 0);
 $('#farApart').onchange = () => { store.set('ss.far', $('#farApart').checked ? '1' : '0'); room.setFakeDelay($('#farApart').checked ? 150 : 0); };

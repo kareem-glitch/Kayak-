@@ -20,7 +20,7 @@ export const context = () => ctx;
 export const direct = { onState: () => {}, onBlock: () => {} };
 export const canDirect = () => false;
 export const directInfo = async () => { throw new Error('desktop app only'); };
-export const directPeer = () => {}, directGone = () => {}, setDirectPlay = () => {}, setDirectGain = () => {}, setDirectBits = () => {};
+export const directPeer = () => {}, directGone = () => {}, setDirectPlay = () => {}, setDirectGain = () => {}, setDirectBits = () => {}, setDirectEcho = () => {};
 export async function start(stream, blockHandler){
   onBlock = blockHandler;
   // Computers: ask for the smallest audio buffer the browser allows. Phones keep

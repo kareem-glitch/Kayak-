@@ -64,6 +64,7 @@ export const directGone = id => tell({ t: 'directGone', id });
 export const setDirectPlay = on => tell({ t: 'directPlay', on });
 export const setDirectGain = (id, g) => tell({ t: 'directGain', id, g });
 export const setDirectBits = bits => tell({ t: 'directBits', bits });
+export const setDirectEcho = on => tell({ t: 'directEcho', on });
 // packets carry times on this page's clock: tell the engine how it differs from wall-clock time
 const tellClock = () => tell({ t: 'clk', off: performance.timeOrigin + performance.now() - Date.now() });
 // The air.band plugin (in your DAW) streams to the app; while it does, it's your input.

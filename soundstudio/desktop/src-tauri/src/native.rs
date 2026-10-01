@@ -209,6 +209,7 @@ impl Session {
             "directGone" => { if let Some(d) = &self.direct { d.forget(&s("id")); } return None; }
             "directPlay" => { if let Some(d) = &self.direct { d.set_play(v.get("on").and_then(|x| x.as_bool()).unwrap_or(true)); } return None; }
             "directGain" => { if let Some(d) = &self.direct { d.set_gain(&s("id"), v.get("g").and_then(|x| x.as_f64()).unwrap_or(1.0) as f32); } return None; }
+            "directEcho" => { if let Some(d) = &self.direct { d.set_echo(v.get("on").and_then(|x| x.as_bool()).unwrap_or(false)); } return None; }
             "directBits" => { if let Some(d) = &self.direct { d.set_bits(v.get("bits").and_then(|x| x.as_u64()).unwrap_or(16) as u8); } return None; }
             "clk" => { if let Some(d) = &self.direct { d.set_clock(v.get("off").and_then(|x| x.as_f64()).unwrap_or(0.0)); } return None; }
             "rec" => {

@@ -36,6 +36,8 @@ pub struct Direct {
     peers: Mutex<HashMap<String, Peer>>,
     public: Mutex<Option<SocketAddr>>, stun_tx: Mutex<([u8; 12], Option<Instant>)>,
     play: AtomicBool, bits: AtomicU8, clk_off: AtomicU64, seq: AtomicU32,
+    /// echo test (latency measurement): send each player's audio straight back, none of yours
+    echo: AtomicBool,
     sh: Arc<Shared>,
 }
 
@@ -46,7 +48,7 @@ impl Direct {
         let port = sock.local_addr()?.port();
         let token = loop { let t = random_u64(); if t != 0 { break t; } };
         let d = Arc::new(Direct { sock, token, port, peers: Mutex::new(HashMap::new()), public: Mutex::new(None), stun_tx: Mutex::new(([0; 12], None)),
-            play: AtomicBool::new(true), bits: AtomicU8::new(16), clk_off: AtomicU64::new(0f64.to_bits()), seq: AtomicU32::new(0), sh });
+            play: AtomicBool::new(true), bits: AtomicU8::new(16), clk_off: AtomicU64::new(0f64.to_bits()), seq: AtomicU32::new(0), echo: AtomicBool::new(false), sh });
         { let d = d.clone(); std::thread::spawn(move || d.receive()); }
         { let d = d.clone(); std::thread::spawn(move || d.timer()); }
         { let d = d.clone(); let blocks = d.sh.direct_rx.clone(); std::thread::spawn(move || for (planes, at) in blocks { d.send_audio(&planes, at); }); }
@@ -76,6 +78,7 @@ impl Direct {
     pub fn forget(&self, id: &str) { self.peers.lock().unwrap().remove(id); self.update_active(); }
     pub fn forget_all(&self) { self.peers.lock().unwrap().clear(); self.update_active(); }
     pub fn set_play(&self, on: bool) { self.play.store(on, Relaxed); }
+    pub fn set_echo(&self, on: bool) { self.echo.store(on, Relaxed); }
     pub fn set_bits(&self, bits: u8) { self.bits.store(if bits == 32 { 32 } else { 16 }, Relaxed); }
     pub fn set_gain(&self, id: &str, g: f32) { if let Some(p) = self.peers.lock().unwrap().get_mut(id) { p.gain = g; } }
     /// The page's clock minus wall-clock time (ms): packets carry page-clock times.
@@ -85,6 +88,7 @@ impl Direct {
 
     /// One block of your input (wall-clock ms when it was ready) to everyone reachable.
     fn send_audio(&self, planes: &[Vec<f32>], at_ms: f64) {
+        if self.echo.load(Relaxed) { return; }   // echo test: only the others' audio goes back
         let targets: Vec<SocketAddr> = self.peers.lock().unwrap().values().filter(|p| p.send_ok).filter_map(|p| p.to).collect();
         if targets.is_empty() { return; }
         let pkt = wire::encode(&Packet { kind: wire::AUDIO, token: self.token, seq: self.seq.fetch_add(1, Relaxed), time_ms: at_ms + f64::from_bits(self.clk_off.load(Relaxed)), bits: self.bits.load(Relaxed), planes: planes.to_vec() });
@@ -113,6 +117,11 @@ impl Direct {
             match p.kind {
                 wire::PROBE => { drop(peers); self.probe(wire::ANSWER, from); self.mark_reachable(&id, from); }
                 wire::ANSWER => { drop(peers); self.mark_reachable(&id, from); }
+                _ if self.echo.load(Relaxed) => {
+                    drop(peers);
+                    let back = wire::encode(&Packet { kind: wire::AUDIO, token: self.token, seq: self.seq.fetch_add(1, Relaxed), time_ms: epoch_ms() + f64::from_bits(self.clk_off.load(Relaxed)), bits: 16, planes: p.planes });
+                    let _ = self.sock.send_to(&back, from);
+                }
                 _ => {
                     // audio: fill gaps, play now (free jam), and give the page a copy
                     let gap = match peer.last_seq { Some(s) => wire::seq_delta(s, p.seq), None => 1 };
@@ -233,5 +242,20 @@ mod tests {
         blocks_a.send((vec![vec![0.5; 64]], 0.0)).unwrap();
         std::thread::sleep(Duration::from_millis(100));
         assert_eq!(shb.cmd_rx.try_iter().filter(|c| matches!(c, Cmd::Deliver(..))).count(), 2, "the lost block filled, then the real one");
+    }
+
+    #[test]
+    fn echo_test_sends_audio_straight_back() {
+        let (a, _sha, outa, blocks_a) = app();
+        let (b, _shb, _outb, _bb) = app();
+        let local = |d: &Arc<Direct>| d.candidates().into_iter().filter(|c| c.starts_with("127.")).collect::<Vec<_>>();
+        a.add_peer("bob", b.token, &local(&b)); b.add_peer("ann", a.token, &local(&a));
+        let t = Instant::now();
+        while !(a.sh.direct_active.load(Relaxed) && b.sh.direct_active.load(Relaxed)) { assert!(t.elapsed() < Duration::from_secs(3)); std::thread::sleep(Duration::from_millis(10)); }
+        b.set_echo(true);
+        for _ in 0..5 { blocks_a.send((vec![vec![0.5; 64]], 0.0)).unwrap(); }
+        std::thread::sleep(Duration::from_millis(200));
+        let back = outa.try_iter().filter(|o| matches!(o, Out::Remote { id, planes, .. } if id == "bob" && (planes[0][0] - 0.5).abs() < 0.001)).count();
+        assert_eq!(back, 5, "Ann hears her own audio back from Bob");
     }
 }

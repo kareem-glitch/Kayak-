@@ -90,7 +90,17 @@ export const gains = new Map();
 let inputGain = 1;
 export const setInputGain = g => { inputGain = g; };
 const scale = (planes, g) => { for(const pl of planes) for(let i = 0; i < pl.length; i++){ const v = pl[i] * g; pl[i] = v > 1 ? 1 : v < -1 ? -1 : v; } };
+// Echo test (latency measurement): send each player's audio straight back to
+// them, and nothing of your own, so they can time the round trip (see /latency-test).
+export let echo = false;
+export function setEcho(on){ echo = on; if(audio.setDirectEcho) audio.setDirectEcho(on); }
+function echoBack(id, p, planes){
+  if(!p.audio || p.audio.readyState !== 'open') return;
+  const n = encodePacket(pkt, { seq:seq++, timeUs:clk() * 1000, sampleRate:RATE, frames:planes[0].length, wantChannels:1, planes, bits:16 });
+  p.audio.send(pkt.subarray(0, n));
+}
 export function sendBlock(planes, capturedAt){
+  if(echo) return;   // echo test: only the others' audio goes back
   if(inputGain !== 1) scale(planes, inputGain);
   if(taps.local) taps.local(planes);
   noteLevel('me', clk(), peakOf(planes[0]));
@@ -206,6 +216,7 @@ function wireConn(c, newcomer){
     const onAudio = e => {
       if(clk() - (p.directAt || 0) < 300) return;   // their audio is arriving app to app (direct path): ignore the backup copy
       const pk = decodePacket(new Uint8Array(e.data)); if(!pk || peers.get(id) !== p) return;
+      if(echo){ echoBack(id, p, pk.planes); return; }   // echo test: straight back, not played here
       receive(id, p, pk, false, clk());
     };
     const pc = c.peerConnection;
