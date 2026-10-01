@@ -116,7 +116,7 @@ fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>, direc
     let write_half = stream.try_clone().map_err(|e| e.to_string())?;
     let mut ws = tungstenite::accept_hdr(stream, check).map_err(|e| e.to_string())?;
     *writer.lock().unwrap() = Some(WebSocket::from_raw_socket(write_half, Role::Server, None));
-    if let Some(d) = &direct { d.forget_all(); }   // a new page: its players have new ids
+    if let Some(d) = &direct { d.forget_all(); d.set_play(true); }   // a new page: its players have new ids, and it starts in a free jam
     let mut a = Session { input: None, output: None, in_name: String::new(), out_name: String::new(), in_chans: 1, channel: InputChannel::One, sh: sh.clone(), direct };
     loop {
         let msg = match ws.read() { Ok(m) => m, Err(_) => break };
