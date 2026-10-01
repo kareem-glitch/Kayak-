@@ -23,18 +23,23 @@ pub struct Player {
     playing: bool, low: f64, n: u32,
     fade: f32, last_l: f32, last_r: f32, gain: f32,
     pub under: u32, pub rate: f64, hold: u32,
+    /// size of the packets arriving (the direct app-to-app path sends 64 frames)
+    pkt: usize,
 }
 
 impl Player {
     pub fn new(limit: f64, feel: Feel) -> Self {
         Player { l: vec![0.0; RING], r: vec![0.0; RING], w: 0, rd: 0.0,
             target: feel.min.max(256.0), limit, feel, playing: false, low: f64::INFINITY, n: 0,
-            fade: 0.0, last_l: 0.0, last_r: 0.0, gain: 1.0, under: 0, rate: 1.0, hold: 0 }
+            fade: 0.0, last_l: 0.0, last_r: 0.0, gain: 1.0, under: 0, rate: 1.0, hold: 0, pkt: FRAMES }
     }
     pub fn fill(&self) -> f64 { self.w as f64 - self.rd }
+    /// The smallest target: the feel's, less what smaller packets save (a late
+    /// 64-frame packet costs half as much to cover as a 128-frame one).
+    fn floor(&self) -> f64 { self.feel.min - FRAMES.saturating_sub(self.pkt) as f64 }
     /// Append one block: mono, or left + right.
     pub fn push(&mut self, left: &[f32], right: Option<&[f32]>) {
-        let n = left.len();
+        let n = left.len(); self.pkt = n;
         if self.fill() + n as f64 > (RING - 1) as f64 { self.rd = (self.w + n as u64) as f64 - (RING - 1) as f64; }
         for i in 0..n {
             let k = (self.w as usize + i) & (RING - 1);
@@ -72,8 +77,8 @@ impl Player {
         if self.n >= WINDOW {
             let spare = self.low - self.feel.margin;
             if self.hold > 0 { self.hold -= 1; }
-            else if spare > 8.0 { self.target = self.feel.min.max(self.target - spare.min(self.feel.shrink)); }
-            else if self.target < self.feel.min { self.target = self.feel.min; }
+            else if spare > 8.0 { self.target = self.floor().max(self.target - spare.min(self.feel.shrink)); }
+            else if self.target < self.floor() { self.target = self.floor(); }
             self.target = self.target.min(self.limit);
             self.low = f64::INFINITY; self.n = 0;
         }
@@ -95,13 +100,14 @@ const _ASSERT_BLOCK: () = assert!(FRAMES == 128);
 mod tests {
     use super::*;
     // Same simulation as test/worklet.test.js: blocks of a 440 Hz tone arriving at arrive(i) render quanta.
-    fn simulate(seconds: f64, arrive: impl Fn(usize) -> f64, feel: Feel) -> (u32, u32, f64) {
+    fn simulate(seconds: f64, arrive: impl Fn(usize) -> f64, feel: Feel) -> (u32, u32, f64) { simulate_n(seconds, arrive, feel, 128) }
+    fn simulate_n(seconds: f64, arrive: impl Fn(usize) -> f64, feel: Feel, n: usize) -> (u32, u32, f64) {
         let mut p = Player::new(16.0 * 128.0, feel);
         let quanta = (seconds * 375.0) as usize; let (mut sent, mut drop, mut clicks) = (0usize, 0u32, 0u32);
         let (mut phase, mut prev) = (0f64, 0f32);
         for q in 0..quanta {
             while arrive(sent) <= q as f64 {
-                let b: Vec<f32> = (0..128).map(|_| { phase += 2.0 * std::f64::consts::PI * 440.0 / 48000.0; (0.5 * phase.sin()) as f32 }).collect();
+                let b: Vec<f32> = (0..n).map(|_| { phase += 2.0 * std::f64::consts::PI * 440.0 / 48000.0; (0.5 * phase.sin()) as f32 }).collect();
                 p.push(&b, None); sent += 1;
             }
             let (mut l, mut r) = ([0f32; 128], [0f32; 128]);
@@ -117,6 +123,13 @@ mod tests {
     #[test] fn steady_network_shrinks_to_floor_without_glitches() {
         let (d, c, ms) = simulate(40.0, |i| i as f64, BALANCED);
         assert_eq!((d, c), (0, 0)); assert!(ms <= 6.0, "{ms}");
+    }
+    #[test] fn smaller_packets_let_the_buffer_go_lower() {
+        // the direct path: 64-frame packets, two per render quantum, steady
+        let (d, c, ms) = simulate_n(40.0, |i| i as f64 / 2.0, TIGHT, 64);
+        assert_eq!((d, c), (0, 0)); assert!(ms <= 4.1, "{ms}");
+        let (_, _, ms128) = simulate(40.0, |i| i as f64, TIGHT);
+        assert!(ms128 > ms + 1.0, "128-frame packets keep the old floor ({ms128} vs {ms})");
     }
     #[test] fn jitter_is_absorbed() {
         let (d, _, ms) = simulate(30.0, jitter(5.0, 1), BALANCED);
