@@ -483,13 +483,16 @@ const signed = ms => (ms > 0 ? '+' : ms < 0 ? '−' : '±') + Math.abs(Math.roun
 const timing = ms => ms == null ? 'no claps found' : Math.abs(ms) < 5 ? 'on the beat' : ms > 0 ? 'behind the beat' : 'ahead of the beat';
 const clock = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
 if(store.get('ss.recWhat')) $('#recWhat').value = store.get('ss.recWhat');
-$('#recWhat').onchange = () => store.set('ss.recWhat', $('#recWhat').value);
+const showTracksRow = () => { $('#recTracksRow').hidden = $('#recWhat').value === 'me'; };
+$('#recWhat').onchange = () => { store.set('ss.recWhat', $('#recWhat').value); showTracksRow(); };
+$('#recTracks').checked = store.get('ss.recTracks') === '1'; showTracksRow();
+$('#recTracks').onchange = () => store.set('ss.recTracks', $('#recTracks').checked ? '1' : '0');
 async function toggleRecording(){
   const btn = $('#recBtn');
   if(!recTimer){
     btn.disabled = true;
-    try{ await recording.start($('#recWhat').value); }catch(e){ btn.disabled = false; $('#recStatus').textContent = 'Recording needs working audio on this device.'; return; }
-    btn.disabled = false; $('#recWhat').disabled = true;
+    try{ await recording.start($('#recWhat').value, $('#recTracks').checked); }catch(e){ btn.disabled = false; $('#recStatus').textContent = 'Recording needs working audio on this device.'; return; }
+    btn.disabled = false; $('#recWhat').disabled = $('#recTracks').disabled = true;
     btn.setAttribute('aria-pressed', 'true');  $('#recStatus').textContent = '0:00';
     recTimer = setInterval(() => { const t = recording.seconds(); $('#recStatus').textContent = clock(t); if(t >= recording.MAX_SECONDS) toggleRecording(); }, 250);
     return;
@@ -497,10 +500,12 @@ async function toggleRecording(){
   clearInterval(recTimer); recTimer = null; btn.disabled = true; $('#recStatus').textContent = 'Finishing…';
   try{
     const r = await recording.stop();
-    recUrls.forEach(u => URL.revokeObjectURL(u)); recUrls = [r.take.url, r.timingUrl];
+    recUrls.forEach(u => URL.revokeObjectURL(u)); recUrls = [r.take.url, r.timingUrl, r.tracksUrl].filter(Boolean);
     const el = document.createElement(r.take.video ? 'video' : 'audio'); el.controls = true; el.src = r.take.url; if(r.take.video) el.playsInline = true;
     $('#recMedia').replaceChildren(el);
-    $('#recDownload').href = r.take.url; $('#recDownload').download = 'soundstudio-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.' + r.take.ext;
+    const stamp = 'airband-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    $('#recDownload').href = r.take.url; $('#recDownload').download = stamp + '.' + r.take.ext;
+    $('#recTracksDl').hidden = !r.tracksUrl; if(r.tracksUrl){ $('#recTracksDl').href = r.tracksUrl; $('#recTracksDl').download = stamp + '-tracks.zip'; }
     $('#recDownload').textContent = r.take.video ? 'Download video' : 'Download audio';
     $('#recTiming').href = r.timingUrl; $('#recResult').hidden = false;
     const q = r.report, notes = [];
@@ -513,7 +518,7 @@ async function toggleRecording(){
     $('#recStatus').textContent = clock(r.seconds) + ' recorded';
     $('#recEmpty').hidden = true; layout.show('record');   // the take, ready to play and download
   }catch(e){ $('#recStatus').textContent = 'Recording failed: ' + (e.message || e); }
-  btn.disabled = false; $('#recWhat').disabled = false; btn.setAttribute('aria-pressed', 'false'); 
+  btn.disabled = false; $('#recWhat').disabled = $('#recTracks').disabled = false; btn.setAttribute('aria-pressed', 'false'); 
 }
 $('#recBtn').onclick = toggleRecording;
 // The latency counter: always on screen, like a game's FPS counter. One line per

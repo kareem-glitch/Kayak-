@@ -46,7 +46,7 @@ export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id)
 // capturedAt: wall-clock ms the block was captured, so receivers can measure
 // how long it really took to arrive (phone audio stacks, send queues, network).
 // Recording taps (mixrec.js): every block you send and every block you receive.
-export const taps = { local: null, remote: null, listen: null };   // listen: the AI soloist's ear (id or 'me', planes, when played)
+export const taps = { local: null, remote: null, listen: null, tracks: null };   // listen: the AI soloist's ear (id or 'me', planes, when played); tracks: separate-track recording (same)
 // "Pretend we're far apart" (testing at home): every player's audio arrives this much later, as if across the world.
 let fakeDelay = 0;
 export const setFakeDelay = ms => { fakeDelay = ms; peers.forEach(p => { p.ages = []; }); };
@@ -95,6 +95,7 @@ export function sendBlock(planes, capturedAt){
   if(taps.local) taps.local(planes);
   noteLevel('me', clk(), peakOf(planes[0]));
   if(taps.listen) taps.listen('me', planes, (capturedAt || clk()) - audio.inputLatencyMs());
+  if(taps.tracks) taps.tracks('me', planes, (capturedAt || clk()) - audio.inputLatencyMs());
   let n = 0;
   for(const p of peers.values()){
     if(!p.audio || p.audio.readyState !== 'open') continue;
@@ -170,6 +171,7 @@ function wireConn(c, newcomer){
       p.last = pk.planes;
       audio.deliver(id, pk.planes, at); if(taps.remote) taps.remote(id, pk.planes);
       if(taps.listen) taps.listen(id, pk.planes, at == null ? clk() : at);
+      if(taps.tracks) taps.tracks(id, pk.planes, at == null ? clk() + (((audio.stats.players || {})[id] || {}).bufferMs || 0) : at);   // when you heard it
       noteLevel(id, at == null ? clk() : at, peakOf(pk.planes[0]));
     };
     const pc = c.peerConnection;

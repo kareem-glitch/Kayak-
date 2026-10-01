@@ -35,6 +35,23 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     assert.ok(me.timing, 'timing file offered too');
     const all = await take('all', 4);
     assert.match(all.name, /\.(webm|m4a)$/); assert.equal(all.tag, 'AUDIO'); assert.match(all.type, /^audio\//); assert.ok(all.size > 20000, `audio file has content (${all.size})`);
+    // separate tracks: a .zip with a 24-bit WAV each for you, the other player and the band, all about as long as the take
+    await h.drawer(A, 'record'); await A.check('#recTracks');
+    await take('all', 4);
+    const zip = await A.evaluate(async () => {
+      const a = document.getElementById('recTracksDl'); if(a.hidden) return null;
+      const b = new Uint8Array(await (await fetch(a.href)).arrayBuffer()), dv = new DataView(b.buffer), files = [];
+      for(let o = 0; dv.getUint32(o, true) === 0x04034b50; ){
+        const size = dv.getUint32(o + 18, true), nl = dv.getUint16(o + 26, true), name = new TextDecoder().decode(b.slice(o + 30, o + 30 + nl)), d = o + 30 + nl;
+        files.push({ name, bits: dv.getUint16(d + 34, true), rate: dv.getUint32(d + 24, true), seconds: dv.getUint32(d + 40, true) / (dv.getUint16(d + 22, true) * 3) / dv.getUint32(d + 24, true) });
+        o = d + size;
+      }
+      return { name: a.download, files };
+    });
+    assert.ok(zip, 'tracks offered'); assert.match(zip.name, /-tracks\.zip$/);
+    assert.deepEqual(zip.files.map(f => f.name).sort(), ['Band.wav', 'Wife.wav', 'You.wav'], `one track each (${zip.files.map(f => f.name)})`);
+    zip.files.forEach(f => { assert.equal(f.bits, 24); assert.equal(f.rate, 48000); assert.ok(f.seconds > 3 && f.seconds < 5.5, `${f.name} ~4 s (${f.seconds.toFixed(2)})`); });
+    await A.uncheck('#recTracks');
     const vid = await take('video', 5);
     assert.match(vid.name, /\.(webm|mp4)$/); assert.equal(vid.tag, 'VIDEO'); assert.match(vid.label, /Download video/); assert.ok(vid.size > 50000, `video file has content (${vid.size})`);
     const dims = await A.evaluate(async () => { const v = document.querySelector('#recMedia video'); if(!v.videoWidth) await new Promise(r => v.addEventListener('loadedmetadata', r, { once:true })); return [v.videoWidth, v.videoHeight]; });
