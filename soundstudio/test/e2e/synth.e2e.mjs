@@ -3,6 +3,7 @@
 // others hear what you play on the pads (and nothing when you stop).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { startServers, sleep } from './harness.mjs';
 
 test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 90000 }, async () => {
@@ -42,6 +43,14 @@ test('pocket synth: pads in the key, heard by the room, mic muted', { timeout: 9
     await sleep(400);
     assert.ok(await B.evaluate(() => document.querySelector('.key.on') !== null), 'the key lights up');
     const loud = await walker();
+    // a "Jam + video" frame shows the synth's keys along the bottom, the one you hold lit
+    const frame = await B.evaluate(async () => {
+      const { drawFrame } = await import('/app/mixrec.js'), c = document.createElement('canvas'); c.width = 1280; c.height = 720; drawFrame(c);
+      const d = c.getContext('2d').getImageData(0, 600, 1280, 110).data; let lit = 0; for(let i = 0; i < d.length; i += 4) if(d[i] === 255 && d[i + 1] === 204 && d[i + 2] === 0) lit++;
+      window.__frame = c.toDataURL(); return lit;
+    });
+    assert.ok(frame > 2000, `the held key is lit in the recording (${frame} lit pixels)`);
+    if(process.env.SHOTS) fs.writeFileSync(process.env.SHOTS + '/rec-frame.png', Buffer.from((await B.evaluate(() => window.__frame)).split(',')[1], 'base64'));
     assert.match(await B.textContent('.synth-lat'), /^\d+ ms from your finger/, 'the delay from finger to ears is shown');
     await B.mouse.up(); await sleep(600);
     const after = await walker();

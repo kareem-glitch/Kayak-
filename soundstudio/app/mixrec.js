@@ -68,9 +68,20 @@ export function stop(){
 // One frame: every player's tile (camera or initial) in a grid, with names.
 function paint(g, c){
   g.fillStyle = '#121c1f'; g.fillRect(0, 0, c.width, c.height);
+  // your on-screen synth, if it's open: a strip of its keys along the bottom, lit as you play
+  const keys = [...document.querySelectorAll('#synthPanel:not([hidden]) .key')], strip = keys.length ? 130 : 0;
+  if(strip){
+    const kg = 6, kw = Math.min(110, (c.width - kg * (keys.length + 1)) / keys.length), x0 = (c.width - (kw + kg) * keys.length + kg) / 2, y = c.height - strip + 12, kh = strip - 24;
+    keys.forEach((k, i) => {
+      const x = x0 + i * (kw + kg), on = k.classList.contains('on');
+      g.fillStyle = on ? '#ffcc00' : k.classList.contains('root') ? '#3a3b40' : '#26272b'; g.beginPath(); g.roundRect ? g.roundRect(x, y, kw, kh, 10) : g.rect(x, y, kw, kh); g.fill();
+      g.fillStyle = on ? '#0f1011' : '#ececea'; g.font = '700 22px "Barlow", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText((k.querySelector('.nm') || {}).textContent || '', x + kw / 2, y + kh / 2);
+    });
+  }
   const tiles = [...document.querySelectorAll('#players .tile')];
   const n = Math.max(1, tiles.length), cols = n > 1 ? 2 : 1, rows = Math.ceil(n / cols), gap = 12;
-  const w = (c.width - gap * (cols + 1)) / cols, h = (c.height - gap * (rows + 1)) / rows;
+  const w = (c.width - gap * (cols + 1)) / cols, h = (c.height - strip - gap * (rows + 1)) / rows;
   tiles.forEach((t, i) => {
     const x = gap + (i % cols) * (w + gap), y = gap + Math.floor(i / cols) * (h + gap);
     g.save(); g.beginPath(); g.roundRect ? g.roundRect(x, y, w, h, 16) : g.rect(x, y, w, h); g.clip();
@@ -94,3 +105,4 @@ function paint(g, c){
   g.font = '800 20px "Geist", system-ui, sans-serif'; g.fillStyle = 'rgba(240,162,56,.9)'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
   g.fillText('air.band', c.width - 20, c.height - 16);
 }
+export const drawFrame = canvas => paint(canvas.getContext('2d'), canvas);   // tests
