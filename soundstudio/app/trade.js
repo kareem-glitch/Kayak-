@@ -75,13 +75,46 @@ const startOf = (id, prev) => {
 
 // Incoming audio: play the soloist exactly `follow` ms after they played it
 // (on the beat, since this band runs that much behind theirs); drop everyone else.
-room.setRoute((id, capturedAt, p) => {
+// Handovers are smooth: the outgoing soloist fades over the first beat of the next
+// turn (their last notes ring), the incoming one fades in over the half beat
+// before their turn (pickup notes come through).
+const gainIn = (id, played, start) => {
+  if(start == null) return 0;
+  const seg = turnMs(), beat = beatMs(), pos = played - start; if(pos < 0) return 0;
+  const k = Math.floor(pos / seg), into = pos - k * seg;
+  if(leaderOf(k) === id) return 1;
+  if(leaderOf(k - 1) === id && into < beat) return 1 - into / beat;
+  if(leaderOf(k + 1) === id && seg - into < beat / 2) return 1 - (seg - into) / (beat / 2);
+  return 0;
+};
+room.setRoute((id, capturedAt, p, planes) => {
   if(!active() || capturedAt == null) return undefined;
   const d = follow.get(id); if(d == null) return null;
-  const played = capturedAt - (p.inMs || 0), seg = turnMs();
-  const theirs = (start, tail) => { if(start == null) return false; const pos = played - start, k = Math.floor(pos / seg); return pos >= 0 && leaderOf(k) === id || (tail && pos >= 0 && leaderOf(k - 1) === id && pos - k * seg < beatMs()); };
-  return theirs(startOf(id), true) || theirs(startOf(id, true), true) ? played + d : null;   // their last notes may ring a beat past the handover
+  const played = capturedAt - (p.inMs || 0), n = planes ? planes[0].length : 128, blockMs = n / 48;
+  const g = t => Math.max(gainIn(id, t, startOf(id)), gainIn(id, t, startOf(id, true)));
+  const g0 = g(played), g1 = g(played + blockMs);
+  if(g0 <= 0 && g1 <= 0) return null;
+  if(planes && (g0 < 1 || g1 < 1)) for(const pl of planes) for(let i = 0; i < n; i++) pl[i] *= g0 + (g1 - g0) * i / n;
+  return played + d;
 });
+
+// A soloist who drops out (left, or no audio arriving for a second and a half)
+// mid-turn: the AI band takes the rest of the turn from the next bar line, so
+// the groove never stops. Each device decides for itself what it can't hear.
+let filling = null;
+function fillDropped(k, lead, st){
+  if(lead === me.id || lead === AI){ return; }
+  const p = room.peers.get(lead), now = clk();
+  if(p){ if(p.recv !== p.recvSeen){ p.recvSeen = p.recv; p.recvAt = now; } }
+  const silent = !p || now - (p.recvAt || now) > 1500;
+  if(filling && filling.k === k){ if(!silent){ soloist.stop(); filling = null; } return; }   // they're back: hand it back
+  if(!silent || (filling && filling.k === k)) return;
+  const bar = 4 * beatMs(), turnStart = st.zero + k * turnMs(), barsDone = Math.ceil((now + 150 - turnStart) / bar);
+  const left = S.game.bars - barsDone; if(left < 1) return;
+  filling = { k };
+  soloist.play({ startMs: turnStart + barsDone * bar, bars: left, sixteenthMs: beatMs() / 4, seed: seedOf(k) });
+}
+export const fillingTurn = () => filling && filling.k;
 
 // The AI soloist's ear: the audio of whoever's turn it is, placed on this band's 16th-note grid.
 room.taps.listen = (id, planes, when) => {
@@ -104,6 +137,8 @@ function tick(){
   // or the game just changed): line up now, or the soloist isn't heard for the whole turn
   if(cur >= 0 && prepared.k < cur){ prepared.k = cur; prepare(cur, cur * seg); }
   if(st.zero + k * seg - now < AHEAD && prepared.k < k){ prepared.k = k; prepare(k, k * seg); }
+  if(trading() && cur >= 0) fillDropped(cur, leaderOf(cur), st);
+  if(filling && (!trading() || cur !== filling.k)) filling = null;
   const t = info(); onLeader(t.leader || null);
   hooks.onTurn(t);
 }
@@ -140,7 +175,7 @@ export function info(){
   const count = leaderOf(next) === me.id && untilNext <= 4 * beatMs() ? Math.ceil(untilNext / beatMs()) : 0;
   const progress = pos < 0 ? 0 : (pos - k * seg) / seg;   // how far through this turn (the turn bar's lights)
   return { mode: 'trade', bars: S.game.bars, leader: pos < 0 ? null : leaderOf(k), next: leaderOf(next), mine: pos >= 0 && leaderOf(k) === me.id, count, nameOf,
-    progress, bar: pos < 0 ? 0 : Math.floor(progress * S.game.bars) + 1 };
+    progress, bar: pos < 0 ? 0 : Math.floor(progress * S.game.bars) + 1, covering: !!filling && filling.k === k };
 }
 
 export function start(){

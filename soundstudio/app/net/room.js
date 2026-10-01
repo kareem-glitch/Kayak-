@@ -159,7 +159,7 @@ function wireConn(c, newcomer){
         else if(age > p.maxes[p.maxes.length - 1]) p.maxes[p.maxes.length - 1] = age;
       }
       p.lastSeq = pk.seq; p.recv++; p.format = `${pk.planes.length}ch/${pk.bits}bit`;
-      const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p);
+      const at = route(id, p.samples.length ? pk.timeUs / 1000 - p.offset : null, p, pk.planes);
       if(at === null){ p.muted = (p.muted || 0) + 1; p.last = null; return; }
       const g = gains.get(id); if(g != null && g !== 1) scale(pk.planes, g);
       // with `at` (BARS, far apart) each fill goes exactly where the lost block would have played

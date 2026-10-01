@@ -213,7 +213,7 @@ export function showTurn(t){
     next.textContent = S.playing ? '' : !S.arr ? 'Pick a track' : trade ? 'Starts with the band' : 'Press play';
     return;
   }
-  line.textContent = t.mine ? `Your ${t.bars} bars` : t.leader ? `${t.nameOf(t.leader)} is on` : `BARS ${t.bars}`;
+  line.textContent = t.mine ? `Your ${t.bars} bars` : t.covering ? `${t.nameOf(t.leader)} dropped: the band covers` : t.leader ? `${t.nameOf(t.leader)} is on` : `BARS ${t.bars}`;
   next.textContent = t.next && t.next !== t.leader ? 'next: ' + (t.next === me.id ? 'you' : t.nameOf(t.next)) : '';
   bar.classList.toggle('countdown', !!t.count);
   if(t.count){ count.textContent = String(t.count); of.textContent = ''; }   // your turn is coming: 4, 3, 2, 1
