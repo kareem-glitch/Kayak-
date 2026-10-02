@@ -1,6 +1,6 @@
 [package]
 name = "soundstudio"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 description = "air.band desktop: the jam room with native, low-latency audio"
 publish = false
@@ -10,6 +10,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+tauri-plugin-updater = "2"
 cpal = "0.16"
 crossbeam-channel = "0.5"
 tungstenite = "0.24"

@@ -11,13 +11,13 @@ export let NATIVE, RATE, FRAMES, BLOCK_MS, micOptions, isPhone, stats, context, 
   deliver, forget, setFeel, setBufferLimit, connectMic, setInputChannel, useInput, currentInputId, setMicEnabled, micEnabled,
   canChooseOutput, useOutput, listDevices, inputLatencyMs, inputSampleRate, echoCancelling, outputLatencyMs,
   canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip, alive,
-  direct, canDirect, directInfo, directPeer, directGone, setDirectPlay, setDirectGain, setDirectBits, setDirectEcho;
+  direct, canDirect, directInfo, directPeer, directGone, setDirectPlay, setDirectGain, setDirectBits, setDirectEcho, installUpdate;
 function bind(x){
   ({ NATIVE, RATE, FRAMES, BLOCK_MS, micOptions, isPhone, stats, context, start, startRecording, stopRecording, recordedSeconds,
     deliver, forget, setFeel, setBufferLimit, connectMic, setInputChannel, useInput, currentInputId, setMicEnabled, micEnabled,
     canChooseOutput, useOutput, listDevices, inputLatencyMs, inputSampleRate, echoCancelling, outputLatencyMs,
     canTone, setTone, setToneEq, canPlugin, pluginLive, installPlugin, canSynth, synthPorts, measureRoundTrip,
-    direct, canDirect, directInfo, directPeer, directGone, setDirectPlay, setDirectGain, setDirectBits, setDirectEcho } = x);
+    direct, canDirect, directInfo, directPeer, directGone, setDirectPlay, setDirectGain, setDirectBits, setDirectEcho, installUpdate } = x);
   alive = x.alive || (async () => '');
 }
 bind(m);

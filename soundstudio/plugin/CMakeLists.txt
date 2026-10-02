@@ -3,7 +3,7 @@
 # computer, which uses it as your input (desktop/src-tauri/src/plugin.rs).
 # Builds AU + VST3 on Mac and VST3 on Windows (and Linux, for tests).
 cmake_minimum_required(VERSION 3.22)
-project(AirBandSend VERSION 0.6.0 LANGUAGES C CXX)
+project(AirBandSend VERSION 0.6.1 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 
 include(FetchContent)

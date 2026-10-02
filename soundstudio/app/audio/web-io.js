@@ -78,6 +78,7 @@ function epochToFrame(t){
 // Audio from another player: one block of planes ([mono] or [mono, L, R]).
 // at (far-apart mode): wall-clock ms it should leave your speakers; otherwise as soon as it can.
 export function deliver(id, planes, at){ if(!node) return; if(at == null) node.port.postMessage({ id, planes }); else node.port.postMessage({ id, planes, at: epochToFrame(at) }); }
+export const installUpdate = async () => {};
 export function forget(id){ node && node.port.postMessage({ gone:id }); }
 // Upper limit for each player's adaptive buffer, in 128-frame blocks.
 // Feel: 'live' | 'tight' | 'balanced' | 'smooth' (see FEELS in worklet.js).

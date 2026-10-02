@@ -196,6 +196,7 @@ impl Session {
                 let list = |d: Vec<(String, u16)>| d.into_iter().map(|(n, c)| json!({ "id": n, "label": n, "channels": c })).collect::<Vec<_>>();
                 Ok(json!({ "ok": true, "inputs": list(ins), "outputs": list(outs) }))
             }
+            "update" => crate::update::install_now().map(|_| json!({ "ok": true })),
             "installPlugin" => crate::plugin::install().map(|paths| json!({ "ok": true, "paths": paths })),
             "mic" => { self.sh.set_mic(v.get("on").and_then(|x| x.as_bool()).unwrap_or(true)); return None; }
             "limit" => { let n = v.get("samples").and_then(|x| x.as_f64()).unwrap_or(1024.0); *self.sh.limit.lock().unwrap() = n; let _ = self.sh.cmd_tx.send(Cmd::Limit(n)); return None; }
@@ -271,7 +272,7 @@ fn hub(rx: crossbeam_channel::Receiver<Out>, writer: Writer, sh: Arc<Shared>) {
             last_stats = Instant::now();
             let st = sh.stats.lock().unwrap().clone();
             let players: serde_json::Map<String, Value> = st.players.iter().map(|p| (p.id.clone(), json!({ "bufferMs": (p.buffer_ms * 10.0).round() / 10.0, "rate": p.rate, "under": p.under, "late": p.late }))).collect();
-            send(Message::Text(json!({ "t": "stats", "under": st.under, "players": players, "peak": sh.take_peak(), "inLat": sh.in_lat(), "outLat": sh.out_lat(), "plugin": sh.plugin_live.load(std::sync::atomic::Ordering::Relaxed) }).to_string().into()));
+            send(Message::Text(json!({ "t": "stats", "under": st.under, "players": players, "peak": sh.take_peak(), "inLat": sh.in_lat(), "outLat": sh.out_lat(), "plugin": sh.plugin_live.load(std::sync::atomic::Ordering::Relaxed), "update": crate::update::ready() }).to_string().into()));
         }
     }
 }

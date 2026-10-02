@@ -72,6 +72,17 @@ jobs:
       - run: npm ci
       - run: npm run web
       - run: npx tauri build ${{ matrix.args }}
+      # auto-update (src-tauri/src/update.rs): the Mac app as a tarball; Windows updates with the installer itself.
+      # Both are signed with the release key when published (not here: the key isn't in CI).
+      - name: 'Mac: the app as a tarball for auto-update'
+        if: runner.os == 'macOS'
+        run: tar -czf src-tauri/target/universal-apple-darwin/release/bundle/air.band.app.tar.gz -C src-tauri/target/universal-apple-darwin/release/bundle/macos air.band.app
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'macOS'
+        with:
+          name: air.band-Mac-update
+          path: soundstudio/desktop/src-tauri/target/universal-apple-darwin/release/bundle/air.band.app.tar.gz
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}

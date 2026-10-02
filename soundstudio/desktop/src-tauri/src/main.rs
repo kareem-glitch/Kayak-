@@ -8,15 +8,18 @@ mod audio;
 mod native;
 mod plugin;
 mod direct;
+mod update;
 
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri::{RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 pub const SITE: &str = "https://air.band/";
 
 fn main() {
     let (port, token) = native::serve().expect("couldn't start the local audio link");
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
+            update::start(app.handle().clone());
             // the live site, served through the app's local server (see native.rs)
             let url = WebviewUrl::External(format!("http://127.0.0.1:{port}/").parse().expect("bad local URL"));
             WebviewWindowBuilder::new(app, "main", url)
@@ -27,6 +30,7 @@ fn main() {
                 .build()?;
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running air.band");
+        .build(tauri::generate_context!())
+        .expect("error while running air.band")
+        .run(|_, event| { if let RunEvent::Exit = event { update::install_on_quit(); } });
 }

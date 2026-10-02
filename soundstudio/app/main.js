@@ -348,10 +348,20 @@ if(store.get('ss.inCh')) $('#inCh').value = $('#scCh').value = store.get('ss.inC
 
 // ---- controls ----
 // The desktop app loads this site, so only its native audio engine can be out of date.
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.6.1';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/air.band-${APP_VERSION}-Mac.zip` : `/download/air.band-${APP_VERSION}-Windows-setup.exe`;
-if(audio.IN_APP && older(window.__SS_NATIVE.version, APP_VERSION)) $('#appNote').innerHTML = `A new version of the app is available. <a href="https://air.band${dl()}">Download it</a> and reinstall.`;
+// From 0.6.1 the app updates itself; older ones need one download.
+if(audio.IN_APP && older(window.__SS_NATIVE.version, '0.6.1')) $('#appNote').innerHTML = `A new version of the app is available, and from this one on it updates itself. <a href="https://air.band${dl()}">Download it</a> and reinstall.`;
+// The app downloaded a newer version in the background: offer to restart now (else it installs when you quit).
+let updateShown = false;
+setInterval(() => {
+  const v = audio.IN_APP && audio.stats.update; if(!v || updateShown) return;
+  updateShown = true;
+  const restart = () => audio.installUpdate().catch(e => ui.notice('Couldn’t install the update: ' + (e.message || e)));
+  if($('#roomView').hidden){ $('#appNote').innerHTML = `air.band ${esc(v)} is ready. <button type="button" class="linkbtn" id="updateNow">Restart now</button> or it installs when you quit.`; $('#updateNow').onclick = restart; }
+  else ui.notice(`air.band ${v} is ready. It installs when you quit the app.`, { action: { label: 'Restart now', run: restart }, key: 'update' });
+}, 2000);
 if(!audio.IN_APP && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/air.band-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/air.band-${APP_VERSION}-Windows-setup.exe">Windows</a><br>Play through your DAW with the air.band Send plugin (works with the app): <a href="/download/airband-send-${APP_VERSION}-Mac.zip">Mac AU/VST3</a> · <a href="/download/airband-send-${APP_VERSION}-Windows.zip">Windows VST3</a>`;
 if(audio.IN_APP){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';

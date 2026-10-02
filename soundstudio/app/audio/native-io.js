@@ -28,7 +28,7 @@ function onMessage(e){
   if(typeof e.data === 'string'){
     const m = JSON.parse(e.data);
     if(m.t === 'direct'){ direct.onState(m.id, m.send, m.recv); return; }
-    if(m.t === 'stats'){ statsSeen++; stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; stats.plugin = !!m.plugin; inLat = m.inLat; outLat = m.outLat; }
+    if(m.t === 'stats'){ statsSeen++; stats.under = m.under; stats.players = m.players; stats.inPeak = m.peak; stats.plugin = !!m.plugin; stats.update = m.update || null; inLat = m.inLat; outLat = m.outLat; }
     else if(m.q && replies.has(m.q)){ replies.get(m.q).res(m); replies.delete(m.q); }
     return;
   }
@@ -135,6 +135,8 @@ function send(id, planes){
   ws.send(b);
 }
 export const forget = id => tell({ t: 'gone', id });
+// Auto-update (app 0.6.1+): a newer version downloaded (stats.update); install it and restart now.
+export const installUpdate = () => request({ t: 'update' });
 export const setFeel = name => tell({ t: 'feel', name });
 export const setBufferLimit = blocks => tell({ t: 'limit', samples: blocks * FRAMES });
 export const connectMic = () => inChannels;
