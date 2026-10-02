@@ -3,6 +3,8 @@
 import { clamp } from '../util.js';
 
 export const NAMES = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+// Transpose note names in a key or chord name ("E minor", "Am7", "D/F#") by t semitones.
+export const transposeName = (s, t) => !t ? s : String(s).replace(/(^|[\s/(])([A-G][#b]?)/g, (m, pre, n) => pre + NAMES[(pcOf(n) + t % 12 + 12) % 12]);
 export function pcOf(s){ const b={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[s[0].toUpperCase()]; if(b===undefined) return null; let v=b; if(s[1]==='#') v++; else if(s[1]==='b') v--; return (v+12)%12; }
 export const QUAL = {'':[0,4,7],maj:[0,4,7],M:[0,4,7],m:[0,3,7],min:[0,3,7],'-':[0,3,7],'5':[0,7],'6':[0,4,7,9],m6:[0,3,7,9],'7':[0,4,7,10],maj7:[0,4,7,11],M7:[0,4,7,11],m7:[0,3,7,10],min7:[0,3,7,10],'-7':[0,3,7,10],m7b5:[0,3,6,10],dim:[0,3,6],dim7:[0,3,6,9],aug:[0,4,8],sus2:[0,2,7],sus4:[0,5,7],sus:[0,5,7],'7sus4':[0,5,7,10],'9':[0,4,7,10,14],m9:[0,3,7,10,14],maj9:[0,4,7,11,14],add9:[0,4,7,14],'11':[0,4,7,10,14,17],m11:[0,3,7,10,14,17],'13':[0,4,7,10,14,21],mmaj7:[0,3,7,11]};
 export function parseChord(name){

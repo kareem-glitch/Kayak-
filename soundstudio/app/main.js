@@ -525,6 +525,16 @@ $('#keepAI').onchange = () => { if(me.isHost) session.setGame({ ai: $('#keepAI')
 document.querySelectorAll('[data-game]').forEach(b => b.onclick = () => { if(!me.isHost) return; const g = b.dataset.game; session.setGame(g === 'free' ? { mode:'free' } : { mode:'trade', bars:+g }); });
 $('#playBtn').onclick = () => S.playing ? session.stopBand() : session.startBand($('#countIn').checked);
 $('#clickAll').onchange = () => { band.options.click = $('#clickAll').checked; };
+// Tap the band display: key (transpose) and tempo. Quick taps are gathered up, then applied once.
+$('#bandTile').addEventListener('click', e => { if(e.target.closest('#lcdPop') || !S.arr) return; $('#lcdPop').hidden = !$('#lcdPop').hidden; ui.showPop(); });
+let wantTr = null, wantBpm = null, stepT = null;
+const applySteps = () => { if(wantTr !== null && wantTr !== (S.arr.transpose || 0)) session.setTranspose(wantTr); if(wantBpm !== null && wantBpm !== S.arr.bpm) session.setTempo(wantBpm); wantTr = wantBpm = null; };
+document.querySelectorAll('#lcdPop [data-tr], #lcdPop [data-bpm]').forEach(b => b.onclick = () => {
+  if(!S.arr || !me.isHost) return;
+  if(b.dataset.tr){ wantTr = clamp((wantTr ?? (S.arr.transpose || 0)) + +b.dataset.tr, -12, 12); $('#popKey').textContent = ui.keyLabel(wantTr); }
+  else { wantBpm = clamp((wantBpm ?? S.arr.bpm) + +b.dataset.bpm, 50, 200); $('#popBpm').textContent = wantBpm; }
+  clearTimeout(stepT); stepT = setTimeout(applySteps, 500);
+});
 $('#bpm').addEventListener('change', () => session.setTempo(clamp(Math.round(+$('#bpm').value || S.arr.bpm), 50, 200)));
 // Latency first, always: the smallest buffer that stays glitch-free to the ear.
 // Laptops get the tight setting; phones (jumpier audio timing) a little more room.

@@ -96,6 +96,11 @@ window.__audioContexts = [];
         <div class="lcd" id="bandTile">
           <div class="label" id="bandTileTitle">The band is waiting for someone to run it</div>
           <div class="lcd-row"><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span><span class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></span></div>
+          <div class="lcd-pop" id="lcdPop" hidden>
+            <div class="lcd-step"><span>Key</span><button type="button" data-tr="-1" aria-label="Transpose down a semitone">−</button><b id="popKey"></b><button type="button" data-tr="1" aria-label="Transpose up a semitone">+</button></div>
+            <div class="lcd-step"><span>Tempo</span><button type="button" data-bpm="-1" aria-label="Slower">−</button><b id="popBpm"></b><button type="button" data-bpm="1" aria-label="Faster">+</button></div>
+            <p class="lcd-note" id="popNote"></p>
+          </div>
         </div>
         <div class="turn-bar" id="turnBar" aria-live="polite">
           <div class="turn-main"><span class="turn-label" id="turnLine">Free jam</span><span class="leds" id="leds" aria-hidden="true"></span></div>

@@ -409,3 +409,12 @@ html{touch-action:manipulation}
 .sc-label{display:block;margin:14px 0 6px}
 .sc-amps{grid-template-columns:repeat(3,1fr);background:var(--surface)}
 .sc-amps.one{grid-template-columns:1fr}
+/* tap the band display: key and tempo */
+#bandTile{cursor:pointer;position:relative}
+.lcd-pop{display:grid;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12);cursor:default}
+.lcd-step{display:grid;grid-template-columns:64px 40px 1fr 40px;align-items:center;gap:8px;font:600 .72rem/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#9a9ba0}
+.lcd-step b{font:600 1.15rem/1 var(--mono);letter-spacing:.04em;color:#ececea;text-align:center;text-transform:none}
+.lcd-step button{height:36px;border-radius:9px;border:1px solid #2c2d31;background:#1c1d20;color:#ececea;font:700 1.2rem/1 var(--mono);cursor:pointer;touch-action:manipulation}
+.lcd-step button:not(:disabled):active{background:var(--amber);color:var(--amber-ink)}
+.lcd-step button:disabled{opacity:.35;cursor:default}
+.lcd-note{margin:0;font-size:.72rem;color:#8b8c91}

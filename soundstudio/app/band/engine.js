@@ -34,7 +34,7 @@ function buildEngine(){
   setTimeout(() => { applyBandVolume(); applyMutes(); });
   return e;
 }
-const mf = m => Tone.Frequency(m,'midi').toFrequency();
+const mf = m => Tone.Frequency(m + ((S.arr && S.arr.transpose) || 0),'midi').toFrequency();   // transposed (drums don't go through here)
 const chordAt = bar => S.arr.chords[S.arr.barMap[((bar%S.arr.barMap.length)+S.arr.barMap.length)%S.arr.barMap.length]];
 const hit = (pat,step) => { const c=pat&&pat[step]; return c==='X'?1:c==='x'?.72:c==='o'?.32:0; };
 const bassRoot = pc => 28+((pc-4+12)%12);

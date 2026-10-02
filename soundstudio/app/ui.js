@@ -3,7 +3,7 @@
 // band panel, part meters, device pickers and the connection panel.
 import { $, clamp } from './util.js';
 import { S, me } from './state.js';
-import { STYLES, DESC } from './band/theory.js';
+import { STYLES, DESC, transposeName } from './band/theory.js';
 import * as band from './band/engine.js';
 import * as session from './session.js';
 import { PAD } from './avatar-colors.js';
@@ -109,9 +109,20 @@ export function showBeat(m){
   $('#countNum').textContent = m.count ? String(m.count) : '';
   const idx = m.chord;
   document.querySelectorAll('#chords li').forEach((el, i) => el.classList.toggle('now', i === idx));
-  $('#nowChord').textContent = (idx !== undefined && S.arr && S.arr.chords[idx]) ? S.arr.chords[idx].name : bandFace();
+  $('#nowChord').textContent = (idx !== undefined && S.arr && S.arr.chords[idx]) ? transposeName(S.arr.chords[idx].name, S.arr.transpose || 0) : bandFace();
 }
 // Recorded tracks have no chord chart: the band tile shows the key and tempo instead.
+// The band display's key and tempo, changeable by whoever runs the band (tap the display)
+export const keyLabel = t => { const a = S.arr, base = a.baseKey || a.key; return shortKey(transposeName(base, t)) + (t ? ` (${t > 0 ? '+' : ''}${t})` : ''); };
+export function showPop(){
+  const a = S.arr; if(!a) { $('#lcdPop').hidden = true; return; }
+  const t = a.transpose || 0;
+  $('#popKey').textContent = keyLabel(t);
+  $('#popBpm').textContent = a.bpm;
+  const host = S.hostId === me.id;
+  document.querySelectorAll('#lcdPop button').forEach(b => { b.disabled = !host || a.engine === 'lyria'; });
+  $('#popNote').textContent = !host ? `${S.hostName || 'Whoever runs the band'} can change these.` : a.engine === 'lyria' ? 'The live AI band can’t be transposed or re-timed.' : 'Drums keep their pitch. Everyone hears the change.';
+}
 const shortKey = k => String(k || '').replace(/\s*major$/i, '').replace(/\s*minor$/i, 'm');
 const bandFace = () => S.arr && S.arr.engine !== 'tone' && (!S.arr.chords || !S.arr.chords.length) ? `${shortKey(S.arr.key)} · ${S.arr.bpm}` : '';
 const styleLabel = st => (STYLES[st] && STYLES[st].label) || String(st || '').replace(/^\w/, c => c.toUpperCase());
@@ -144,7 +155,7 @@ export function render(){
   const ol = $('#chords'); ol.innerHTML = '';
   if(a && (!a.engine || a.engine === 'tone')) a.chords.forEach(c => { const li = document.createElement('li'); li.textContent = c.name + (c.bars > 1 ? ' ×' + c.bars : ''); ol.appendChild(li); });
   if(a && hostHere) $('#bpm').value = a.bpm;
-  $('#bpm').disabled = !!(a && a.engine === 'stems');   // recorded parts keep their tempo
+  showPop();
   $('#countIn').closest('label').hidden = !!(a && a.engine && a.engine !== 'tone');
   $('#playIcon').innerHTML = S.playing ? '<rect x="6" y="6" width="12" height="12" rx="1.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
   $('#playBtn').setAttribute('aria-label', S.playing ? 'Stop' : 'Play');

@@ -38,9 +38,36 @@ async function decodeAll(id, bpm, files, data){
   const total = Object.values(buffers).reduce((a, b) => a + energy(b), 0) || 1;
   for(const name of Object.keys(buffers)) if(energy(buffers[name]) / total < 0.003) delete buffers[name];
   const wasPlaying = start;
-  stopSources(); current = { id, bpm, buffers, data }; gains = {};
+  stopSources(); current = { id, bpm, buffers, data, orig: buffers, origBpm: bpm, semis: 0 }; gains = {};
   if(wasPlaying !== null) schedule();
   applySeats(); hooks.onReady(id);
+  if(S.arr && S.arr.engine === 'stems') match(S.arr.bpm, S.arr.transpose || 0);
+}
+
+// Tempo and transpose: the parts re-made from the originals in a worker (pitch and
+// speed independent; drums only change speed), then swapped in on the same timing.
+let worker = null, job = 0;
+const UNPITCHED = new Set(['drums']);
+export async function match(bpm, semis){
+  if(!current || (current.bpm === bpm && current.semis === semis)) return;
+  const mine = ++job, cur = current, tempo = bpm / cur.origBpm, cx = ctx();
+  if(!worker) worker = new Worker(new URL('./stretch-worker.js', import.meta.url));
+  const run = (name, buf) => new Promise(res => {
+    const id = mine + ':' + name, chans = [];
+    for(let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c).slice());
+    const on = e => { if(e.data.id !== id) return; worker.removeEventListener('message', on); res(e.data.channels); };
+    worker.addEventListener('message', on);
+    worker.postMessage({ id, channels: chans, tempo, semis: UNPITCHED.has(name) ? 0 : semis }, chans.map(c => c.buffer));
+  });
+  const out = {};
+  for(const [name, buf] of Object.entries(cur.orig)){
+    if(tempo === 1 && (semis === 0 || UNPITCHED.has(name))){ out[name] = buf; continue; }
+    const chans = await run(name, buf); if(mine !== job || current !== cur) return;
+    const b = cx.createBuffer(chans.length, chans[0].length, buf.sampleRate); chans.forEach((d, c) => b.copyToChannel(d, c)); out[name] = b;
+  }
+  if(mine !== job || current !== cur) return;
+  cur.buffers = out; cur.bpm = bpm; cur.semis = semis;
+  if(start !== null){ stopSources(); schedule(); }   // carry on from the same place, now changed
 }
 
 // A stock track from the site.
@@ -105,7 +132,7 @@ export function shiftAt(boundaryPos, newStart){
 function stopSources(){ sources.forEach(s => { try{ s.stop(); }catch(e){} }); sources = []; }
 
 // Start: position 0 of the loop sounds at wall-clock atLocal (ms) on this device.
-export function playAt(atLocal){ stopSources(); start = atLocal; schedule(); }
+export function playAt(atLocal){ stopSources(); start = atLocal; schedule(); if(S.arr) match(S.arr.bpm, S.arr.transpose || 0); }
 export function stop(){ stopSources(); start = null; }
 export const playing = () => start !== null && sources.length > 0;
 
@@ -122,3 +149,12 @@ export function applySeats(){
 }
 export const gainOf = name => gains[name] ? gains[name].gain.value : null;   // for tests
 export function setVolume(db){ volumeDb = db; if(master) master.gain.value = db === -Infinity ? 0 : Math.pow(10, db / 20); }
+
+// tests: each part's length and zero crossings (a pitch measure), and where tempo/transpose stand
+export function debug(){
+  if(!current) return null;
+  const zc = b => { const d = b.getChannelData(0); let n = 0; for(let i = 1; i < d.length; i++) if((d[i - 1] < 0) !== (d[i] < 0) && Math.abs(d[i] - d[i - 1]) > 1e-4) n++; return n; };
+  const o = { bpm: current.bpm, semis: current.semis, lengths: {}, zc: {} };
+  for(const [n, b] of Object.entries(current.buffers)){ o.lengths[n] = b.length; o.zc[n] = zc(b); o[n] = { len: b.length, zc: zc(b) }; }
+  return o;
+}
