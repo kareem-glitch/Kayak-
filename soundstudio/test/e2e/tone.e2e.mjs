@@ -11,7 +11,7 @@ test('built-in tones: each amp has its own character, chorus and reverb work, th
   try{
     const A = await h.page('Player');
     await A.goto(h.base);
-    const labels = await A.$$eval('[data-tone]', bs => bs.map(b => b.textContent));
+    const labels = await A.$$eval('#toneBox [data-tone]', bs => bs.map(b => b.textContent));
     assert.deepEqual(labels, ['Off (DI)', 'Clean', 'Warm', 'Crunch', 'Lead', 'Bass']);
 
     // each amp through the full chain, played softly (-30 dBFS) and firmly (-12 dBFS)
@@ -55,12 +55,12 @@ test('built-in tones: each amp has its own character, chorus and reverb work, th
     // in a room: pick Crunch; your (fake) mic still reaches the jam through the amp
     await A.fill('#nameInput', 'Player'); await A.click('#joinBtn');
     await A.waitForSelector('#roomView:not([hidden])');
-    await h.drawer(A, 'tone'); await A.click('[data-tone="crunch"]');
+    await h.drawer(A, 'tone'); await A.click('#toneBox [data-tone="crunch"]');
     await A.waitForFunction(() => /direct monitoring/.test(document.getElementById('toneNote').textContent), null, { timeout: 20000 });
     await sleep(1500);
     assert.ok(await A.evaluate(() => window.jamStats.inPeak) > 0.001, 'your signal flows through the tone');
     assert.equal(await A.evaluate(() => document.getElementById('eqBox').hidden), false, 'EQ shows for a tone');
-    await A.click('[data-tone="off"]'); await sleep(300);
+    await A.click('#toneBox [data-tone="off"]'); await sleep(300);
     assert.equal(await A.evaluate(() => document.getElementById('eqBox').hidden), true, 'no EQ for Off (DI)');
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }

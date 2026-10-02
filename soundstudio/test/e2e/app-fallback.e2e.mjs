@@ -63,3 +63,37 @@ test('desktop app: a working engine stays native', { timeout: 60000 }, async () 
     assert.deepEqual(h.errors, []);
   } finally { wss.close(); await h.close(); }
 });
+
+test('desktop app: the sound check runs on the app engine, and Join keeps it', { timeout: 60000 }, async () => {
+  const h = await startServers();
+  const wss = new WebSocketServer({ port: 0, host: '127.0.0.1' });
+  let starts = 0, monitor = 0;
+  wss.on('connection', ws => {
+    ws.on('message', (d, bin) => {
+      if(bin){ if(d[0] === 3 && String(d.subarray(3, 3 + d[1])) === 'monitor') monitor++; return; }
+      const m = JSON.parse(String(d)); if(m.t === 'start') starts++;
+      if(m.q) ws.send(JSON.stringify({ q: m.q, ok: true, input: 'Mic', inChannels: 2, inputs: [{ id: 'iface', label: 'ZOOM AMS' }], outputs: [{ id: 'iface', label: 'ZOOM AMS' }] }));
+    });
+    const block = Buffer.alloc(16 + 128 * 4); block[0] = 1; block[1] = 1;
+    for(let i = 0; i < 128; i++) block.writeFloatLE(0.2 * Math.sin(i / 4), 16 + i * 4);
+    const b = setInterval(() => { block.writeDoubleLE(Date.now(), 8); ws.send(block); }, 3);
+    const t = setInterval(() => ws.send(JSON.stringify({ t: 'stats', under: 0, players: {}, peak: 0.2, inLat: 3, outLat: 6 })), 100);
+    ws.on('close', () => { clearInterval(t); clearInterval(b); });
+  });
+  await new Promise(r => wss.on('listening', r));
+  try{
+    const A = await h.page('Host'); await pretendApp(A, wss.address().port);
+    await A.goto(h.base); await A.click('#scStart');
+    await A.waitForSelector('#scBody:not([hidden])', { timeout: 15000 });
+    assert.ok((await A.textContent('#scIn')).includes('ZOOM AMS'), 'the interface is listed');
+    await A.waitForFunction(() => /We hear you/.test(document.getElementById('scMsg').textContent), null, { timeout: 5000 });
+    assert.deepEqual(await A.$$eval('#scAmps button', bs => bs.map(b => b.textContent)), ['No amp'], 'the app: no amp models yet');
+    await A.click('#scHear'); await sleep(500);
+    assert.ok(monitor > 20, 'your input is played back through the engine');
+    await A.fill('#nameInput', 'Host'); await A.click('#joinBtn'); await inRoom(A);
+    assert.equal(starts, 1, 'Join reuses the engine the sound check started');
+    assert.ok(!await usingBrowserAudio(A), 'still on the app engine');
+    const m0 = monitor; await sleep(400); assert.ok(monitor - m0 < 3, 'hearing yourself stops when you join');
+    assert.deepEqual(h.errors, []);
+  } finally { wss.close(); await h.close(); }
+});

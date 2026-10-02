@@ -50,6 +50,27 @@ window.__audioContexts = [];
     </div>
     <div id="inviteField" hidden><label for="inviteInput">Invite link (leave empty to start a new jam)</label>
     <input id="inviteInput" autocomplete="off" placeholder="Paste the link someone sent you"></div>
+    <section class="sound-check" id="soundCheck" aria-labelledby="scTitle">
+      <div class="sc-head"><span class="sc-step" aria-hidden="true"></span><b id="scTitle">Sound check</b><span class="muted small" id="scState">Before you join</span></div>
+      <p class="muted small" id="scIntro">Plug in your instrument or audio interface and wired headphones, then check you can hear yourself.</p>
+      <button type="button" class="btn btn-quiet" id="scStart">Set up my sound</button>
+      <div id="scBody" hidden>
+        <label for="scIn">Input (your audio interface or mic)</label>
+        <select id="scIn" class="devsel"></select>
+        <label for="scCh">Which input on it</label>
+        <select id="scCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2 (mono)</option><option value="stereo">Inputs 1 + 2 as stereo</option></select>
+        <div class="level sc-level"><span>Play something <span class="small" id="scDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0"><i id="scLevel"></i><b id="scHold"></b></div></div>
+        <p class="small sc-msg" id="scMsg" aria-live="polite">Play your instrument: the bar should move.</p>
+        <label for="scOut">Output (your headphones or interface)</label>
+        <select id="scOut" class="devsel"></select>
+        <p class="muted small" id="scOutNote" hidden>This browser plays through your computer’s sound output: set that to your headphones or interface. (Chrome or Edge let you choose here.)</p>
+        <div class="sc-row"><button type="button" class="btn btn-quiet" id="scBeep">Play a test sound</button><button type="button" class="btn btn-quiet" id="scHear" aria-pressed="false">Hear myself</button></div>
+        <p class="muted small" id="scHearNote">“Hear myself” plays your input back through air.band, the way the room will hear you. Make sure you can hear yourself, then turn it off.</p>
+        <span class="muted small sc-label">Amp</span>
+        <div class="modes tones sc-amps" id="scAmps" role="radiogroup" aria-label="Amp"></div>
+        <p class="muted small" id="scAmpNote"></p>
+      </div>
+    </section>
     <p class="muted small" style="margin-top:14px">Use wired headphones. Bluetooth adds too much delay to play in time.</p>
     <button class="btn btn-primary" id="joinBtn">Join the jam</button>
     <p class="err" id="joinErr" role="alert"></p>

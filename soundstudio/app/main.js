@@ -64,40 +64,22 @@ async function join(){
   me.name = name; $('#joinBtn').disabled = true; $('#joinErr').textContent = ''; cameraProblem = null;
   Tone.start();   // unlock audio inside the click so the band can start later without another tap
   try{
-    const savedIn = store.get('ss.inDev') || '';
-    const audioReq = Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {});
-    if(audio.NATIVE){   // the desktop app handles audio natively: the page only needs the camera
+    if(audioReady){   // the sound check already started your audio: just the camera now
+      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); cameraProblem = e; }
+    } else if(audio.NATIVE){   // the desktop app handles audio natively: the page only needs the camera
       try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); cameraProblem = e; }
     } else {
-      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:audioReq }); }
-      catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:audioReq }); }
+      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:micRequest() }); }
+      catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:micRequest() }); }
     }
-    let audioProblem = null;
-    const startAudio = async () => { audio.setInputChannel($('#inCh').value); await audio.start(media, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); };
-    try{ await startAudio(); }
-    catch(e){ audioProblem = e; console.error('audio setup failed', e); }
-    // In the desktop app: if its native engine won't start or never plays, use the browser's audio instead
-    const why = audio.IN_APP && audio.NATIVE ? (audioProblem ? audioProblem.message || String(audioProblem) : await audio.alive()) : '';
-    if(why){
-      engineWhy = why; console.warn('app audio engine: ' + why + '; switching to browser audio');
-      await audio.useWeb(); audioProblem = null; engineFellBack = true; $('#speaker').closest('label').hidden = false;
-      try{
-        const a = await navigator.mediaDevices.getUserMedia({ audio:Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {}) });
-        a.getAudioTracks().forEach(t => media.addTrack(t)); await startAudio();
-      }catch(e){ audioProblem = e; console.error('browser audio setup failed', e); }
-    }
+    const audioProblem = await setupAudio(media);
+    soundCheckDone();
     const videoOnly = new MediaStream(media.getVideoTracks());
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
     $('#joinView').hidden = true; $('#roomView').hidden = false; layout.start();
     const t = ui.tileFor({ identity:me.id, name:me.name }); if(media.getVideoTracks().length) ui.showVideoIn(t, videoOnly);
     if(joinId) inviteLink = SITE + '?join=' + joinId + (params.get('broker') ? '&broker=' + params.get('broker') : '');
     else ownRoom();
-    if(!audioProblem){
-      if(audio.canTone() && store.get('ss.tone') && store.get('ss.tone') !== 'off') pickTone(store.get('ss.tone'));
-      await fillDevices().catch(() => {});
-      const o = store.get('ss.outDev'); if(o) await audio.useOutput(o);
-      navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
-    }
     setCam(camOn);
     if(!audioProblem && audio.canSynth()){ $('#synthBtn').hidden = false; $('#synthSet').hidden = false; if(store.get('ss.synth') === '1') setSynth(true); }
     if(!joinId) await runBand();   // you started the room: you run the band
@@ -109,6 +91,37 @@ async function join(){
   }catch(e){
     $('#joinErr').textContent = 'Couldn’t start: ' + (e.message || e.type || e) + '. Allow camera and microphone, then try again.'; $('#joinBtn').disabled = false;
   }
+}
+
+// Your audio, started once: by the sound check on the join screen, or by Join.
+// In the desktop app, if its native engine won't start or never plays, the
+// browser's audio takes over. Resolves to the problem, or null when it works.
+const micRequest = () => { const savedIn = store.get('ss.inDev') || ''; return Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {}); };
+let audioReady = null, audioOn = false;
+function setupAudio(stream){ return audioReady || (audioReady = startAudioOnce(stream)); }
+async function startAudioOnce(stream){
+  const own = new MediaStream(stream ? stream.getAudioTracks() : []);
+  let problem = null;
+  const startAudio = async () => { audio.setInputChannel($('#inCh').value); await audio.start(own, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); };
+  try{
+    if(!audio.NATIVE && !own.getAudioTracks().length) (await navigator.mediaDevices.getUserMedia({ audio:micRequest() })).getAudioTracks().forEach(t => own.addTrack(t));
+    await startAudio();
+  }catch(e){ problem = e; console.error('audio setup failed', e); }
+  const why = audio.IN_APP && audio.NATIVE ? (problem ? problem.message || String(problem) : await audio.alive()) : '';
+  if(why){
+    engineWhy = why; console.warn('app audio engine: ' + why + '; switching to browser audio');
+    await audio.useWeb(); problem = null; engineFellBack = true; $('#speaker').closest('label').hidden = false;
+    try{ (await navigator.mediaDevices.getUserMedia({ audio:micRequest() })).getAudioTracks().forEach(t => own.addTrack(t)); await startAudio(); }
+    catch(e){ problem = e; console.error('browser audio setup failed', e); }
+  }
+  if(!problem){
+    audioOn = true;
+    if(audio.canTone() && store.get('ss.tone') && store.get('ss.tone') !== 'off') pickTone(store.get('ss.tone'));
+    await fillDevices().catch(() => {});
+    const o = store.get('ss.outDev'); if(o) await audio.useOutput(o).catch(() => {});
+    navigator.mediaDevices.addEventListener('devicechange', () => fillDevices().catch(() => {}));
+  }
+  return problem;
 }
 
 // You're the room's creator: your invite link (also in the address bar), remembered
@@ -259,10 +272,11 @@ function checkSetup(c){
 // ---- audio devices ----
 async function fillDevices(){
   const { inputs, outputs } = await audio.listDevices();
-  ui.fillSelect($('#inDev'), inputs, audio.currentInputId() || store.get('ss.inDev') || '');
+  for(const sel of [$('#inDev'), $('#scIn')]) ui.fillSelect(sel, inputs, audio.currentInputId() || store.get('ss.inDev') || '');
   const canOut = audio.canChooseOutput();
-  $('#outDev').hidden = !canOut; $('#outNote').hidden = canOut;
-  if(canOut) ui.fillSelect($('#outDev'), outputs, store.get('ss.outDev') || '');
+  $('#outDev').hidden = $('#scOut').hidden = !canOut; $('#outNote').hidden = $('#scOutNote').hidden = canOut;
+  if(canOut) for(const sel of [$('#outDev'), $('#scOut')]) ui.fillSelect(sel, outputs, store.get('ss.outDev') || '');
+  $('#scOut').previousElementSibling.hidden = !canOut;
 }
 // ---- built-in tone: amp + cab + EQ (browser), or your input as it is ----
 // Each amp keeps your own settings (EQ, level, chorus, reverb), starting from its defaults.
@@ -272,7 +286,9 @@ const settingsFor = id => Object.assign(toneDefaults(id), toneSets[id] || {});
 let toneEq = settingsFor(store.get('ss.tone') || 'off');
 const showKnobs = () => document.querySelectorAll('[data-eq]').forEach(r => { r.value = toneEq[r.dataset.eq]; });
 const toneNotes = { off: 'Your input as it arrives, like a DI. Use this for vocals, keys, or a tone from your own amp or pedals.' };
+let toneNow = 'off';
 function showTone(id){
+  toneNow = id; showAmpNote();
   document.querySelectorAll('[data-tone]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.tone === id)));
   $('#eqBox').hidden = id === 'off';
   $('#toneNote').textContent = toneNotes[id] || 'You hear your tone through air.band. Turn off direct monitoring on your interface so you don’t hear the dry signal too.';
@@ -280,27 +296,34 @@ function showTone(id){
 async function pickTone(id){
   showTone(id); store.set('ss.tone', id);
   toneEq = settingsFor(id); showKnobs();
-  if(!media) return;   // applied when you join
+  if(!audioOn) return;   // applied when your audio starts
   try{ $('#toneNote').textContent = id === 'off' ? $('#toneNote').textContent : 'Loading the amp…'; await audio.setTone(id); audio.setToneEq(toneEq); showTone(id); }
   catch(e){ $('#toneNote').textContent = 'Couldn’t load that tone: ' + (e.message || e); }
 }
 if(audio.canTone()){
-  TONES.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.tone = t.id; b.title = toneIcons.SPRITES[t.id].name; b.onclick = () => pickTone(t.id);
+  for(const [box, offLabel] of [[$('#toneBox'), null], [$('#scAmps'), 'No amp']]) TONES.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.tone = t.id; b.title = toneIcons.SPRITES[t.id].name; b.onclick = () => pickTone(t.id);
     const icon = document.createElement('span'); icon.className = 'tone-icon'; icon.setAttribute('aria-hidden', 'true');
     icon.style.setProperty('--on', `url(${toneIcons.frame(t.id, true)})`); icon.style.setProperty('--off', `url(${toneIcons.frame(t.id, false)})`);
-    const label = document.createElement('span'); label.textContent = t.label;
-    b.append(icon, label); $('#toneBox').appendChild(b); });
+    const label = document.createElement('span'); label.textContent = t.id === 'off' && offLabel ? offLabel : t.label;
+    b.append(icon, label); box.appendChild(b); });
   const saveKnobs = () => { const id = store.get('ss.tone') || 'off'; toneSets[id] = toneEq; store.set('ss.toneSets', JSON.stringify(toneSets)); };
   document.querySelectorAll('[data-eq]').forEach(r => { r.oninput = () => { toneEq[r.dataset.eq] = +r.value; audio.setToneEq(toneEq); saveKnobs(); }; });
   $('#toneReset').onclick = () => { const id = store.get('ss.tone') || 'off'; delete toneSets[id]; store.set('ss.toneSets', JSON.stringify(toneSets)); toneEq = settingsFor(id); showKnobs(); audio.setToneEq(toneEq); };
   showKnobs();
   showTone(TONES.some(t => t.id === store.get('ss.tone')) ? store.get('ss.tone') : 'off');
-} else $('#toneSection').hidden = true;   // the desktop app: coming soon
-const showChannels = chans => { $('#inCh').disabled = chans < 2; };
-$('#inDev').onchange = () => audio.useInput($('#inDev').value, $('#speaker').checked).then(ch => { store.set('ss.inDev', $('#inDev').value); showChannels(ch); return fillDevices(); }).catch(e => ui.notice('Couldn’t switch input: ' + (e.name || e)));
-$('#inCh').onchange = () => { store.set('ss.inCh', $('#inCh').value); showChannels(audio.setInputChannel($('#inCh').value)); };
+} else {   // the desktop app: amp models coming soon; your input goes in as it is
+  $('#toneSection').hidden = true;
+  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'true'); b.textContent = 'No amp'; $('#scAmps').appendChild(b);
+  $('#scAmps').classList.add('one');
+}
+const showChannels = chans => { $('#inCh').disabled = $('#scCh').disabled = chans < 2; };
+const chooseInput = id => audio.useInput(id, $('#speaker').checked).then(ch => { store.set('ss.inDev', id); showChannels(ch); return fillDevices(); });
+const chooseChannel = ch => { store.set('ss.inCh', ch); $('#inCh').value = $('#scCh').value = ch; showChannels(audio.setInputChannel(ch)); };
+const chooseOutput = id => { store.set('ss.outDev', id); $('#outDev').value = $('#scOut').value = id; return audio.useOutput(id); };
+$('#inDev').onchange = () => chooseInput($('#inDev').value).catch(e => ui.notice('Couldn’t switch input: ' + (e.name || e)));
+$('#inCh').onchange = () => chooseChannel($('#inCh').value);
 // A short beep through whichever engine is playing: the quickest way to check you can hear the app
-$('#testSound').onclick = () => {
+const testBeep = () => {
   const n = Math.round(0.35 * audio.RATE / audio.FRAMES), t0 = clk() + 80;
   for(let b = 0; b < n; b++){
     const pl = new Float32Array(audio.FRAMES);
@@ -308,19 +331,20 @@ $('#testSound').onclick = () => {
     audio.deliver('test-sound', [pl], t0 + b * audio.BLOCK_MS);
   }
 };
+$('#testSound').onclick = testBeep;
 if(audio.IN_APP){
   $('#engine').hidden = $('#engineLabel').hidden = false;
   $('#engine').value = store.get('ss.engine') === 'web' ? 'web' : 'native';
   $('#engine').onchange = () => { store.set('ss.engine', $('#engine').value); location.reload(); };
 }
-$('#outDev').onchange = () => { store.set('ss.outDev', $('#outDev').value); audio.useOutput($('#outDev').value); };
+$('#outDev').onchange = () => chooseOutput($('#outDev').value);
 // Echo cancellation: on by default for phones (often used on loudspeaker), off for computers.
 if(audio.NATIVE) $('#speaker').closest('label').hidden = true;   // no browser echo cancellation in the app
 $('#speaker').checked = store.get('ss.speaker') !== null ? store.get('ss.speaker') === '1' : audio.isPhone();
-$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(media) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.notice('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
+$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(audioOn) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.notice('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
 $('#studio').checked = store.get('ss.studio') === '1'; room.setBits($('#studio').checked ? 32 : 16);
 $('#studio').onchange = () => { room.setBits($('#studio').checked ? 32 : 16); store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
-if(store.get('ss.inCh')) $('#inCh').value = store.get('ss.inCh');
+if(store.get('ss.inCh')) $('#inCh').value = $('#scCh').value = store.get('ss.inCh');
 
 // ---- controls ----
 // The desktop app loads this site, so only its native audio engine can be out of date.
@@ -341,12 +365,69 @@ $('#nameDice').onclick = () => { $('#nameInput').value = randomName(); store.set
 $('#nameInput').addEventListener('input', () => store.set('ss.name', $('#nameInput').value));
 $('#nameInput').addEventListener('keydown', e => { if(e.key === 'Enter') join(); });
 $('#joinBtn').onclick = join;
+// ---- sound check (join screen): pick your gear, see your level, hear yourself, pick an amp ----
+// It starts your audio here, and Join carries on with it.
+let hearing = false, scTimer = null, scHeard = 0, scStarted = 0, scHold = -60, scClip = 0;
+function setHear(on){
+  hearing = on; $('#scHear').setAttribute('aria-pressed', String(on)); $('#scHear').textContent = on ? 'Stop hearing myself' : 'Hear myself';
+  // your input played back through air.band, the way it leaves you (in the browser an amp already plays you back)
+  room.taps.local = on ? planes => { if(!(toneNow !== 'off' && audio.canTone())) audio.deliver('monitor', planes); } : null;
+  if(!on) audio.forget('monitor');
+}
+function scMeter(){
+  const pk = audio.stats.inPeak || 0, db = pk > 0 ? Math.max(-60, 20 * Math.log10(pk)) : -60, pct = (db + 60) / 60 * 100, now = performance.now();
+  scHold = Math.max(db, scHold - 0.6);
+  $('#scLevel').style.width = (100 - pct) + '%'; $('#scHold').style.left = 'calc(' + ((scHold + 60) / 60 * 100) + '% - 2px)';
+  $('#scDb').textContent = pk > 0 ? Math.round(db) + ' dB' : '– dB';
+  if(db > -45) scHeard = now;
+  if(pk >= 0.98) scClip = now;
+  const msg = $('#scMsg');
+  if(now - scHeard < 4000){ $('#soundCheck').classList.add('ok'); $('#scState').textContent = 'Ready'; }
+  if(now - scClip < 2000){ msg.className = 'small sc-msg warn'; msg.textContent = 'Too loud: it’s clipping. Turn the gain knob on your interface down a little.'; }
+  else if(now - scHeard < 4000){
+    msg.className = 'small sc-msg ok'; msg.textContent = 'We hear you ✓';
+  }
+  else if(now - scStarted > 6000 && !scHeard){ msg.className = 'small sc-msg warn'; msg.textContent = 'Nothing coming in yet. Check the gain knob on your interface, and that the right input is picked above. Keyboard in input 2: pick Input 2. Stereo keyboard (L and R): pick Inputs 1 + 2.'; }
+  else { msg.className = 'small sc-msg'; msg.textContent = 'Play your instrument: the bar should move.'; }
+}
+function showAmpNote(){
+  const el = $('#scAmpNote'); if(!el) return;
+  let p = 'guitar'; try{ p = part; }catch(e){}   // called once before `part` exists
+  if(!audio.canTone()) el.textContent = 'The app sends your instrument as it is. For guitar, use your own amp, pedals or modeller, or your DAW with the air.band Send plugin.';
+  else if(p === 'guitar' || p === 'bass') el.textContent = toneNow === 'off'
+    ? `${p === 'bass' ? 'Bass' : 'Guitar'} plugged straight into your interface? Pick an amp. Going through your own amp, pedals or modeller? Keep “No amp”.`
+    : 'You hear yourself through the amp. Turn off direct monitoring on your interface so you don’t hear the dry sound too.';
+  else el.textContent = toneNow === 'off' ? `${p === 'keys' ? 'Keys' : p === 'drums' ? 'Drums' : 'Keys, vocals and most instruments'}: keep “No amp”. Amps are for a guitar plugged straight in.`
+    : `Amps are for a guitar plugged straight in. For ${p === 'keys' ? 'keys' : p === 'drums' ? 'drums' : 'most instruments'}, pick “No amp”.`;
+}
+$('#scStart').onclick = async () => {
+  const b = $('#scStart'); b.disabled = true; b.textContent = 'Starting your audio…'; $('#scMsg').textContent = '';
+  Tone.start();
+  const problem = await setupAudio();
+  if(problem){
+    audioReady = null; b.disabled = false; b.textContent = 'Try again';
+    $('#scIntro').textContent = 'Couldn’t start your audio (' + (problem.message || problem.name || problem) + '). Allow the microphone when asked, check your interface is plugged in, then try again.';
+    return;
+  }
+  b.hidden = true; $('#scBody').hidden = false; $('#scState').textContent = 'Play something';
+  $('#scIntro').textContent = engineFellBack ? 'The app’s audio engine had a problem (' + engineWhy + '), so this uses browser audio.' : 'Pick your interface, play, and check you can hear yourself.';
+  if(audio.inputSampleRate() && audio.inputSampleRate() !== 48000) $('#scIntro').textContent += ` Your interface runs at ${audio.inputSampleRate() / 1000} kHz: set it to 48 kHz if you can.`;
+  scStarted = performance.now(); scTimer = setInterval(scMeter, 60);
+};
+$('#scIn').onchange = () => { scHeard = 0; scStarted = performance.now(); chooseInput($('#scIn').value).catch(e => { $('#scMsg').textContent = 'Couldn’t switch input: ' + (e.name || e); }); };
+$('#scCh').onchange = () => { scHeard = 0; scStarted = performance.now(); chooseChannel($('#scCh').value); };
+$('#scOut').onchange = () => chooseOutput($('#scOut').value);
+$('#scBeep').onclick = testBeep;
+$('#scHear').onclick = () => setHear(!hearing);
+// Joining: the sound check stops (your own playback is off in the room; use your interface's direct monitoring)
+function soundCheckDone(){ if(hearing) setHear(false); clearInterval(scTimer); scTimer = null; }
+
 // What you play, picked on the start screen: you land on that part's spot and its AI player steps out.
 // Lead ('none'): you solo over the whole band, no part of your own.
 let part = ['guitar', 'bass', 'keys', 'drums', 'none'].includes(store.get('ss.part')) ? store.get('ss.part') : 'guitar', seated = false;
 const showPart = () => document.querySelectorAll('[data-part]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.part === part)));
-document.querySelectorAll('[data-part]').forEach(b => b.onclick = () => { part = b.dataset.part; store.set('ss.part', part); showPart(); });
-showPart();
+document.querySelectorAll('[data-part]').forEach(b => b.onclick = () => { part = b.dataset.part; store.set('ss.part', part); showPart(); showAmpNote(); });
+showPart(); showAmpNote();
 // Once you're in and someone runs the band: take your part (or the first one nobody's playing).
 function autoSeat(){
   if(seated || part === 'none' || !S.hostId || $('#roomView').hidden) return;

@@ -391,3 +391,21 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
    pinch-zoom still works */
 html{touch-action:manipulation}
 .synth,.synth *{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+/* sound check on the join screen */
+.sound-check{margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--raised)}
+.sound-check .sc-head{display:flex;align-items:center;gap:8px}
+.sound-check .sc-head .muted{margin-left:auto}
+.sc-step{width:10px;height:10px;border-radius:50%;background:var(--amber)}
+.sound-check.ok .sc-step{background:var(--ok)}
+.sound-check p{margin:8px 0 0}
+.sound-check .btn{margin-top:10px}
+.sound-check label{margin:12px 0 4px}
+.sound-check .devsel{background:var(--surface)}
+.sc-level{margin-top:12px}
+.sc-msg{color:var(--muted)} .sc-msg.ok{color:var(--ok)} .sc-msg.warn{color:var(--warn)}
+.sc-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc-row .btn{margin-top:12px;padding:10px 8px}
+#scHear[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.sc-label{display:block;margin:14px 0 6px}
+.sc-amps{grid-template-columns:repeat(3,1fr);background:var(--surface)}
+.sc-amps.one{grid-template-columns:1fr}
