@@ -46,7 +46,9 @@ export async function start({ video, screen = false }){
       const canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720;
       if(!canvas.captureStream) throw new Error('this browser can’t record video from the page');
       const g = canvas.getContext('2d');
-      draw = () => { paint(g, canvas); rec && rec.video && (rec.raf = requestAnimationFrame(draw)); };
+      // 30 frames a second (not every screen refresh: 120 Hz screens would paint 4x as often for nothing)
+      let last = 0;
+      draw = t => { if(!t || t - last >= 33){ last = t || 0; paint(g, canvas); } rec && rec.video && (rec.raf = requestAnimationFrame(draw)); };
       draw();   // a first frame before recording starts (Safari wants one)
       tracks.unshift(...canvas.captureStream(30).getVideoTracks());
     }

@@ -15,8 +15,13 @@ export function start(names){
   // the band: Tone's output streamed into a plain 48 kHz context and tapped there
   // (the same route the whole-jam recording takes; Tone's own context is wrapped)
   try{
-    // the jam's own context in the browser (phones limit how many there can be); a quiet one of its own in the app
-    const jam = audio.context && audio.context(), shared = !!jam, ctx = jam || new AudioContext({ sampleRate: SR }), dest = Tone.getContext().rawContext.createMediaStreamDestination();
+    // a quiet context of its own, so recording adds nothing to the jam's audio; the jam's
+    // only if this browser won't make another (iPhone limits how many there can be)
+    let ctx = null, shared = false;
+    try{ ctx = new AudioContext({ sampleRate: SR }); }catch(e){ ctx = audio.context && audio.context(); shared = true; }
+    if(!ctx) throw new Error('no audio context');
+    if(ctx.state !== 'running') ctx.resume().catch(() => {});
+    const dest = Tone.getContext().rawContext.createMediaStreamDestination();
     Tone.connect(Tone.getDestination(), dest);
     rec.band = { chunks: [], rate: ctx.sampleRate, startAt: null, ctx, dest, shared, nodes: [] };
     ctx.audioWorklet.addModule(new URL('./audio/rectap.js', import.meta.url)).then(() => {
