@@ -28,4 +28,14 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
 - `desktop/` — Tauri app (native audio engine in Rust); built by `.github/workflows/desktop.yml`.
 - `plugin/` — JUCE "air.band Send" (AU/VST3), streams a DAW track into the app.
 - `test/` — unit tests (`npm test`) and browser end-to-end tests (`npm run test:e2e`).
-- `download/` — git-ignored; app and plugin downloads, deployed with the site.
+- `download/` — git-ignored; app and plugin downloads, deployed with the site. Files keep
+  their version in the name (`air.band-0.6.1-Mac.zip`, …); `APP_VERSION` in `app/main.js` points the links.
+
+## Releasing the desktop app (it auto-updates from 0.6.1)
+
+Bump the version in `desktop/src-tauri/Cargo.toml`, `tauri.conf.json`, `plugin/CMakeLists.txt`
+and `APP_VERSION`; push; when the Desktop app workflow passes, put its artifacts in `download/`
+(`air.band-<v>-Mac.zip`, `-Windows-setup.exe`, `-Mac.app.tar.gz`, `airband-send-<v>-…zip`), then
+`TAURI_SIGNING_PRIVATE_KEY=… node desktop/scripts/release-update.mjs <v>` writes the signed
+`download/latest.json`, and deploy. The signing key lives only in the Vercel project's
+Development environment variables (`vercel env pull`); lose it and apps can't auto-update.
