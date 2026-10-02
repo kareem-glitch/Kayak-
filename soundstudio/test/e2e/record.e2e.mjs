@@ -66,3 +66,27 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });
+
+// iPhone Safari: no screen sharing, and it won't make more audio contexts than
+// the page already has; Jam + video must still give a video, not a WAV.
+test('record: video still works when no new audio context can be made (iPhone)', { timeout: 90000 }, async () => {
+  const h = await startServers();
+  try{
+    const A = await h.page('Kareem');
+    await A.addInitScript(() => {
+      delete MediaDevices.prototype.getDisplayMedia;
+      const Orig = window.AudioContext; let made = 0;
+      window.AudioContext = class extends Orig { constructor(...a){ if(++made > 2) throw new Error('too many audio contexts'); super(...a); } };
+    });
+    await h.join(A, h.base, 'Kareem');
+    await A.waitForFunction(() => window.getInvite && window.getInvite());
+    assert.equal(await A.locator('#recWhat option[value="screen"]').count(), 0, 'no screen option without screen sharing');
+    await h.drawer(A, 'record'); await A.selectOption('#recWhat', 'video'); await A.check('#recTracks');
+    await A.click('#recBtn'); await sleep(4000); await A.click('#recBtn');
+    await A.waitForFunction(() => /recorded/.test(document.getElementById('recStatus').textContent), null, { timeout: 20000 });
+    const r = await A.evaluate(async () => { const dl = document.getElementById('recDownload'); const b = await (await fetch(dl.href)).blob(); return { name: dl.download, size: b.size, tag: document.querySelector('#recMedia video, #recMedia audio').tagName, zip: !document.getElementById('recTracksDl').hidden }; });
+    assert.match(r.name, /\.(mp4|webm)$/, `a video file (${r.name})`); assert.equal(r.tag, 'VIDEO'); assert.ok(r.size > 30000, `with content (${r.size})`);
+    assert.ok(r.zip, 'separate tracks too');
+    assert.deepEqual(h.errors, []);
+  } finally { await h.close(); }
+});

@@ -6,6 +6,7 @@
 // plays with, in a silent recording-only AudioContext), the band from Tone.js.
 import * as room from './net/room.js';
 import { $ } from './util.js';
+import * as audio from './audio/io.js';
 
 let rec = null;
 export const hooks = { screenEnded: () => {} };   // the screen share was stopped from the browser's bar
@@ -20,43 +21,62 @@ export async function start({ video, screen = false }){
   if(screen && !(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) throw new Error('screen recording isn’t supported here');
   if(!window.MediaRecorder) throw new Error('MediaRecorder isn’t supported here');
   const shot = screen ? await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude' }) : null;
-  const ctx = new AudioContext({ sampleRate: 48000 });
-  await ctx.audioWorklet.addModule(new URL('./audio/worklet.js', import.meta.url));
-  const mix = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
-  const dest = ctx.createMediaStreamDestination(); mix.connect(dest);
-  mix.port.postMessage({ limit: 16 * 128 });
-  mix.port.onmessage = () => {};
-  room.taps.local = planes => mix.port.postMessage({ id: 'me', planes: planes.map(p => p.slice(0)) });
-  room.taps.remote = (id, planes) => mix.port.postMessage({ id, planes });
-  // the band, from Tone.js's own context
-  let bandDest = null;
-  try{ bandDest = Tone.getContext().rawContext.createMediaStreamDestination(); Tone.connect(Tone.getDestination(), bandDest); ctx.createMediaStreamSource(bandDest.stream).connect(dest); }catch(e){ console.warn('band not recorded', e); }
-  const tracks = [...dest.stream.getAudioTracks()];
-  let canvas = null, draw = null;
-  if(shot){ tracks.unshift(...shot.getVideoTracks()); shot.getVideoTracks()[0].onended = () => { if(rec && rec.shot === shot) hooks.screenEnded(); }; }
-  else if(video){
-    canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720;
-    const g = canvas.getContext('2d');
-    draw = () => { paint(g, canvas); rec && rec.video && (rec.raf = requestAnimationFrame(draw)); };
-    tracks.unshift(...canvas.captureStream(30).getVideoTracks());
-  }
-  const mimeType = pick(video || screen ? VIDEO : AUDIO);
-  const mr = new MediaRecorder(new MediaStream(tracks), mimeType ? { mimeType, audioBitsPerSecond: 192000, videoBitsPerSecond: 4000000 } : {});
-  const parts = []; mr.ondataavailable = e => e.data.size && parts.push(e.data);
-  rec = { ctx, mix, mr, parts, video: video || screen, bandDest, raf: 0, shot };
-  mr.start(1000); if(draw) draw();
+  // a quiet context of its own for the mix; phones that won't make another
+  // (iPhone Safari limits them) share the jam's, which only adds work while recording
+  let ctx = null, shared = false;
+  try{ ctx = new AudioContext({ sampleRate: 48000 }); }catch(e){ console.warn('own recording context unavailable', e); }
+  if(!ctx){ ctx = audio.context && audio.context(); shared = true; if(!ctx) throw new Error('no audio context for recording'); }
+  const parts = [];
+  rec = { ctx, shared, mix: null, dest: null, mr: null, parts, video: video || screen, bandDest: null, raf: 0, shot };
+  try{
+    if(ctx.state !== 'running') ctx.resume().catch(() => {});   // iPhone starts new contexts paused
+    await ctx.audioWorklet.addModule(new URL('./audio/worklet.js', import.meta.url));
+    const mix = rec.mix = new AudioWorkletNode(ctx, 'jam-io', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+    const dest = rec.dest = ctx.createMediaStreamDestination(); mix.connect(dest);
+    mix.port.postMessage({ limit: 16 * 128 });
+    mix.port.onmessage = () => {};
+    room.taps.local = planes => mix.port.postMessage({ id: 'me', planes: planes.map(p => p.slice(0)) });
+    room.taps.remote = (id, planes) => mix.port.postMessage({ id, planes });
+    // the band, from Tone.js's own context
+    try{ rec.bandDest = Tone.getContext().rawContext.createMediaStreamDestination(); Tone.connect(Tone.getDestination(), rec.bandDest); ctx.createMediaStreamSource(rec.bandDest.stream).connect(dest); }catch(e){ console.warn('band not recorded', e); }
+    const tracks = [...dest.stream.getAudioTracks()];
+    let draw = null;
+    if(shot){ tracks.unshift(...shot.getVideoTracks()); shot.getVideoTracks()[0].onended = () => { if(rec && rec.shot === shot) hooks.screenEnded(); }; }
+    else if(video){
+      const canvas = document.createElement('canvas'); canvas.width = 1280; canvas.height = 720;
+      if(!canvas.captureStream) throw new Error('this browser can’t record video from the page');
+      const g = canvas.getContext('2d');
+      draw = () => { paint(g, canvas); rec && rec.video && (rec.raf = requestAnimationFrame(draw)); };
+      draw();   // a first frame before recording starts (Safari wants one)
+      tracks.unshift(...canvas.captureStream(30).getVideoTracks());
+    }
+    // the best format this browser records (Safari: MP4); if it refuses, let it pick
+    const stream = new MediaStream(tracks), mimeType = pick(video || screen ? VIDEO : AUDIO);
+    let mr = null, err = null;
+    for(const opts of [mimeType ? { mimeType, audioBitsPerSecond: 192000, videoBitsPerSecond: 4000000 } : null, mimeType ? { mimeType } : null, {}]){
+      if(!opts) continue;
+      try{ mr = new MediaRecorder(stream, opts); mr.ondataavailable = e => e.data.size && parts.push(e.data); mr.start(1000); break; }catch(e){ err = e; mr = null; }
+    }
+    if(!mr) throw err || new Error('MediaRecorder couldn’t start');
+    rec.mr = mr;
+  }catch(e){ cleanup(rec); rec = null; throw e; }
+}
+function cleanup(r){
+  cancelAnimationFrame(r.raf);
+  room.taps.local = room.taps.remote = null;
+  try{ if(r.bandDest) Tone.getDestination().disconnect(r.bandDest); }catch(e){}
+  if(r.shot) r.shot.getTracks().forEach(t => t.stop());   // end the screen share
+  if(r.shared){ try{ r.mix && r.mix.disconnect(); }catch(e){} r.mix && r.mix.port.postMessage({ gone: 'me' }); }
+  else r.ctx.close().catch(() => {});
 }
 
 export function stop(){
   if(!rec) return Promise.resolve(null);
-  const r = rec; rec = null; cancelAnimationFrame(r.raf);
-  room.taps.local = room.taps.remote = null;
+  const r = rec; rec = null;
   return new Promise(res => {
     r.mr.onstop = () => {
-      try{ Tone.getDestination().disconnect(r.bandDest); }catch(e){}
-      if(r.shot) r.shot.getTracks().forEach(t => t.stop());   // end the screen share
-      r.ctx.close();
-      const type = r.mr.mimeType || (r.video ? 'video/webm' : 'audio/webm');
+      cleanup(r);
+      const type = r.mr.mimeType || (r.parts[0] && r.parts[0].type) || (r.video ? 'video/webm' : 'audio/webm');
       const blob = new Blob(r.parts, { type });
       const ext = /mp4/.test(type) ? (r.video ? 'mp4' : 'm4a') : 'webm';
       res({ url: URL.createObjectURL(blob), type, ext, video: r.video });

@@ -582,7 +582,9 @@ let recTimer = null, recUrls = [];
 const signed = ms => (ms > 0 ? '+' : ms < 0 ? '−' : '±') + Math.abs(Math.round(ms)) + ' ms';
 const timing = ms => ms == null ? 'no claps found' : Math.abs(ms) < 5 ? 'on the beat' : ms > 0 ? 'behind the beat' : 'ahead of the beat';
 const clock = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
-if(store.get('ss.recWhat')) $('#recWhat').value = store.get('ss.recWhat');
+// phones can't share the screen: don't offer it
+if(!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) $('#recWhat option[value="screen"]').remove();
+if(store.get('ss.recWhat') && $(`#recWhat option[value="${store.get('ss.recWhat')}"]`)) $('#recWhat').value = store.get('ss.recWhat');
 const showTracksRow = () => { $('#recTracksRow').hidden = $('#recWhat').value === 'me'; };
 $('#recWhat').onchange = () => { store.set('ss.recWhat', $('#recWhat').value); showTracksRow(); };
 $('#recTracks').checked = store.get('ss.recTracks') === '1'; showTracksRow();

@@ -4,6 +4,7 @@
 // Same in the browser and the desktop app: players come from the room's taps.
 import * as room from './net/room.js';
 import { clk } from './util.js';
+import * as audio from './audio/io.js';
 
 const SR = 48000;
 let rec = null;
@@ -14,14 +15,15 @@ export function start(names){
   // the band: Tone's output streamed into a plain 48 kHz context and tapped there
   // (the same route the whole-jam recording takes; Tone's own context is wrapped)
   try{
-    const ctx = new AudioContext({ sampleRate: SR }), dest = Tone.getContext().rawContext.createMediaStreamDestination();
+    // the jam's own context in the browser (phones limit how many there can be); a quiet one of its own in the app
+    const jam = audio.context && audio.context(), shared = !!jam, ctx = jam || new AudioContext({ sampleRate: SR }), dest = Tone.getContext().rawContext.createMediaStreamDestination();
     Tone.connect(Tone.getDestination(), dest);
-    rec.band = { chunks: [], rate: SR, startAt: null, ctx, dest };
+    rec.band = { chunks: [], rate: ctx.sampleRate, startAt: null, ctx, dest, shared, nodes: [] };
     ctx.audioWorklet.addModule(new URL('./audio/rectap.js', import.meta.url)).then(() => {
       if(!rec) return;
       const node = new AudioWorkletNode(ctx, 'rec-tap', { numberOfInputs: 1, numberOfOutputs: 1 });
       node.port.onmessage = e => { if(!rec) return; if(rec.band.startAt === null) rec.band.startAt = clk() - (ctx.baseLatency || 0) * 1000; rec.band.chunks.push(e.data); };
-      ctx.createMediaStreamSource(dest.stream).connect(node);
+      const src = ctx.createMediaStreamSource(dest.stream); src.connect(node); rec.band.nodes.push(src, node);
     }).catch(e => console.warn('band track unavailable', e));
   }catch(e){ console.warn('band track unavailable', e); }
 }
@@ -54,7 +56,7 @@ export async function stop({ zip: wantZip = true, mix: wantMix = false } = {}){
   let bandL = null, bandR = null;
   if(r.band){
     try{ Tone.getDestination().disconnect(r.band.dest); }catch(e){}
-    r.band.ctx.close();
+    if(r.band.shared) r.band.nodes.forEach(n => { try{ n.disconnect(); }catch(e){} }); else r.band.ctx.close();
     const b = r.band, n = b.chunks.reduce((a, c) => a + c[0].length, 0);
     if(n && b.startAt !== null){
       const l = new Float32Array(n), rr = new Float32Array(n); let o = 0;
