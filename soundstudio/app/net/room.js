@@ -236,6 +236,11 @@ function dial(id, newcomer){
   const call = peer.call(id, video);
   call.on('stream', s => gotVideo(id, s));
 }
+// Camera turned on after joining: call everyone again with it.
+export function setVideo(stream){
+  video = stream;
+  for(const id of peers.keys()){ const call = peer.call(id, video); call.on('stream', s => gotVideo(id, s)); }
+}
 function gotVideo(id, s){ const p = peers.get(id); if(p) p.video = s; if(p && p.name) events.onVideo(id, s); }
 
 // Join (joinId set) or create a room. Resolves with my id once the broker knows me.

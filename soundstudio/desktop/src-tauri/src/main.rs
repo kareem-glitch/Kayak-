@@ -10,6 +10,8 @@ mod plugin;
 mod direct;
 mod update;
 
+#[cfg(target_os = "macos")]
+use tauri::Manager;
 use tauri::{RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 pub const SITE: &str = "https://air.band/";
@@ -19,6 +21,8 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
+            #[cfg(target_os = "macos")]
+            fresh_permissions(app);
             update::start(app.handle().clone());
             // the live site, served through the app's local server (see native.rs)
             let url = WebviewUrl::External(format!("http://127.0.0.1:{port}/").parse().expect("bad local URL"));
@@ -33,4 +37,21 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error while running air.band")
         .run(|_, event| { if let RunEvent::Exit = event { update::install_on_quit(); } });
+}
+
+/// The Mac app is ad-hoc signed, so macOS ties the microphone and camera
+/// permission to this exact build: after an update the old "allowed" stays in
+/// System Settings but no longer applies, and macOS doesn't ask again (silent
+/// mic, no camera). Once per version, clear the app's own entries so macOS asks.
+#[cfg(target_os = "macos")]
+fn fresh_permissions(app: &tauri::App) {
+    let Ok(dir) = app.path().app_data_dir() else { return };
+    let marker = dir.join("permissions-version");
+    let v = env!("CARGO_PKG_VERSION");
+    if std::fs::read_to_string(&marker).map(|s| s.trim() == v).unwrap_or(false) { return; }
+    for service in ["Microphone", "Camera"] {
+        let _ = std::process::Command::new("/usr/bin/tccutil").args(["reset", service, app.config().identifier.as_str()]).status();
+    }
+    let _ = std::fs::create_dir_all(&dir);
+    let _ = std::fs::write(&marker, v);
 }

@@ -87,7 +87,10 @@ test('desktop app: the sound check runs on the app engine, and Join keeps it', {
     await A.waitForSelector('#scBody:not([hidden])', { timeout: 15000 });
     assert.ok((await A.textContent('#scIn')).includes('ZOOM AMS'), 'the interface is listed');
     await A.waitForFunction(() => /We hear you/.test(document.getElementById('scMsg').textContent), null, { timeout: 5000 });
-    assert.deepEqual(await A.$$eval('#scAmps button', bs => bs.map(b => b.textContent)), ['No amp'], 'the app: no amp models yet');
+    assert.deepEqual(await A.$$eval('#scAmps button', bs => bs.map(b => b.textContent)), ['No amp', 'Clean', 'Warm', 'Crunch', 'Lead', 'Bass'], 'the app offers the amps too');
+    await A.click('#scAmps [data-app-tone="crunch"]');
+    assert.match(await A.textContent('#scAmpNote'), /browser’s audio/, 'picking one explains it switches to browser audio');
+    await A.click('#ampCancel');
     // the app downloaded a newer version: offered on the start screen
     await A.waitForFunction(() => /0\.6\.9 is ready/.test(document.getElementById('appNote').textContent), null, { timeout: 5000 });
     await A.click('#updateNow'); await sleep(300);

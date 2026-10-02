@@ -311,11 +311,19 @@ if(audio.canTone()){
   $('#toneReset').onclick = () => { const id = store.get('ss.tone') || 'off'; delete toneSets[id]; store.set('ss.toneSets', JSON.stringify(toneSets)); toneEq = settingsFor(id); showKnobs(); audio.setToneEq(toneEq); };
   showKnobs();
   showTone(TONES.some(t => t.id === store.get('ss.tone')) ? store.get('ss.tone') : 'off');
-} else {   // the desktop app: amp models coming soon; your input goes in as it is
+} else {   // the desktop app's own engine has no amps yet: they run on browser audio in the app (a switch, a little more delay)
   $('#toneSection').hidden = true;
-  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'true'); b.textContent = 'No amp'; $('#scAmps').appendChild(b);
-  $('#scAmps').classList.add('one');
+  $('#toneEmpty').hidden = false;
+  TONES.forEach(t => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(t.id === 'off')); b.dataset.appTone = t.id;
+    const icon = document.createElement('span'); icon.className = 'tone-icon'; icon.setAttribute('aria-hidden', 'true');
+    icon.style.setProperty('--on', `url(${toneIcons.frame(t.id, true)})`); icon.style.setProperty('--off', `url(${toneIcons.frame(t.id, false)})`);
+    const label = document.createElement('span'); label.textContent = t.id === 'off' ? 'No amp' : t.label; b.append(icon, label);
+    b.onclick = () => { if(t.id === 'off') return; ampOffer = t.id; showAmpNote(); };
+    $('#scAmps').appendChild(b); });
 }
+let ampOffer = null;
+// In the app: use an amp by switching to browser audio (only from the start screen, so no jam is cut off)
+function useWebForAmps(id){ store.set('ss.tone', id); store.set('ss.engine', 'web'); store.set('ss.name', $('#nameInput').value.trim() || store.get('ss.name') || ''); location.reload(); }
 const showChannels = chans => { $('#inCh').disabled = $('#scCh').disabled = chans < 2; };
 const chooseInput = id => audio.useInput(id, $('#speaker').checked).then(ch => { store.set('ss.inDev', id); showChannels(ch); return fillDevices(); });
 const chooseChannel = ch => { store.set('ss.inCh', ch); $('#inCh').value = $('#scCh').value = ch; showChannels(audio.setInputChannel(ch)); };
@@ -403,7 +411,15 @@ function scMeter(){
 function showAmpNote(){
   const el = $('#scAmpNote'); if(!el) return;
   let p = 'guitar'; try{ p = part; }catch(e){}   // called once before `part` exists
-  if(!audio.canTone()) el.textContent = 'The app sends your instrument as it is. For guitar, use your own amp, pedals or modeller, or your DAW with the air.band Send plugin.';
+  if(!audio.canTone()){
+    if(ampOffer){
+      el.innerHTML = `The ${esc(TONES.find(t => t.id === ampOffer).label)} amp runs on the browser’s audio inside the app for now (a few ms more delay than the app’s own engine). <button type="button" class="linkbtn" id="ampSwitch">Switch and use it</button> · <button type="button" class="linkbtn" id="ampCancel">Keep No amp</button>`;
+      $('#ampSwitch').onclick = () => useWebForAmps(ampOffer); $('#ampCancel').onclick = () => { ampOffer = null; showAmpNote(); };
+    } else el.textContent = p === 'guitar' || p === 'bass'
+      ? 'Going through your own amp, pedals or modeller? Keep “No amp”. Plugged straight in? Pick an amp (it uses browser audio in the app for now).'
+      : `${p === 'keys' ? 'Keys' : p === 'drums' ? 'Drums' : 'Keys, vocals and most instruments'}: keep “No amp”.`;
+    return;
+  }
   else if(p === 'guitar' || p === 'bass') el.textContent = toneNow === 'off'
     ? `${p === 'bass' ? 'Bass' : 'Guitar'} plugged straight into your interface? Pick an amp. Going through your own amp, pedals or modeller? Keep “No amp”.`
     : 'You hear yourself through the amp. Turn off direct monitoring on your interface so you don’t hear the dry sound too.';
@@ -420,7 +436,8 @@ $('#scStart').onclick = async () => {
     return;
   }
   b.hidden = true; $('#scBody').hidden = false; $('#scState').textContent = 'Play something';
-  $('#scIntro').textContent = engineFellBack ? 'The app’s audio engine had a problem (' + engineWhy + '), so this uses browser audio.' : 'Pick your interface, play, and check you can hear yourself.';
+  if(audio.IN_APP && !audio.NATIVE && !engineFellBack){ $('#scIntro').textContent = 'Browser audio (for the amps). Back to the app’s own engine, lowest delay: Audio settings → Sound engine.'; }
+  else $('#scIntro').textContent = engineFellBack ? 'The app’s audio engine had a problem (' + engineWhy + '), so this uses browser audio.' : 'Pick your interface, play, and check you can hear yourself.';
   if(audio.inputSampleRate() && audio.inputSampleRate() !== 48000) $('#scIntro').textContent += ` Your interface runs at ${audio.inputSampleRate() / 1000} kHz: set it to 48 kHz if you can.`;
   scStarted = performance.now(); scTimer = setInterval(scMeter, 60);
 };
@@ -526,13 +543,22 @@ const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeTe
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
 $('#leaveBtn').onclick = () => { room.leave(); location.href = location.pathname; };
 $('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); avatar.setMuted(!on); $('#micBtn').setAttribute('aria-pressed', String(on)); $('#micBtn').title = on ? 'Mic on' : 'Mic off'; };
-function setCam(on){
+let camBusy = false;
+function setCam(on, retry = false){
   camOn = on; store.set('ss.cam', on ? '1' : '0');
   const v = media && media.getVideoTracks()[0]; if(v) v.enabled = on;
+  if(on && !v && retry && media && !camBusy){   // no camera when you joined: ask for it again now
+    camBusy = true;
+    navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }).then(s => {
+      const t = s.getVideoTracks()[0]; media.addTrack(t);
+      const vs = new MediaStream([t]); ui.showVideoIn(ui.tileFor({ identity:me.id, name:me.name }), vs); room.setVideo(vs); avatar.setCam(true);
+    }).catch(e => { setCam(false); ui.notice('Camera unavailable (' + (e.name || e) + '). ' + (/Mac/.test(navigator.userAgent) ? 'On a Mac: System Settings → Privacy & Security → Camera → turn on ' + (audio.IN_APP ? 'air.band' : 'your browser') + ', then restart it.' : 'Allow the camera for this site, then try again.'), { key: 'cam' }); })
+      .finally(() => { camBusy = false; });
+  }
   avatar.setCam(on && !!v);
   const b = $('#camToggle'); b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'Camera on' : 'Camera off'); b.title = on ? 'Camera on (tap to turn it off)' : 'Camera off (tap to turn it on)';
 }
-$('#camToggle').onclick = () => setCam(!camOn);
+$('#camToggle').onclick = () => setCam(!camOn, true);
 // The pocket synth: pads on screen instead of your instrument (your mic goes quiet while it's on).
 let micBeforeSynth = true;
 function setSynth(on){
