@@ -22,7 +22,7 @@ let split = false, mixFailed = null;
 // compressed file (no MediaRecorder), it's mixed here and saved as a WAV instead.
 export async function start(kind, alsoTracks = false){
   what = kind; split = alsoTracks && kind !== 'me'; mixFailed = null;
-  if(kind !== 'me') tracks.start(id => (room.peers.get(id) || {}).name); audio.startRecording();   // always: the exact capture behind the timing check
+  tracks.start(id => (room.peers.get(id) || {}).name, { band: kind !== 'me' }); audio.startRecording();   // 'me' too: your take, block by block with no seams   // always: the exact capture behind the timing check
   if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video', screen: what === 'screen' }); }catch(e){ console.warn('mix recording unavailable', e); mixFailed = e; } }
   return what;
 }
@@ -55,12 +55,13 @@ export async function stop(){
   };
   const timingUrl = URL.createObjectURL(new Blob([wav(left, right, sr)], { type: 'audio/wav' }));
   const mixed = mix && await mix;
-  const t = what !== 'me' ? await tracks.stop({ zip: split, mix: !mixed }) : null;
+  const t = await tracks.stop({ zip: split, mix: !mixed && what !== 'me', me: what === 'me' });
   const tracksUrl = t && t.zipUrl, wavMix = !mixed && t && t.mixUrl;
   const why = mixFailed && (mixFailed.name === 'NotAllowedError' ? 'the screen share was cancelled' : mixFailed.message || mixFailed);
   const note = mixFailed ? (what === 'video' ? 'Video recording isn’t available in this browser/app (' + why + '), so this is the whole jam as audio. Chrome records video.'
     : what === 'screen' ? 'The screen wasn’t recorded (' + why + '), so this is the whole jam as audio. Chrome records the screen: pick "This tab" when it asks.' : '') : '';
   split = false;
-  const take = mixed || (wavMix ? { url: wavMix, type: 'audio/wav', ext: 'wav', video: false, note } : { url: URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false });
+  const meUrl = t && t.meUrl;
+  const take = mixed || (wavMix ? { url: wavMix, type: 'audio/wav', ext: 'wav', video: false, note } : { url: meUrl || URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false });
   return { take, timingUrl, tracksUrl, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
 }

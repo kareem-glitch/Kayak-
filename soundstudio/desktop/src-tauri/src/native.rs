@@ -257,8 +257,13 @@ fn hub(rx: crossbeam_channel::Receiver<Out>, writer: Writer, sh: Arc<Shared>) {
                 let out: Vec<f32> = outs.drain(..).flat_map(|o| o.1).collect();
                 // mic placed on the same timeline: sample j is what reached the mic at heard + j
                 let mut mic = vec![0f32; out.len()];
+                // blocks that follow on (within two blocks) go back to back: their timestamps wobble a
+                // little, and placing each one exactly would leave a click at every block boundary
+                let mut next: Option<i64> = None;
                 for (at, d) in mics.drain(..) {
-                    let j0 = ((at - heard) * ssengine::RATE as f64 / 1000.0).round() as i64;
+                    let mut j0 = ((at - heard) * ssengine::RATE as f64 / 1000.0).round() as i64;
+                    if let Some(e) = next { if (j0 - e).abs() <= 2 * d.len() as i64 { j0 = e; } }
+                    next = Some(j0 + d.len() as i64);
                     for (k, x) in d.iter().enumerate() { let j = j0 + k as i64; if j >= 0 && (j as usize) < mic.len() { mic[j as usize] = *x; } }
                 }
                 let mut b = vec![0u8; 16]; b[0] = 2; b[4..8].copy_from_slice(&(out.len() as u32).to_le_bytes()); b[8..16].copy_from_slice(&heard.to_le_bytes());

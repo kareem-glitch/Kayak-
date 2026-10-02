@@ -9,9 +9,10 @@ import * as audio from './audio/io.js';
 const SR = 48000;
 let rec = null;
 
-export function start(names){
+export function start(names, { band = true } = {}){
   rec = { t0: clk(), names, tracks: new Map(), band: null };
   room.taps.tracks = (id, planes, atMs) => place(id, planes, atMs);
+  if(!band) return;
   // the band: Tone's output streamed into a plain 48 kHz context and tapped there
   // (the same route the whole-jam recording takes; Tone's own context is wrapped)
   try{
@@ -48,14 +49,15 @@ function place(id, planes, atMs){
 
 // Stop. zip: the separate tracks as a .zip; mix: everything mixed to one stereo
 // WAV (the whole jam, made here, for browsers and apps without MediaRecorder).
-export async function stop({ zip: wantZip = true, mix: wantMix = false } = {}){
+export async function stop({ zip: wantZip = true, mix: wantMix = false, me: wantMe = false } = {}){
   if(!rec) return null;
   const r = rec; rec = null; room.taps.tracks = null;
-  const files = [], mono = [];
+  const files = [], mono = []; let meTrack = null;
   for(const [id, t] of r.tracks){
     const out = new Float32Array(t.end);
     for(const b of t.blocks) out.set(b.data, b.pos);
     mono.push(out);
+    if(wantMe && id === 'me') meTrack = out;
     if(wantZip) files.push({ name: safe(id === 'me' ? 'You' : (r.names(id) || id)) + '.wav', data: wav24(out, SR) });
   }
   let bandL = null, bandR = null;
@@ -72,6 +74,7 @@ export async function stop({ zip: wantZip = true, mix: wantMix = false } = {}){
     }
   }
   const res = {};
+  if(meTrack && meTrack.length) res.meUrl = URL.createObjectURL(new Blob([wav24(meTrack, SR)], { type: 'audio/wav' }));   // just you, 24-bit, seamless
   if(wantZip && files.length) res.zipUrl = URL.createObjectURL(new Blob([zip(files)], { type: 'application/zip' }));
   if(wantMix && (mono.length || bandL)){
     const n = Math.max(0, ...mono.map(x => x.length), bandL ? bandL.length : 0), L = new Float32Array(n), R = new Float32Array(n);

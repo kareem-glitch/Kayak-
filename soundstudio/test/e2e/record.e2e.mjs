@@ -29,13 +29,13 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
         const blob = await (await fetch(dl.href)).blob();
         const bytes = new Uint8Array(await blob.arrayBuffer());
         return { name: dl.download, label: dl.textContent, tag: media.tagName, type: blob.type, size: bytes.length,
-          wavChannels: bytes[0] === 82 ? new DataView(bytes.buffer).getUint16(22, true) : 0, timing: document.getElementById('recTiming').href.startsWith('blob:') };
+          wavChannels: bytes[0] === 82 ? new DataView(bytes.buffer).getUint16(22, true) : 0, wavSeconds: bytes[0] === 82 ? new DataView(bytes.buffer).getUint32(40, true) / new DataView(bytes.buffer).getUint32(28, true) : 0, timing: document.getElementById('recTiming').href.startsWith('blob:') };
       });
     }
     const me = await take('me', 4);
     const look = await A.evaluate(() => { const s = getComputedStyle(document.getElementById('recDownload')); return [s.color, s.backgroundColor]; });
     assert.notEqual(look[0], look[1], `the download button's label is readable (${look})`);
-    assert.match(me.name, /\.wav$/); assert.equal(me.tag, 'AUDIO'); assert.ok(me.size > 44 + 3.5 * 48000 * 4, `WAV holds ~4 s (${me.size})`);
+    assert.match(me.name, /\.wav$/); assert.equal(me.tag, 'AUDIO'); assert.ok(me.wavSeconds > 3.5 && me.wavSeconds < 5.5, `WAV holds ~4 s (${me.wavSeconds})`);
     assert.ok(me.timing, 'timing file offered too');
     const all = await take('all', 4);
     assert.match(all.name, /\.(webm|m4a)$/); assert.equal(all.tag, 'AUDIO'); assert.match(all.type, /^audio\//); assert.ok(all.size > 20000, `audio file has content (${all.size})`);
