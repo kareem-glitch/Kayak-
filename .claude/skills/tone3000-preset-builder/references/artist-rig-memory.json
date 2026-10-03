@@ -1,0 +1,3723 @@
+[
+  {
+    "id": "prince-purple-rain",
+    "artist": "Prince",
+    "song": "Purple Rain",
+    "year": 1984,
+    "genres": [
+      "Pop Rock",
+      "R&B",
+      "Power Ballad"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/prince",
+    "guitars": [
+      "Hohner MadCat Telecaster (flamed maple body, vintage single coils)"
+    ],
+    "pedals": [
+      "Boss DS-1 Distortion",
+      "Boss BF-2 Flanger",
+      "Boss OC-2 Octave"
+    ],
+    "amp": "Mesa Boogie Mark V / Mark II Series (Lead Channel)",
+    "cab": "1x12 Mesa Combo (Celestion Black Shadow C90 / EVM12L)",
+    "outboard": "Teletronix LA-2A Tube Optical Compressor",
+    "reverb": "EMT 250 / Lexicon 224 Plate Reverb (32% wet)",
+    "notes": "Iconic high-sustain 80s lead tone. DS-1 drives the front of the Mesa Mark lead channel; compressed for endless sustain into lush studio plate.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "CLASSIC",
+        "name": "Boss DS-1 Distortion"
+      },
+      {
+        "tone": 89805,
+        "gear": "amp-cab",
+        "model": "LEAD",
+        "name": "Boogie Mark V 1x12 Combo"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.32,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mark V Lead; Right: Mark V Rhythm (both pushed by DS-1 for immense stadium stereo spread)"
+  },
+  {
+    "id": "deep-purple-highway-star",
+    "artist": "Deep Purple / Ritchie Blackmore",
+    "song": "Highway Star",
+    "year": 1972,
+    "genres": [
+      "Hard Rock",
+      "Proto-Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/ritchie-blackmore",
+    "guitars": [
+      "1968 Fender Stratocaster (alder body, maple cap neck, single coils)"
+    ],
+    "pedals": [
+      "Dallas Rangemaster / Hornby-Skewes Treble Booster (germanium/silicon boost)"
+    ],
+    "amp": "1968 Marshall Major 200W Lead (Model 1967, dimed Volume/Treble, no bass)",
+    "cab": "Marshall 1982B 4x12 (Celestion G12H30 55Hz Pulsonic cones)",
+    "outboard": "Studio analog tape compression",
+    "reverb": "Room ambience (20% wet)",
+    "notes": "Ritchie's legendary Bach-influenced neo-classical solo. Treble booster slam into 200 watts of EL34/KT88 Marshall headroom.",
+    "t3k_chain": [
+      {
+        "tone": 87264,
+        "gear": "pedal",
+        "model": "BOOST SET 5",
+        "name": "Dallas Rangemaster Treble Booster"
+      },
+      {
+        "tone": 51310,
+        "gear": "amp-cab",
+        "model": "MRSH MJR",
+        "name": "Marshall Major 200 Plexi Lead 1968"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.2,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall Major 200W Dimed; Right: 1968 Marshall Super Lead 12,000 Series (Tone 72145) both pushed by Rangemaster"
+  },
+  {
+    "id": "allman-brothers-blue-sky",
+    "artist": "The Allman Brothers Band",
+    "song": "Blue Sky",
+    "year": 1972,
+    "genres": [
+      "Southern Rock",
+      "Blues Rock",
+      "Jam"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/duane-allman",
+    "guitars": [
+      "Duane: 1959 Gibson Les Paul 'Hot Lanta'; Dickey: 1957 Goldtop Les Paul"
+    ],
+    "pedals": [
+      "None (straight in, guitar volume knobs dialed for dynamics)"
+    ],
+    "amp": "Marshall JMP 50W Plexi (Model 1987) cranked into sweet spot saturation",
+    "cab": "Marshall 4x12 with JBL D120F / Celestion G12H speakers",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Room ambience (22% wet)",
+    "notes": "The definitive southern twin-lead benchmark. Duane takes Solo 1 (smooth, lyrical warmth); Dickey takes Solo 2 (biting country-blues clarity).",
+    "t3k_chain": [
+      {
+        "tone": 65578,
+        "gear": "amp-cab",
+        "model": "JM50LD",
+        "name": "Marshall JMP-50 Lead 1969 Plexi"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.22,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left (Duane Allman): 1969 JMP-50 (Tone 65578); Right (Dickey Betts): 1976 Marshall JMP 50W (Tone 86687)"
+  },
+  {
+    "id": "lynyrd-skynyrd-free-bird",
+    "artist": "Lynyrd Skynyrd / Allen Collins",
+    "song": "Free Bird",
+    "year": 1973,
+    "genres": [
+      "Southern Rock",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/allen-collins",
+    "guitars": [
+      "1964 Gibson Firebird I (bridge pickup)"
+    ],
+    "pedals": [
+      "Maestro Echoplex tape delay (subtle slap)"
+    ],
+    "amp": "1968 Marshall Super Lead 100W (12,000 series Plexi) cranked",
+    "cab": "Marshall 1960 4x12 (Celestion G12H30 55Hz Pulsonic cones)",
+    "outboard": "LA-2A Optical Compression",
+    "reverb": "Studio One Doraville room ambience (25% wet)",
+    "notes": "Allen Collins' marathon multi-tracked guitar solo. Recorded at Studio One in Doraville, GA through a cranked 100W Marshall Super Lead.",
+    "t3k_chain": [
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12,000 Series Drive"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.25,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1968 Marshall Super Lead 12k (Tone 72145); Right: 1969 Marshall JMP Super Lead (Tone 87031) recreating the multi-tracked guitar army"
+  },
+  {
+    "id": "chuck-berry-johnny-b-goode",
+    "artist": "Chuck Berry",
+    "song": "Johnny B. Goode",
+    "year": 1958,
+    "genres": [
+      "Rock and Roll",
+      "Rhythm & Blues"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/chuck-berry",
+    "guitars": [
+      "Gibson ES-350T (P-90 single coils, thin archtop)"
+    ],
+    "pedals": [
+      "None"
+    ],
+    "amp": "Gibson GA-200 Rhythm King / Fender Tweed Bassman 5F6-A (cranked into natural tube breakup)",
+    "cab": "2x12 Jensen / Norelco speakers or 4x10 Jensen P10R",
+    "outboard": "Chess Studios tape slapback delay (Echo Fix EF-X2)",
+    "reverb": "Chess Studios live room (18% wet)",
+    "notes": "The birth of rock and roll guitar intro. P-90s pushing Tweed-era tubes into gritty, punchy edge-of-breakup bite with vintage Chess tape slapback.",
+    "t3k_chain": [
+      {
+        "tone": 60033,
+        "gear": "amp-cab",
+        "model": "GBSN G200",
+        "name": "Gibson GA-200 Rhythm King 1960"
+      },
+      {
+        "tone": 65088,
+        "gear": "outboard",
+        "model": "Echo Fix",
+        "mix": 0.35,
+        "name": "Echo Fix EF-X2 Tape Delay"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Gibson GA-200 Rhythm King (Tone 60033); Right: Eric Clapton's Fender Bassman 5F6-A (Tone 84556) with Chess tape slap on both"
+  },
+  {
+    "id": "steely-dan-kid-charlemagne",
+    "artist": "Steely Dan / Larry Carlton",
+    "song": "Kid Charlemagne",
+    "year": 1976,
+    "genres": [
+      "Jazz Rock",
+      "Fusion",
+      "Yacht Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/larry-carlton",
+    "guitars": [
+      "1969 Gibson ES-335 (PAF neck and bridge pickups)"
+    ],
+    "pedals": [
+      "None (plugged directly into amp, dynamic picking response)"
+    ],
+    "amp": "1960 Fender Tweed Deluxe (5E3 circuit, volume on ~11, tone on ~6)",
+    "cab": "1x12 Jensen P12R speaker in Tweed combo",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Studio room ambience (22% wet)",
+    "notes": "Ranked #1 guitar solo by Steely Dan. Larry Carlton cranked the little Tweed Deluxe until it sang with sweet harmonic saturation without fuzziness.",
+    "t3k_chain": [
+      {
+        "tone": 54580,
+        "gear": "amp-cab",
+        "model": "SM57 CAP EDGE",
+        "name": "1960 Fender Tweed Deluxe 5E3"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.22,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Shure SM57 Cap Edge mic; Right: Sennheiser MD 421 Middle mic on the 1960 Tweed Deluxe"
+  },
+  {
+    "id": "jimi-hendrix-purple-haze",
+    "artist": "Jimi Hendrix",
+    "song": "Purple Haze / Voodoo Child",
+    "year": 1967,
+    "genres": [
+      "Psychedelic Rock",
+      "Acid Rock",
+      "Blues Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jimi-hendrix",
+    "guitars": [
+      "1965 Fender Stratocaster (reverse strung, single coils)"
+    ],
+    "pedals": [
+      "Dallas Arbiter Fuzz Face (BC108 Silicon / Germanium)",
+      "Roger Mayer Octavia",
+      "Shin-ei Uni-Vibe"
+    ],
+    "amp": "1968 Marshall Super Lead 100W 1959 (cranked all controls to 10)",
+    "cab": "Marshall 1960 4x12 (Celestion G12M Greenback 25W)",
+    "outboard": "Olympic Studios tape compression",
+    "reverb": "Spring / Studio Room (25% wet)",
+    "notes": "The foundation of psychedelic rock guitar. Silicon Fuzz Face slaps the cranked Super Lead for thick, singing octave harmonics.",
+    "t3k_chain": [
+      {
+        "tone": 87219,
+        "gear": "pedal",
+        "model": "Silicon",
+        "name": "Dallas Arbiter Silicon Fuzz Face"
+      },
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12 000 Series"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.25,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1968 Super Lead; Right: 1969 JMP-50 Plexi (Tone 65578) with Fuzz Face spread across both channels"
+  },
+  {
+    "id": "led-zeppelin-whole-lotta-love",
+    "artist": "Led Zeppelin / Jimmy Page",
+    "song": "Whole Lotta Love / Heartbreaker",
+    "year": 1969,
+    "genres": [
+      "Hard Rock",
+      "Blues Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jimmy-page",
+    "guitars": [
+      "1959 Gibson Les Paul Standard 'Number One' (PAF humbuckers)"
+    ],
+    "pedals": [
+      "Sola Sound Tone Bender Professional MKII",
+      "Maestro Echoplex"
+    ],
+    "amp": "1969 Marshall JMP-50 / 1959 Super Lead cranked",
+    "cab": "Marshall 1982B 4x12 (Celestion G12H30 55Hz)",
+    "outboard": "Lindell Lin76 FET Compressor + Neve 1073 EQ",
+    "reverb": "Large Chamber / Plate Reverb (24% wet)",
+    "notes": "Classic Page bite and mid-growl. Tone Bender MkII into Plexi with crisp British upper midrange punch.",
+    "t3k_chain": [
+      {
+        "tone": 86750,
+        "gear": "outboard",
+        "model": "4:1",
+        "name": "Lindell Lin76 FET Compressor"
+      },
+      {
+        "tone": 79454,
+        "gear": "pedal",
+        "model": "mid gain",
+        "name": "Klon Centaur Overdrive"
+      },
+      {
+        "tone": 65578,
+        "gear": "amp-cab",
+        "model": "JM50LD",
+        "name": "Marshall JMP-50 Lead 1969 Plexi"
+      },
+      {
+        "tone": 79572,
+        "gear": "outboard",
+        "model": "Line 0",
+        "name": "Neve 1073LB Console Preamp"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Chamber",
+        "mix": 0.24,
+        "name": "Lexicon PCM91 Large Chamber"
+      }
+    ],
+    "stereo_strategy": "Left: JMP-50 Plexi (FAT CAB); Right: 1968 Marshall Super Lead (Tone 72145) with Neve 1073 console sheen"
+  },
+  {
+    "id": "van-halen-eruption",
+    "artist": "Van Halen / Eddie Van Halen",
+    "song": "Eruption / Ain't Talkin' 'Bout Love",
+    "year": 1978,
+    "genres": [
+      "Hard Rock",
+      "Heavy Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/eddie-van-halen",
+    "guitars": [
+      "Frankenstrat (Gibson PAF bridge humbucker screwed into ash body)"
+    ],
+    "pedals": [
+      "MXR Phase 90 (script logo)",
+      "MXR 6-Band Graphic EQ",
+      "Echoplex EP-3"
+    ],
+    "amp": "1968 Marshall Super Lead 100W (Model 1959, run at ~90V via Variac into dummy load)",
+    "cab": "Marshall 4x12 with Celestion G12M-25 Greenbacks",
+    "outboard": "API Console Preamp / Studio EQ",
+    "reverb": "Sunset Sound Studio 1 EMT Plate Reverb (25% wet)",
+    "notes": "The Holy Grail 'Brown Sound'. Sagged 100W Marshall power section giving warm, woody, chewy compression with cutting clarity.",
+    "t3k_chain": [
+      {
+        "tone": 89490,
+        "gear": "amp-cab",
+        "model": "EVH",
+        "name": "Van Halen 1 Marshall Super Lead"
+      },
+      {
+        "tone": 84558,
+        "gear": "space",
+        "model": "WetDry",
+        "mix": 0.25,
+        "name": "Sunset Sound EMT Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Van Halen 1 Super Lead; Right: 1968 Marshall Super Lead Drive (Tone 72145) with Sunset Sound EMT Plate spread"
+  },
+  {
+    "id": "pink-floyd-comfortably-numb",
+    "artist": "Pink Floyd / David Gilmour",
+    "song": "Comfortably Numb",
+    "year": 1979,
+    "genres": [
+      "Progressive Rock",
+      "Classic Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/david-gilmour",
+    "guitars": [
+      "The Black Strat (1969 Fender Stratocaster, Seymour Duncan SSL-1C bridge pickup)"
+    ],
+    "pedals": [
+      "Electro-Harmonix Big Muff (Ram's Head 1973)",
+      "Colorsound Power Boost",
+      "MXR Phase 90"
+    ],
+    "amp": "Hiwatt DR103 Custom 100W (immense clean headroom, pristine punch)",
+    "cab": "WEM Super Starfinder 200 4x12 (Fane Crescendo 12A cast chassis)",
+    "outboard": "Yamaha RA-200 Rotary Speaker / Studio Plate Reverb",
+    "reverb": "Lexicon 224 / PCM91 Large Chamber (30% wet)",
+    "notes": "Often cited as the greatest guitar solo ever recorded. Ram's Head Big Muff singing into high-headroom Hiwatt DR103 with lush hall reverb.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "Electro-Harmonix Big Muff Ram's Head"
+      },
+      {
+        "tone": 53037,
+        "gear": "amp-cab",
+        "model": "Bright Overdrive",
+        "name": "Hiwatt DR103 Custom 100W"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Chamber",
+        "mix": 0.3,
+        "name": "Lexicon PCM91 Large Chamber"
+      }
+    ],
+    "stereo_strategy": "Left: Hiwatt DR103 BLEND #1; Right: Hiwatt DR103 BLEND #2 (Tone 53037) or Cetus Hall for massive Gilmourian dimension"
+  },
+  {
+    "id": "gnr-sweet-child-o-mine",
+    "artist": "Guns N' Roses / Slash",
+    "song": "Sweet Child O' Mine / November Rain",
+    "year": 1987,
+    "genres": [
+      "Hard Rock",
+      "Heavy Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/slash",
+    "guitars": [
+      "1959 Gibson Les Paul Replica (built by Kris Derrig, Seymour Duncan Alnico II Pro pickups)"
+    ],
+    "pedals": [
+      "Dunlop Cry Baby Wah",
+      "Boss OD-1 / Ibanez TS-9 (subtle mid push)"
+    ],
+    "amp": "Marshall JCM800 2203 / Studio SIR Stock #39 modded 1959 Super Lead",
+    "cab": "Marshall 1960A 4x12 (Celestion Vintage 30 60W)",
+    "outboard": "Lindell Lin76 FET Compressor + Neve 1073LB Line Preamp",
+    "reverb": "Lexicon PCM91 Plate Reverb (26% wet)",
+    "notes": "Slash's signature 'Appetite for Destruction' singing neck pickup tone with tone knob rolled down, pushed by modded Marshall roar.",
+    "t3k_chain": [
+      {
+        "tone": 86750,
+        "gear": "outboard",
+        "model": "4:1",
+        "name": "Lindell Lin76 FET Compressor"
+      },
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tube Screamer"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 + V30 4x12"
+      },
+      {
+        "tone": 79572,
+        "gear": "outboard",
+        "model": "Line 0",
+        "name": "Neve 1073LB Console Preamp"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.26,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: JCM800 2203 with V30; Right: 1968 Marshall Super Lead (Tone 72145) with Cetus Plate"
+  },
+  {
+    "id": "srv-texas-flood",
+    "artist": "Stevie Ray Vaughan",
+    "song": "Texas Flood / Pride and Joy",
+    "year": 1983,
+    "genres": [
+      "Texas Blues",
+      "Blues Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/stevie-ray-vaughan",
+    "guitars": [
+      "'Number One' (1963 Fender Stratocaster, high output Texas single coils, heavy .013 strings)"
+    ],
+    "pedals": [
+      "Ibanez TS808 / TS9 Tube Screamer (Drive low, Level max)"
+    ],
+    "amp": "1964 Fender Super Reverb 4x10 / Dumble Steel String Singer cranked",
+    "cab": "4x10 Jensen P10R / Electro-Voice EV12L speakers",
+    "outboard": "Studio optical tube compression",
+    "reverb": "Fender tube spring reverb (28% wet)",
+    "notes": "Unrivaled Texas blues punch. TS9 pushes the Super Reverb front end; massive low-end authority and glassy high-end bloom.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tube Screamer"
+      },
+      {
+        "tone": 88775,
+        "gear": "amp-cab",
+        "model": "BFSR",
+        "name": "Fender Super Reverb 1965"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.28,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1965 Fender Super Reverb; Right: 1965 Fender Twin Reverb (Tone 89797) both driven by TS9"
+  },
+  {
+    "id": "metallica-master-of-puppets",
+    "artist": "Metallica / James Hetfield & Kirk Hammett",
+    "song": "Master of Puppets / Battery",
+    "year": 1986,
+    "genres": [
+      "Thrash Metal",
+      "Speed Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/james-hetfield",
+    "guitars": [
+      "James: ESP Explorer (Seymour Duncan Invader / EMG 81); Kirk: Jackson Randy Rhoads (EMG 81)"
+    ],
+    "pedals": [
+      "Ibanez TS9 (used on early albums, later pure amp gain)"
+    ],
+    "amp": "Mesa Boogie Mark IIC+ (Simul-Class, Graphic EQ in classic 'V-shape' scoop)",
+    "cab": "Marshall 1960B 4x12 (Celestion Vintage 30)",
+    "outboard": "Neve console EQ & studio limiter",
+    "reverb": "Small tight room ambience (12% wet)",
+    "notes": "The gold standard of thrash metal rhythm. Mark IIC+ scooped mids with surgical low-end tightness and crushing saturation.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tube Screamer (Tight Boost)"
+      },
+      {
+        "tone": 81803,
+        "gear": "amp-cab",
+        "model": "Mark IIC",
+        "name": "Mesa Boogie Mark IIC+ Simul-Class"
+      },
+      {
+        "tone": 79572,
+        "gear": "outboard",
+        "model": "Line 0",
+        "name": "Neve 1073LB Line Preamp"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.12,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Boogie Mark IIC+; Right: Mesa Boogie Dual Rectifier Rev G (Tone 69206) for wall-of-sound thrash rhythm"
+  },
+  {
+    "id": "nirvana-smells-like-teen-spirit",
+    "artist": "Nirvana / Kurt Cobain",
+    "song": "Smells Like Teen Spirit",
+    "year": 1991,
+    "genres": [
+      "Grunge",
+      "Alternative Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/kurt-cobain",
+    "guitars": [
+      "1969 Fender Mustang / Jaguar (bridge humbucker)"
+    ],
+    "pedals": [
+      "Boss DS-1 Distortion (Tone on 11 o'clock, Distortion dimed)",
+      "Electro-Harmonix Small Clone Chorus"
+    ],
+    "amp": "Mesa Boogie Studio .22 / Fender Twin Reverb / Quad Reverb",
+    "cab": "Marshall 1960B 4x12 (Celestion 75W)",
+    "outboard": "Butch Vig Smart Studios compression",
+    "reverb": "Studio live room (26% wet)",
+    "notes": "The quiet-verse/explosive-chorus dynamic that reshaped 90s rock. Clean Twin for the verse, DS-1 kicked on for crushing chorus crunch.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "CLASSIC",
+        "name": "Boss DS-1 Distortion"
+      },
+      {
+        "tone": 88775,
+        "gear": "amp-cab",
+        "model": "BFSR",
+        "name": "Fender Super Reverb / Twin"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.26,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: DS-1 into Fender Super Reverb; Right: DS-1 into In Utero Twin Reverb (Tone 65844 STC 4038)"
+  },
+  {
+    "id": "black-sabbath-paranoid",
+    "artist": "Black Sabbath / Tony Iommi",
+    "song": "Paranoid / Iron Man",
+    "year": 1970,
+    "genres": [
+      "Heavy Metal",
+      "Doom Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/tony-iommi",
+    "guitars": [
+      "1965 Gibson SG Special 'Monkey' (John Birch / P-90 pickups, light gauge strings)"
+    ],
+    "pedals": [
+      "Dallas Rangemaster Treble Booster (custom modded for full-range boost by John 'Birch')"
+    ],
+    "amp": "Laney Supergroup 100W / Laney TI100 (dimed EL34 power stage)",
+    "cab": "Laney 4x12 with Goodmans / Celestion G12H speakers",
+    "outboard": "Regent Sound Studio analog tape compression",
+    "reverb": "Live tracking room (20% wet)",
+    "notes": "The riff that started heavy metal. Modded Rangemaster treble booster slams the Laney front end into thick, ominous fuzz-drive.",
+    "t3k_chain": [
+      {
+        "tone": 31234,
+        "gear": "pedal",
+        "model": "V7",
+        "name": "Dallas Rangemaster Treble Booster"
+      },
+      {
+        "tone": 83324,
+        "gear": "amp-cab",
+        "model": "Iommy",
+        "name": "Laney TI100 / Supergroup"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.2,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Laney TI100 'Iommy 2'; Right: 1968 Marshall Super Lead 12k (Tone 72145) with boosted mids"
+  },
+  {
+    "id": "queen-bohemian-rhapsody",
+    "artist": "Queen / Brian May",
+    "song": "Bohemian Rhapsody / Killer Queen",
+    "year": 1975,
+    "genres": [
+      "Glam Rock",
+      "Hard Rock",
+      "Operatic Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/brian-may",
+    "guitars": [
+      "The Red Special (homemade Burns Tri-Sonic pickups in series, out-of-phase switches, sixpence coin pick)"
+    ],
+    "pedals": [
+      "Dallas Rangemaster / Greg Fryer Treble Booster"
+    ],
+    "amp": "Vox AC30 2x12 (Normal Channel dimed, Top Boost bypassed)",
+    "cab": "2x12 Celestion Alnico Blue speakers",
+    "outboard": "Trident A-Range console compression",
+    "reverb": "Lexicon NuHall / Trident Room (28% wet)",
+    "notes": "The singing 'orchestral guitar' tone. High-impedance treble booster overloads Vox AC30 EL84 power tubes into violin-like sustain.",
+    "t3k_chain": [
+      {
+        "tone": 45843,
+        "gear": "pedal",
+        "model": "1500",
+        "name": "Dallas Rangemaster Treble Booster"
+      },
+      {
+        "tone": 53601,
+        "gear": "amp-cab",
+        "model": "VX 304",
+        "name": "1961 Vox AC30/4 Normal"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "NuHall",
+        "mix": 0.28,
+        "name": "Lexicon PCM91 Wave NuHall"
+      }
+    ],
+    "stereo_strategy": "Left: 1961 Vox AC30/4; Right: 1964 Vox AC30 Top Boost (Tone 82521) for multi-tracked Queen harmony spread"
+  },
+  {
+    "id": "acdc-back-in-black",
+    "artist": "AC/DC / Angus Young & Malcolm Young",
+    "song": "Back in Black / Highway to Hell",
+    "year": 1980,
+    "genres": [
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/angus-young",
+    "guitars": [
+      "Angus: 1968 Gibson SG Standard; Malcolm: 1963 Gretsch Double Jet 'The Beast'"
+    ],
+    "pedals": [
+      "Schaffer-Vega Diversity System (clean wireless boost / comp)"
+    ],
+    "amp": "1959 Marshall Super Lead 100W / JTM45 cranked into power tube crunch",
+    "cab": "Marshall 1960AX 4x12 (Celestion G12M Greenback 25W)",
+    "outboard": "Mutt Lange / Compass Point Studios SSL console EQ",
+    "reverb": "Small studio live room (15% wet)",
+    "notes": "The purest hard rock crunch in history. Zero distortion pedals — all organic Marshall EL34 power saturation and wood vibration.",
+    "t3k_chain": [
+      {
+        "tone": 80875,
+        "gear": "amp",
+        "model": "Driven",
+        "name": "Marshall 1959 Super Lead Head"
+      },
+      {
+        "tone": 75087,
+        "gear": "cab",
+        "model": "SA73",
+        "name": "Marshall 1960AX 4x12 Greenback"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.15,
+        "name": "Alabs Cetus Small Room"
+      }
+    ],
+    "stereo_strategy": "Left (Angus Lead): Marshall Super Lead + Greenbacks; Right (Malcolm Rhythm): 1976 Marshall JMP 50W (Tone 86687)"
+  },
+  {
+    "id": "rhcp-under-the-bridge",
+    "artist": "Red Hot Chili Peppers / John Frusciante",
+    "song": "Under the Bridge / Scar Tissue",
+    "year": 1991,
+    "genres": [
+      "Alternative Rock",
+      "Funk Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/john-frusciante",
+    "guitars": [
+      "1962 Fender Stratocaster (rosewood fretboard, Seymour Duncan SSL-1 / vintage single coils)"
+    ],
+    "pedals": [
+      "Boss DS-2 Turbo Distortion",
+      "Ibanez WH10 Wah",
+      "Boss CE-1 Chorus Ensemble"
+    ],
+    "amp": "Marshall Major 200W + Marshall Silver Jubilee 2555",
+    "cab": "Marshall 1960A 4x12 (Celestion G12T-75)",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "The Mansion live room / Cetus Spring (24% wet)",
+    "notes": "Soulful, articulate Hendrix-style thumb-over chord embellishments. Bell-like clean Strat compressed straight into vintage tube warmth.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 65227,
+        "gear": "amp-cab",
+        "model": "Deluxe",
+        "name": "Fender Deluxe Reverb 1965"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.24,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1965 Fender Deluxe Reverb; Right: 1965 Fender Twin Reverb (Tone 89797) with Cetus Spring"
+  },
+  {
+    "id": "dire-straits-sultans-of-swing",
+    "artist": "Dire Straits / Mark Knopfler",
+    "song": "Sultans of Swing",
+    "year": 1978,
+    "genres": [
+      "Roots Rock",
+      "Classic Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/mark-knopfler",
+    "guitars": [
+      "1961 Fender Stratocaster (fiesta red, position 2: bridge + middle pickups, bare fingers)"
+    ],
+    "pedals": [
+      "Dan Armstrong Orange Squeezer Compressor"
+    ],
+    "amp": "1965 Fender Twin Reverb / Fender Vibrolux Reverb",
+    "cab": "2x12 Jensen C12N / JBL D120F speakers",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Pathway Studios London live room / Plate (22% wet)",
+    "notes": "The quintessential 'quack' tone. In-between Strat pickup selection with fast optical compression catching bare finger clawhammer attack.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 51649,
+        "gear": "amp-cab",
+        "model": "NEW VERSION",
+        "name": "Fender 65 Deluxe Reverb Reissue"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.22,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Deluxe Reverb; Right: Fender 65 Twin Reverb CLEAN (Tone 89797) with LA-2A"
+  },
+  {
+    "id": "foo-fighters-everlong",
+    "artist": "Foo Fighters / Dave Grohl & Chris Shiflett",
+    "song": "Everlong / Monkey Wrench",
+    "year": 1997,
+    "genres": [
+      "Post-Grunge",
+      "Alternative Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/dave-grohl",
+    "guitars": [
+      "Gibson Trini Lopez / Gibson Les Paul Standard"
+    ],
+    "pedals": [
+      "Boss SD-1 Super Overdrive",
+      "ProCo Rat 2"
+    ],
+    "amp": "Mesa Boogie Dual Rectifier Rev G + Vox AC30 Top Boost (the classic Gil Norton blend)",
+    "cab": "Mesa Rectifier 4x12 (Celestion V30) + Vox 2x12 Blue Alnico",
+    "outboard": "Neve 1073 EQ + Empirical Labs Distressor",
+    "reverb": "Grandmaster Recorders live room (16% wet)",
+    "notes": "Massive wall-of-guitars chorus. Combining the scooped low-end roar of a Dual Rectifier with the midrange chime and bite of a cranked Vox AC30.",
+    "t3k_chain": [
+      {
+        "tone": 87914,
+        "gear": "pedal",
+        "model": "Drive-II",
+        "name": "Boss SD-1 Super Overdrive"
+      },
+      {
+        "tone": 79103,
+        "gear": "amp-cab",
+        "model": "Orange Crunch",
+        "name": "Mesa Boogie Dual Rectifier Rev G"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.16,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Boogie Dual Rectifier Rev G; Right: 2002 Vox AC30 (Tone 70408) for the exact studio multi-amp pairing"
+  },
+  {
+    "id": "green-day-basket-case",
+    "artist": "Green Day / Billie Joe Armstrong",
+    "song": "Basket Case / Longview",
+    "year": 1994,
+    "genres": [
+      "Pop Punk",
+      "Punk Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/billie-joe-armstrong",
+    "guitars": [
+      "Fernandes Stratocaster 'Blue' (Seymour Duncan SH-4 JB angled bridge humbucker)"
+    ],
+    "pedals": [
+      "Boss BD-2 Blues Driver / SD-1 (boost only)"
+    ],
+    "amp": "Marshall 1959SLP 100W Super Lead ('Pete' with Bradshaw Dookie gain mod)",
+    "cab": "Marshall 1960B 4x12 (Celestion Vintage 30)",
+    "outboard": "Lindell Lin76 FET Compressor 8:1 (fast attack punk glue)",
+    "reverb": "Fantasy Studios live room (14% wet)",
+    "notes": "The defining 90s pop-punk guitar tone. Hot-rodded Marshall Plexi with extra preamp tube gain and upper mid snarl.",
+    "t3k_chain": [
+      {
+        "tone": 86750,
+        "gear": "outboard",
+        "model": "8:1",
+        "name": "Lindell Lin76 FET Compressor"
+      },
+      {
+        "tone": 87914,
+        "gear": "pedal",
+        "model": "Boost-I",
+        "name": "Boss SD-1 Super Overdrive"
+      },
+      {
+        "tone": 78832,
+        "gear": "amp-cab",
+        "model": "v2",
+        "name": "Marshall 1959BJA Billie Joe Super Lead"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.14,
+        "name": "Alabs Cetus Small Room"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall 1959BJA Super Lead; Right: Mesa Boogie Dual Rectifier Rev G (Tone 79103 Orange Crunch) for punk punch"
+  },
+  {
+    "id": "eagles-hotel-california",
+    "artist": "Eagles / Don Felder & Joe Walsh",
+    "song": "Hotel California",
+    "year": 1976,
+    "genres": [
+      "Classic Rock",
+      "Soft Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/don-felder",
+    "guitars": [
+      "Don: 1959 Gibson Les Paul Standard; Joe: 1968 Fender Telecaster"
+    ],
+    "pedals": [
+      "Echoplex EP-3 tape delay",
+      "MXR Phase 90"
+    ],
+    "amp": "Fender Tweed Deluxe 5E3 + Marshall JMP 50W Plexi (Felder into Tweed, Walsh into Marshall)",
+    "cab": "Jensen P12R 1x12 + Marshall 4x12 Celestion G12H",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Criteria Studios Miami EMT Plate (24% wet)",
+    "notes": "The twin-solo finale. Felder's warm, creamy Les Paul through a cranked Tweed Deluxe interplaying with Walsh's biting Telecaster through a Marshall.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 79454,
+        "gear": "pedal",
+        "model": "mid gain",
+        "name": "Klon Centaur Overdrive"
+      },
+      {
+        "tone": 54580,
+        "gear": "amp-cab",
+        "model": "SM57",
+        "name": "1960 Fender Tweed Deluxe 5E3"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.24,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left (Don Felder): 1960 Fender Tweed Deluxe; Right (Joe Walsh): 1969 Marshall JMP-50 Plexi (Tone 65578)"
+  },
+  {
+    "id": "bb-king-the-thrill-is-gone",
+    "artist": "B.B. King",
+    "song": "The Thrill Is Gone",
+    "year": 1969,
+    "genres": [
+      "Blues",
+      "Electric Blues"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/b-b-king",
+    "guitars": [
+      "Gibson ES-355 'Lucille' (Varitone switch, stereo output, no F-holes)"
+    ],
+    "pedals": [
+      "None (pure touch, butterfly vibrato, volume knob dynamics)"
+    ],
+    "amp": "Gibson Lab Series L5 100W 2x12 (solid state with multifilter parametric mid & optical compressor) or Fender Twin Reverb",
+    "cab": "2x12 Celestion / CTS speakers",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Hit Factory NYC Plate / Spring Reverb (26% wet)",
+    "notes": "The King of the Blues tone. Smooth, horn-like sustain with rolled-off highs, singing midrange, and exquisite vibrato dynamics.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "WARM",
+        "name": "1965 Fender Twin Reverb Warm"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.26,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1965 Fender Twin Reverb Warm; Right: 1960 Fender Tweed Deluxe (Tone 54580) with LA-2A"
+  },
+  {
+    "id": "wes-montgomery-round-midnight",
+    "artist": "Wes Montgomery",
+    "song": "Round Midnight / Four on Six",
+    "year": 1960,
+    "genres": [
+      "Jazz",
+      "Bop",
+      "Hard Bop"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/wes-montgomery",
+    "guitars": [
+      "Gibson L-5 CES (single Gibson classic '57 / PAF neck pickup, heavy flatwound strings)"
+    ],
+    "pedals": [
+      "None (plucked exclusively with fleshy right thumb, tone knob on 2-3)"
+    ],
+    "amp": "Standel 200L / Polytone Mini-Brute / Fender Twin Reverb (warm clean headroom)",
+    "cab": "1x15 JBL D130 / 2x12 Jensen C12N",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Reeves Sound Studios room ambience (20% wet)",
+    "notes": "The archetype of jazz guitar warmth. Fleshy thumb attack with high tone roll-off, thick low mids, and zero harsh treble.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "WARM",
+        "name": "1965 Fender Twin Reverb Warm"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.2,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Twin Reverb Warm; Right: 1960 Gibson GA-200 Rhythm King (Tone 60033) for rich jazz archtop depth"
+  },
+  {
+    "id": "tool-schism",
+    "artist": "Tool / Adam Jones",
+    "song": "Schism / Lateralus",
+    "year": 2001,
+    "genres": [
+      "Progressive Metal",
+      "Alternative Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/adam-jones",
+    "guitars": [
+      "1979 Gibson Les Paul Custom (Silverburst, Seymour Duncan JB bridge pickup)"
+    ],
+    "pedals": [
+      "Dunlop BB535 Cry Baby Wah",
+      "Boss BF-2 Flanger",
+      "DOD FX40B Equalizer"
+    ],
+    "amp": "Three-amp blend: 1976 Marshall Super Bass + Diezel VH4 (Channel 3) + Mesa Boogie Dual Rectifier",
+    "cab": "Mesa traditional 4x12 (Celestion V30) + Marshall 1960B",
+    "outboard": "Joe Barresi mix bus compression + API 550 EQs",
+    "reverb": "Studio live room (16% wet)",
+    "notes": "Heavy, polyrhythmic, chugging precision. Adam Jones blends three heads for unmatched punch: Marshall for bite, Diezel for low-end girth, Mesa for grit.",
+    "t3k_chain": [
+      {
+        "tone": 88012,
+        "gear": "amp-cab",
+        "model": "BLEND 2",
+        "name": "Diezel / Plexi / Bogner Studio 3-Amp Blend"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.16,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Diezel/Plexi Blend (Tone 88012); Right: Diezel VH4 Channel 3 (Tone 89509) for crushing progressive metal width"
+  },
+  {
+    "id": "u2-where-the-streets-have-no-name",
+    "artist": "U2 / The Edge",
+    "song": "Where the Streets Have No Name / Bad",
+    "year": 1987,
+    "genres": [
+      "Post-Punk",
+      "Arena Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/the-edge",
+    "guitars": [
+      "1976 Gibson Explorer / 1973 Fender Stratocaster (Herdim blue pick held sideways for scraper attack)"
+    ],
+    "pedals": [
+      "Korg SDD-3000 rack delay/preamp",
+      "Electro-Harmonix Deluxe Memory Man",
+      "Boss FA-1 FET Preamp"
+    ],
+    "amp": "1964 Vox AC30 Top Boost (Normal channel jumpered into Brilliant)",
+    "cab": "2x12 Celestion Alnico Blue speakers",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Brian Eno / Daniel Lanois ambient shimmer & cloud reverb (35% wet)",
+    "notes": "The chime of modern rock. Herdim pick texture pushes Vox AC30 top end, buffered by studio preamp into ambient rhythmic repeats.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 70408,
+        "gear": "amp-cab",
+        "model": "AC30",
+        "name": "2002 Vox AC30 Top Boost"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Cloud",
+        "mix": 0.35,
+        "name": "Alabs Cetus Cloud Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Vox AC30; Right: 1965 Fender Twin Reverb CLEAN (Tone 89797) with Cetus Shimmer reverb"
+  },
+  {
+    "id": "john-mayer-gravity",
+    "artist": "John Mayer",
+    "song": "Gravity / Slow Dancing in a Burning Room",
+    "year": 2006,
+    "genres": [
+      "Blues Pop",
+      "Contemporary Blues"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/john-mayer",
+    "guitars": [
+      "Fender Custom Shop 'The Black One' Stratocaster (Big Dipper scooped pickups)"
+    ],
+    "pedals": [
+      "Ibanez TS10 Tube Screamer",
+      "Klon Centaur",
+      "Keeley Katana Clean Boost",
+      "Electro-Harmonix Q-Tron"
+    ],
+    "amp": "Two-Rock Custom Reverb Signature + Dumble Steel String Singer (SSS) 100W",
+    "cab": "Two-Rock 2x12 (Celestion G12-65 / EVM12L)",
+    "outboard": "Teletronix LA-2A Optical Tube Compressor",
+    "reverb": "Bricasti M7 / Wet Plate Reverb (30% wet)",
+    "notes": "The holy grail modern clean-to-edge Strat tone. Scooped midrange pickups into ultra-high-headroom Dumble/Two-Rock cleans pushed gently by TS10 and Klon.",
+    "t3k_chain": [
+      {
+        "tone": 79454,
+        "gear": "pedal",
+        "model": "mid gain",
+        "name": "Klon Centaur Overdrive"
+      },
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez Tube Screamer"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 65227,
+        "gear": "amp-cab",
+        "model": "Deluxe",
+        "name": "Fender Deluxe Reverb 1965 / Boutique Clean"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.3,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Deluxe Reverb (Tone 65227); Right: 1965 Fender Twin Reverb CLEAN (Tone 89797) with Klon & Plate spread"
+  },
+  {
+    "id": "carlos-santana-black-magic-woman",
+    "artist": "Carlos Santana",
+    "song": "Black Magic Woman / Europa / Smooth",
+    "year": 1970,
+    "genres": [
+      "Latin Rock",
+      "Blues Rock",
+      "Fusion"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/carlos-santana",
+    "guitars": [
+      "PRS Santana Signature / Yamaha SG2000 / Gibson Les Paul (warm neck humbucker)"
+    ],
+    "pedals": [
+      "Ibanez TS9 Tube Screamer",
+      "Mu-Tron Wah"
+    ],
+    "amp": "Mesa Boogie Mark I 100W Combo ('Snakebyte' - Randall Smith's original hot-rodded Princeton) / Dumble Overdrive Special",
+    "cab": "Altec 417-8H / Celestion 1x12 open-back",
+    "outboard": "Studio analog optical compression",
+    "reverb": "Lush hall / plate reverb (28% wet)",
+    "notes": "Singing, violin-like sustain with rolled-down tone knob on neck pickup, driving cascading tube gain stages into endless, singing feedback.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tube Screamer"
+      },
+      {
+        "tone": 89805,
+        "gear": "amp-cab",
+        "model": "LEAD",
+        "name": "Mesa Boogie Mark Series Lead"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.28,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Boogie Mark V Lead; Right: Boogie Mark V Rhythm (Tone 89805) with Hall reverb"
+  },
+  {
+    "id": "billy-gibbons-la-grange",
+    "artist": "ZZ Top / Billy Gibbons",
+    "song": "La Grange / Sharp Dressed Man",
+    "year": 1973,
+    "genres": [
+      "Texas Blues Rock",
+      "Boogie Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/billy-gibbons",
+    "guitars": [
+      "1959 Gibson Les Paul Standard 'Pearly Gates' (PAF humbuckers, Mexican peso coin pick)"
+    ],
+    "pedals": [
+      "Bixonic Expandora",
+      "Z.Vex Super Hard-On",
+      "Dunlop Cry Baby"
+    ],
+    "amp": "1959 Marshall Super Lead 100W / Rio Grande / Legend 50W cranked",
+    "cab": "Marshall 4x12 with Celestion G12M Greenbacks",
+    "outboard": "Teletronix LA-2A Tube Compressor",
+    "reverb": "Studio live room (20% wet)",
+    "notes": "Greasy Texas boogie sizzle. Pearly Gates pinched harmonics singing through hot EL34 power tube breakup with thick midrange punch.",
+    "t3k_chain": [
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12,000 Series Drive"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.2,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1968 Marshall Super Lead 12k; Right: 1969 Marshall JMP-50 Plexi (Tone 65578) with room ambience"
+  },
+  {
+    "id": "smashing-pumpkins-cherub-rock",
+    "artist": "The Smashing Pumpkins / Billy Corgan",
+    "song": "Cherub Rock / Today / Mayonaise",
+    "year": 1993,
+    "genres": [
+      "Alternative Rock",
+      "Grunge",
+      "Shoegaze"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/billy-corgan",
+    "guitars": [
+      "1957 Reissue Fender Stratocaster (Fender Lace Sensor pickups: Blue neck, Silver middle, Red bridge)"
+    ],
+    "pedals": [
+      "Electro-Harmonix Op-Amp Big Muff (V4/V5 'Pumpkin Pi')",
+      "MXR Phase 100"
+    ],
+    "amp": "1984 Marshall JCM800 2203 (100W master volume, KT88 power tube mod)",
+    "cab": "Marshall 1960A 4x12 (Celestion G12T-75)",
+    "outboard": "Butch Vig 40-track guitar layering / SSL console EQ",
+    "reverb": "Studio live room (22% wet)",
+    "notes": "Crushing, symphonic wall of fuzz. The Op-Amp Big Muff provides massive scooped grit with singing high-end bloom into Marshall headroom.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "Electro-Harmonix Big Muff Fuzz"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 + V30 4x12"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.22,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Big Muff into JCM800; Right: Big Muff into Soldano SLO-100 (Tone 46269) for massive Corgan wall-of-guitars"
+  },
+  {
+    "id": "pearl-jam-alive",
+    "artist": "Pearl Jam / Mike McCready & Stone Gossard",
+    "song": "Alive / Yellow Ledbetter",
+    "year": 1991,
+    "genres": [
+      "Grunge",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/mike-mccready",
+    "guitars": [
+      "1959 Fender Stratocaster (custom shop / vintage single coils)"
+    ],
+    "pedals": [
+      "Ibanez TS9 Tube Screamer",
+      "Dunlop Cry Baby Wah",
+      "Univox Uni-Vibe"
+    ],
+    "amp": "1968 Marshall 50W Plexi / 1959 Fender Tweed Bassman",
+    "cab": "Marshall 1960B 4x12 (Celestion Vintage 30) + 4x10 Jensen",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "London Bridge Studios live room (24% wet)",
+    "notes": "Searing Hendrix/Ace Frehley-inspired climax solo on 'Alive'. Warm TS9 overdrive pushes vintage Plexi into singing, responsive sustain.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 79454,
+        "gear": "pedal",
+        "model": "mid gain",
+        "name": "Klon Centaur Overdrive"
+      },
+      {
+        "tone": 84556,
+        "gear": "amp-cab",
+        "model": "Clapton's Bassman",
+        "name": "Fender Bassman 5F6-A"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.24,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Bassman 5F6-A; Right: 1968 Marshall Super Lead 12k (Tone 72145) with Klon boost"
+  },
+  {
+    "id": "tom-morello-killing-in-the-name",
+    "artist": "Rage Against the Machine / Tom Morello",
+    "song": "Killing in the Name / Bulls on Parade",
+    "year": 1992,
+    "genres": [
+      "Rap Metal",
+      "Alternative Metal",
+      "Funk Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/tom-morello",
+    "guitars": [
+      "'Arm The Homeless' custom guitar (Kramer-style body, EMG 81/85 active humbuckers, Ibanez Edge locking tremolo, killswitch)"
+    ],
+    "pedals": [
+      "DigiTech WH-1 Whammy",
+      "Dunlop Cry Baby",
+      "DOD FX40B Equalizer",
+      "Boss DD-2 Delay"
+    ],
+    "amp": "1988 Marshall JCM800 2205 (50W split-channel head, channel gain maxed)",
+    "cab": "Peavey 4x12 straight cabinet (Celestion G12K-85 speakers)",
+    "outboard": "Neve console compression & EQ",
+    "reverb": "Tight dry room (12% wet)",
+    "notes": "Industrial hip-hop guitar groove. Aggressive Marshall JCM800 crunch, scooped midrange, biting percussive attack, and iconic killswitch stutter.",
+    "t3k_chain": [
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 / 2205"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.12,
+        "name": "Alabs Cetus Small Room"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JCM800 (Tone 87735); Right: 1969 Marshall JMP Super Lead (Tone 87031) for heavy hard-panned rhythm"
+  },
+  {
+    "id": "jack-white-seven-nation-army",
+    "artist": "The White Stripes / Jack White",
+    "song": "Seven Nation Army / Ball and Biscuit",
+    "year": 2003,
+    "genres": [
+      "Garage Rock",
+      "Blues Rock",
+      "Punk Blues"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jack-white",
+    "guitars": [
+      "1964 Airline JB Hutto Res-O-Glass (Valco single coils) / 1950s Kay Hollowbody"
+    ],
+    "pedals": [
+      "DigiTech Whammy (octave down for bass riff)",
+      "Electro-Harmonix Big Muff Pi (NYC)",
+      "MXR Micro Amp"
+    ],
+    "amp": "1960s Sears Silvertone 1484 Twin Twelve (60W tube head) + 1970s Fender Twin Reverb",
+    "cab": "Silvertone 2x12 Jensen C12Q + Fender 2x12 Utah",
+    "outboard": "Toe Rag Studios analog tape saturation",
+    "reverb": "Vintage spring / studio room (22% wet)",
+    "notes": "Raw, trashy garage-rock grit. Low-fi tube saturation from vintage Sears Silvertone blended with cranked NYC Big Muff fuzz.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "Electro-Harmonix Big Muff Fuzz"
+      },
+      {
+        "tone": 60033,
+        "gear": "amp-cab",
+        "model": "GBSN G200",
+        "name": "Gibson GA-200 / Silvertone Style Vintage Breakup"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.22,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Gibson GA-200 / Silvertone Fuzz; Right: 1965 Fender Twin Reverb WARM (Tone 89797) with Big Muff"
+  },
+  {
+    "id": "keith-richards-brown-sugar",
+    "artist": "The Rolling Stones / Keith Richards",
+    "song": "Brown Sugar / Start Me Up / Honky Tonk Women",
+    "year": 1971,
+    "genres": [
+      "Classic Rock",
+      "Rock and Roll"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/keith-richards",
+    "guitars": [
+      "1953 Fender Telecaster 'Micawber' (5-string Open-G tuning: G-D-G-B-D, neck Gibson PAF humbucker, bridge lap steel pickup)"
+    ],
+    "pedals": [
+      "None (cranked tube amps only)"
+    ],
+    "amp": "Late 1950s Fender Tweed Twin-Amp (high-powered 5F8-A) / Fender Tweed Champ (in studio)",
+    "cab": "2x12 Jensen P12N in Tweed Twin",
+    "outboard": "Olympic Studios / Rolling Stones Mobile unit tape compression",
+    "reverb": "Studio live room (18% wet)",
+    "notes": "The definition of rhythm guitar groove. Open-G chords through saturated Tweed power tubes yielding rich, ringing, chimey overdrive.",
+    "t3k_chain": [
+      {
+        "tone": 54580,
+        "gear": "amp-cab",
+        "model": "SM57",
+        "name": "1960 Fender Tweed Deluxe / Twin Breakup"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1960 Tweed Deluxe 5E3; Right: Eric Clapton's Fender Bassman 5F6-A (Tone 84556) with LA-2A"
+  },
+  {
+    "id": "jeff-beck-cause-weve-ended-as-lovers",
+    "artist": "Jeff Beck",
+    "song": "Cause We've Ended as Lovers / Beck's Bolero",
+    "year": 1975,
+    "genres": [
+      "Jazz Fusion",
+      "Instrumental Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jeff-beck",
+    "guitars": [
+      "The 'Oxblood' 1954 Gibson Les Paul / 1959 Fender Telecaster 'Tele-Gib' (Seymour Duncan JB/Jazz pickups)"
+    ],
+    "pedals": [
+      "Colorsound Overdriver",
+      "ProCo Rat",
+      "Maestro Echoplex"
+    ],
+    "amp": "Marshall JTM45 50W / 1970s Fender Twin Reverb",
+    "cab": "Marshall 4x12 with Celestion Greenbacks",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "AIR Studios London plate reverb (32% wet)",
+    "notes": "Dedicated to Roy Buchanan. Heartbreaking volume swell dynamics, delicate harmonic overtones, and weeping pick-hand microtonal vibrato.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 78883,
+        "gear": "pedal",
+        "model": "Crunch",
+        "name": "ProCo Rat Distortion"
+      },
+      {
+        "tone": 77706,
+        "gear": "amp-cab",
+        "model": "JT45",
+        "name": "Marshall JTM45 Bluesbreaker"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.32,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JTM45 Bluesbreaker; Right: 1965 Fender Twin Reverb WARM (Tone 89797) with LA-2A & Plate"
+  },
+  {
+    "id": "gary-moore-still-got-the-blues",
+    "artist": "Gary Moore",
+    "song": "Still Got the Blues / Parisienne Walkways",
+    "year": 1990,
+    "genres": [
+      "Blues Rock",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/gary-moore",
+    "guitars": [
+      "1959 Gibson Les Paul Standard 'Greeny' (out-of-phase Peter Green neck pickup mod)"
+    ],
+    "pedals": [
+      "Marshall The Guv'nor overdrive pedal",
+      "Ibanez TS9 Tube Screamer"
+    ],
+    "amp": "Marshall JTM45 Reissue 1989 (cranked with 5881/KT66 output tubes)",
+    "cab": "Marshall 1960B 4x12 (Celestion G12T-75 / Vintage 30)",
+    "outboard": "Studio optical tube compression",
+    "reverb": "Lexicon 480L Hall / Plate (32% wet)",
+    "notes": "The monumental blues sustain anthem. Neck pickup with tone at ~7, Marshall Guv'nor pedal driving the JTM45 front end for singing feedback.",
+    "t3k_chain": [
+      {
+        "tone": 87914,
+        "gear": "pedal",
+        "model": "Drive-II",
+        "name": "Marshall Guv'nor / Boss SD-1 Warm Drive"
+      },
+      {
+        "tone": 77706,
+        "gear": "amp-cab",
+        "model": "JT45",
+        "name": "Marshall JTM45 Bluesbreaker"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.32,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JTM45 Bluesbreaker; Right: 1968 Marshall Super Lead 12k (Tone 72145) with Hall reverb"
+  },
+  {
+    "id": "randy-rhoads-crazy-train",
+    "artist": "Ozzy Osbourne / Randy Rhoads",
+    "song": "Crazy Train / Mr. Crowley",
+    "year": 1980,
+    "genres": [
+      "Heavy Metal",
+      "Classical Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/randy-rhoads",
+    "guitars": [
+      "Karl Sandoval Polka Dot Flying V (DiMarzio PAF / Super Distortion pickups) / 1974 Gibson Les Paul Custom White"
+    ],
+    "pedals": [
+      "MXR Distortion+ (Output max, Distortion ~2 o'clock)",
+      "MXR 10-Band Graphic EQ",
+      "MXR Stereo Chorus",
+      "Roland RE-201 Space Echo"
+    ],
+    "amp": "1979 Marshall 1959 Super Lead 100W (white, modified with cascade gain mod)",
+    "cab": "Marshall 1960 4x12 (Altec 417-8H / Celestion G12-65)",
+    "outboard": "Ridge Farm Studios Trident console EQ",
+    "reverb": "Studio live room (18% wet)",
+    "notes": "The classical metal revolution. MXR Distortion+ pushes the bright, mid-forward Marshall cascade mod into tight, laser-focused articulation.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "LOW",
+        "name": "MXR Distortion+ / DS-1 Edge Drive"
+      },
+      {
+        "tone": 87031,
+        "gear": "amp-cab",
+        "model": "1969 Marshall JMP",
+        "name": "1969 Marshall JMP Super Lead"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JMP Super Lead; Right: 1968 Marshall Super Lead 12k (Tone 72145) triple-tracked lead replica"
+  },
+  {
+    "id": "george-benson-breezin",
+    "artist": "George Benson",
+    "song": "Breezin' / Affirmation",
+    "year": 1976,
+    "genres": [
+      "Jazz",
+      "Smooth Jazz",
+      "R&B"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/george-benson",
+    "guitars": [
+      "Ibanez GB10 George Benson Signature (floating mini-humbuckers, spruce top)"
+    ],
+    "pedals": [
+      "None (rest-stroke picking technique)"
+    ],
+    "amp": "Polytone Mini-Brute / 1965 Fender Twin Reverb",
+    "cab": "1x12 Polytone speaker / 2x12 Jensen C12N",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Capitol Studios Hollywood live chamber (24% wet)",
+    "notes": "The pinnacle of melodic jazz-pop fluency. Pure acoustic archtop body resonance captured with immaculate clean headroom and optical compression.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "WARM",
+        "name": "1965 Fender Twin Reverb Warm"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.24,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Twin Reverb Warm; Right: 1960 Gibson GA-200 Rhythm King (Tone 60033) for acoustic jazz body depth"
+  },
+  {
+    "id": "grant-green-idle-moments",
+    "artist": "Grant Green",
+    "song": "Idle Moments / Solid",
+    "year": 1963,
+    "genres": [
+      "Jazz",
+      "Hard Bop",
+      "Soul Jazz"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/grant-green",
+    "guitars": [
+      "1960 Gibson ES-330 (dual P-90 single coil pickups, fully hollow body)"
+    ],
+    "pedals": [
+      "None (plucked with a medium pick near the bridge)"
+    ],
+    "amp": "Fender Tweed Twin / Fender Super Reverb (all tone controls turned down except midrange cranked)",
+    "cab": "4x10 Jensen P10R speakers",
+    "outboard": "Rudy Van Gelder optical tube limiter",
+    "reverb": "Van Gelder Studio Hackensack chamber (20% wet)",
+    "notes": "The unmistakable Blue Note hollowbody bite. Single-note horn phrasing with P-90 single coils cut through the mix without round muffled highs.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88775,
+        "gear": "amp-cab",
+        "model": "BFSR",
+        "name": "Fender Super Reverb 1965"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.2,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Super Reverb; Right: 1960 Gibson GA-200 Rhythm King (Tone 60033) with Van Gelder room"
+  },
+  {
+    "id": "john-scofield-a-go-go",
+    "artist": "John Scofield",
+    "song": "A Go Go / Hottentot",
+    "year": 1998,
+    "genres": [
+      "Jazz Funk",
+      "Jam Band",
+      "Post-Bop"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/john-scofield",
+    "guitars": [
+      "1981 Ibanez AS200 Semi-Hollow (Super 58 humbuckers)"
+    ],
+    "pedals": [
+      "ProCo Rat 2 (Distortion low ~9 o'clock for gritty edge-of-breakup bite)",
+      "Klon Centaur",
+      "DigiTech XP100 Whammy/Wah",
+      "Boomerang Phrase Sampler"
+    ],
+    "amp": "Vox AC30 Top Boost / Mesa Boogie Mark I",
+    "cab": "2x12 Celestion Alnico Blue",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Studio spring / live room (22% wet)",
+    "notes": "Grimy, angular jazz-funk grease. Semi-hollow body bite pushed into sweet harmonic distortion by the Rat into a responsive tube combo.",
+    "t3k_chain": [
+      {
+        "tone": 78883,
+        "gear": "pedal",
+        "model": "Crunch",
+        "name": "ProCo Rat 2 (Edge of Breakup)"
+      },
+      {
+        "tone": 70408,
+        "gear": "amp-cab",
+        "model": "AC30",
+        "name": "2002 Vox AC30 Top Boost"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.22,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Vox AC30 Top Boost; Right: 1965 Fender Deluxe Reverb (Tone 65227) both driven by ProCo Rat"
+  },
+  {
+    "id": "josh-homme-no-one-knows",
+    "artist": "Queens of the Stone Age / Josh Homme",
+    "song": "No One Knows / Little Sister",
+    "year": 2002,
+    "genres": [
+      "Stoner Rock",
+      "Desert Rock",
+      "Alternative Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/josh-homme",
+    "guitars": [
+      "1984 Ovation Ultra GP (dual Dimarzio Super 2 humbuckers, C-standard tuning)",
+      "Maton BB1200 'Betty Blue'"
+    ],
+    "pedals": [
+      "Fulltone Ultimate Octave",
+      "Boss SD-1 Super Overdrive",
+      "Dunlop Cry Baby Q-Zone fixed wah"
+    ],
+    "amp": "Ampeg VT-40 / VT-22 60W (cranked midrange, ultra-linear power stage) + Peavey Decade (studio secret)",
+    "cab": "Ampeg 4x10 / 2x12 with CTS / Celestion speakers",
+    "outboard": "Studio analog optical compression",
+    "reverb": "Dry studio room (12% wet)",
+    "notes": "The signature dry, wooden, mid-heavy 'desert rock' punch. Distinct midrange emphasis without fizzy high end, tight bass response in dropped tuning.",
+    "t3k_chain": [
+      {
+        "tone": 87914,
+        "gear": "pedal",
+        "model": "Drive-II",
+        "name": "Boss SD-1 / Mid Boost"
+      },
+      {
+        "tone": 60033,
+        "gear": "amp-cab",
+        "model": "GBSN G200",
+        "name": "Vintage American Mid-Forward Tube Breakup"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.12,
+        "name": "Alabs Cetus Small Dry Room"
+      }
+    ],
+    "stereo_strategy": "Left: Mid-forward punch; Right: 1968 Marshall Super Lead 12k (Tone 72145) with scooped presence"
+  },
+  {
+    "id": "kevin-parker-elephant",
+    "artist": "Tame Impala / Kevin Parker",
+    "song": "Elephant / Feels Like We Only Go Backwards",
+    "year": 2012,
+    "genres": [
+      "Psychedelic Rock",
+      "Neo-Psychedelia",
+      "Indie Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/kevin-parker",
+    "guitars": [
+      "Rickenbacker 335 / Teisco ET-460 K-4L / 1967 Epiphone Olympic"
+    ],
+    "pedals": [
+      "Boss BD-2 Blues Driver (often run AFTER modulation for signature squash)",
+      "Electro-Harmonix Small Stone Phaser",
+      "Boss FZ-5 / Fuzz Face"
+    ],
+    "amp": "Vox AC30 2x12 Combo + Fender FM 212R solid state combo",
+    "cab": "2x12 Celestion Alnico Blue",
+    "outboard": "DBX 160XT Compressor + Roland RE-201 Space Echo",
+    "reverb": "Holy Grail / Spring reverb (26% wet)",
+    "notes": "Fuzzy, compressed, tape-warped 60s/70s psych guitar. Drive after modulation gives that synthetic, heavily limited square-wave envelope.",
+    "t3k_chain": [
+      {
+        "tone": 74159,
+        "gear": "pedal",
+        "model": "BD-2",
+        "name": "Boss BD-2 Blues Driver"
+      },
+      {
+        "tone": 70408,
+        "gear": "amp-cab",
+        "model": "AC30",
+        "name": "2002 Vox AC30 Top Boost"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.26,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Vox AC30 with Blues Driver; Right: 1965 Fender Twin Reverb CLEAN (Tone 89797) with tape compression"
+  },
+  {
+    "id": "matthew-bellamy-plug-in-baby",
+    "artist": "Muse / Matthew Bellamy",
+    "song": "Plug In Baby / Hysteria / Knights of Cydonia",
+    "year": 2001,
+    "genres": [
+      "Space Rock",
+      "Alternative Rock",
+      "Progressive Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/matthew-bellamy",
+    "guitars": [
+      "Manson Custom Guitars (built-in Z.Vex Fuzz Factory, Fernandes Sustainer, Kaoss Pad)"
+    ],
+    "pedals": [
+      "Z.Vex Fuzz Factory (built into guitar body for self-oscillating squeals)",
+      "DigiTech WH-1 Whammy",
+      "Line 6 DL4"
+    ],
+    "amp": "Diezel VH4 (Channel 3 & 4) + Vox AC30 / Marshall JCM2000 blended",
+    "cab": "Marshall 1960A 4x12 (Celestion Vintage 30)",
+    "outboard": "Neve 1073 EQ + Empirical Labs Distressor",
+    "reverb": "Lexicon / Eventide Space Reverb (24% wet)",
+    "notes": "Searing, robotic German high-gain fuzz. High-velocity Fuzz Factory oscillating squeals tamed by high-headroom Diezel VH4 saturation.",
+    "t3k_chain": [
+      {
+        "tone": 87219,
+        "gear": "pedal",
+        "model": "Silicon",
+        "name": "High-Gain Silicon Fuzz / Fuzz Factory"
+      },
+      {
+        "tone": 89509,
+        "gear": "amp-cab",
+        "model": "DZL",
+        "name": "Diezel VH4 High Gain Lead"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.24,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Diezel VH4; Right: 2002 Vox AC30 Top Boost (Tone 70408) for signature British chime + German high-gain blend"
+  },
+  {
+    "id": "alex-turner-i-bet-you-look-good",
+    "artist": "Arctic Monkeys / Alex Turner",
+    "song": "I Bet You Look Good on the Dancefloor / Brianstorm / Do I Wanna Know",
+    "year": 2006,
+    "genres": [
+      "Indie Rock",
+      "Garage Rock Revival",
+      "Post-Punk Revival"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/alex-turner",
+    "guitars": [
+      "Fender Bronco / American Standard Stratocaster (bridge single coil) / Vox Starstream XII"
+    ],
+    "pedals": [
+      "ProCo Rat 2 Distortion",
+      "Ibanez TS808 Tube Screamer",
+      "Electro-Harmonix Memory Man"
+    ],
+    "amp": "Selmer Zodiac Twin 30 / Fender Twin Reverb '65 Reissue / Orange AD30",
+    "cab": "2x12 Jensen / Celestion speakers",
+    "outboard": "Teletronix LA-2A Tube Optical Compressor",
+    "reverb": "Spring / small club room (18% wet)",
+    "notes": "Frenetic, jagged British indie attack. Piercing bridge pickup attack through a hot Rat 2 distortion into chimey 2x12 clean headroom.",
+    "t3k_chain": [
+      {
+        "tone": 78883,
+        "gear": "pedal",
+        "model": "Crunch",
+        "name": "ProCo Rat 2 Distortion"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "CLEAN",
+        "name": "1965 Fender Twin Reverb Clean"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Club Room"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Twin Reverb with Rat; Right: 2002 Vox AC30 (Tone 70408) with TS9 boost"
+  },
+  {
+    "id": "jonny-greenwood-paranoid-android",
+    "artist": "Radiohead / Jonny Greenwood",
+    "song": "Paranoid Android / Creep / Just",
+    "year": 1997,
+    "genres": [
+      "Art Rock",
+      "Alternative Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jonny-greenwood",
+    "guitars": [
+      "1990s Fender Telecaster Plus (Fender Lace Sensor Blue in neck, dual Red humbucker in bridge, killswitch)"
+    ],
+    "pedals": [
+      "Marshall ShredMaster distortion (Contour rolled down for aggressive scooped bite)",
+      "DigiTech Whammy WH-1",
+      "Roland RE-201 Space Echo"
+    ],
+    "amp": "Fender Twin Reverb (for cleans) + 1990s Fender Deluxe 85 solid state combo (for distortion channel)",
+    "cab": "2x12 Fender / Celestion",
+    "outboard": "Nigel Godrich studio tube limiting",
+    "reverb": "Studio hall / plate (22% wet)",
+    "notes": "The defining 90s art-rock aggression. Lace Sensor Red dually humbucker slam into Marshall ShredMaster produces razor-sharp jagged distortion.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "AGRESSIVE",
+        "name": "Marshall ShredMaster / High Gain Drive"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "CLEAN",
+        "name": "1965 Fender Twin Reverb Clean"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.22,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Twin Reverb with ShredMaster; Right: 1961 Vox AC30/4 (Tone 53601) with biting upper midrange"
+  },
+  {
+    "id": "noel-gallagher-supersonic",
+    "artist": "Oasis / Noel Gallagher",
+    "song": "Supersonic / Live Forever / Wonderwall",
+    "year": 1994,
+    "genres": [
+      "Britpop",
+      "Rock and Roll"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/noel-gallagher",
+    "guitars": [
+      "Epiphone Riviera / Sheraton (humbuckers) / 1960 Gibson Les Paul Standard"
+    ],
+    "pedals": [
+      "Ibanez TS9 Tube Screamer",
+      "Marshall Guv'nor",
+      "Way Huge Aqua Puss analog delay"
+    ],
+    "amp": "Marshall JCM900 4100 / Vox AC30 / Orange Overdrive 120 head",
+    "cab": "Marshall 1960A 4x12 (Celestion G12T-75)",
+    "outboard": "Owen Morris brickwall master limiter + Neve console EQ",
+    "reverb": "Sawmills Studios chamber / plate (24% wet)",
+    "notes": "Wall-of-sound Britpop anthem tone. Dual humbuckers pushing Marshall JCM900 / Orange power sections into lush, melodic, anthemic crunch.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tube Screamer"
+      },
+      {
+        "tone": 82521,
+        "gear": "amp-cab",
+        "model": "VX TB30",
+        "name": "1964 Vox AC30 Top Boost"
+      },
+      {
+        "tone": 79572,
+        "gear": "outboard",
+        "model": "Line 0",
+        "name": "Neve 1073LB Line Preamp"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.24,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Vox AC30 with TS9; Right: Marshall 1959BJA Super Lead (Tone 78832 v2) for massive Oasis stadium wall"
+  },
+  {
+    "id": "rivers-cuomo-say-it-aint-so",
+    "artist": "Weezer / Rivers Cuomo",
+    "song": "Say It Ain't So / Buddy Holly / Hash Pipe",
+    "year": 1994,
+    "genres": [
+      "Power Pop",
+      "Alternative Rock",
+      "Emo"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/rivers-cuomo",
+    "guitars": [
+      "Warmoth Custom Stratocaster 'Blue Album' (Seymour Duncan Trembucker / 59 neck humbuckers)"
+    ],
+    "pedals": [
+      "Boss Turbo Distortion DS-2 (used live)"
+    ],
+    "amp": "Mesa Boogie Mark IIC+ / Mark I (Ric Ocasek's personal studio head) + Marshall JCM900",
+    "cab": "Marshall 1960A 4x12 (Celestion Vintage 30)",
+    "outboard": "Studio SSL compression & console EQ",
+    "reverb": "Electric Lady Studios live room (18% wet)",
+    "notes": "The holy grail power-pop guitar crunch. Clean reggae-strum verse into explosive, thick Mesa Boogie Mark IIC+ chorus distortion.",
+    "t3k_chain": [
+      {
+        "tone": 81803,
+        "gear": "amp-cab",
+        "model": "Mark IIC",
+        "name": "Mesa Boogie Mark IIC+ Studio Head"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Mark IIC+; Right: Marshall JCM800 2203 (Tone 87735) for balanced low-end thump and high-end crackle"
+  },
+  {
+    "id": "stephen-carpenter-my-own-summer",
+    "artist": "Deftones / Stephen Carpenter",
+    "song": "My Own Summer (Shove It) / Change (In the House of Flies)",
+    "year": 1997,
+    "genres": [
+      "Alternative Metal",
+      "Nu-Metal",
+      "Post-Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/stephen-carpenter",
+    "guitars": [
+      "ESP Stef B-7 / B-8 7-string & 8-string baritone guitars (Fishman Fluence signature pickups, Drop-C / Drop-F#)"
+    ],
+    "pedals": [
+      "Boss FZ-2 Hyper Fuzz",
+      "Electro-Harmonix Bass Micro Synth",
+      "Line 6 MM4"
+    ],
+    "amp": "Marshall JMP-1 MIDI Tube Preamp + Peavey 5150 / Diezel VH4 (Channel 3)",
+    "cab": "Marshall 1960BV 4x12 (Celestion Vintage 30)",
+    "outboard": "Terry Date SSL mix bus compression",
+    "reverb": "Atmospheric studio room (18% wet)",
+    "notes": "Low-tuned, hypnotic groove metal. Heavy Drop-C chugs with tight, articulate low-end tracking and sweeping atmospheric decay.",
+    "t3k_chain": [
+      {
+        "tone": 84864,
+        "gear": "amp-cab",
+        "model": "Red",
+        "name": "Peavey 5150 High Gain Red Channel"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Peavey 5150 Red; Right: Mesa Boogie Dual Rectifier Rev G (Tone 69206) for heavy de-tuned groove depth"
+  },
+  {
+    "id": "jim-root-psychosocial",
+    "artist": "Slipknot / Jim Root & Mick Thomson",
+    "song": "Psychosocial / Duality",
+    "year": 2008,
+    "genres": [
+      "Nu-Metal",
+      "Groove Metal",
+      "Alternative Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jim-root",
+    "guitars": [
+      "Fender Jim Root Signature Telecaster / Jazzmaster (EMG 81/60 or Daemonum active pickups, Drop-B tuning)"
+    ],
+    "pedals": [
+      "MXR Carbon Copy",
+      "Dunlop JH-1 Jimi Hendrix Wah",
+      "Boss NS-2 Noise Suppressor"
+    ],
+    "amp": "Orange Rockerverb 100 MKIII / Diezel Herbert (EL34 / 6L6 high gain)",
+    "cab": "Orange PPC412 4x12 (Celestion Vintage 30)",
+    "outboard": "Studio optical gating and SSL channel strip EQ",
+    "reverb": "Small percussive room (10% wet)",
+    "notes": "Tight, crushing Drop-B rhythm precision. Orange Rockerverb British harmonic growl mixed with American high-gain tightness.",
+    "t3k_chain": [
+      {
+        "tone": 88952,
+        "gear": "amp-cab",
+        "model": "Mid",
+        "name": "Orange Rockerverb High Gain"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.1,
+        "name": "Alabs Cetus Tight Room"
+      }
+    ],
+    "stereo_strategy": "Left: Orange Rockerverb 100; Right: Peavey 5150 Red Channel (Tone 84864) for maximum modern metal separation"
+  },
+  {
+    "id": "tim-henson-playing-god",
+    "artist": "Polyphia / Tim Henson & Scott LePage",
+    "song": "Playing God / G.O.A.T.",
+    "year": 2022,
+    "genres": [
+      "Progressive Rock",
+      "Math Rock",
+      "Trap Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/tim-henson",
+    "guitars": [
+      "Ibanez TOD10N Nylon Acoustic-Electric / Ibanez THBB10 (Fishman Fluence Tim Henson signature pickups)"
+    ],
+    "pedals": [
+      "Boutique compressor",
+      "Multi-voice chorus/delay",
+      "Archetype Tim Henson"
+    ],
+    "amp": "Matchless DC30 / Marshall JCM800 clean platform (pristine harmonic headroom)",
+    "cab": "2x12 Custom Matchless Celestion G12H / V30",
+    "outboard": "Teletronix LA-2A Optical Compressor (fast recovery setting)",
+    "reverb": "Lush spatial plate/hall (26% wet)",
+    "notes": "Nylon-string flamenco phrasing meets trap production. Laser-precise pick articulation, zero flub, pristine high harmonics, and sparkling compression.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 65227,
+        "gear": "amp-cab",
+        "model": "Deluxe",
+        "name": "Fender Deluxe Reverb Clean Platform"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.26,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Deluxe Reverb; Right: 1965 Fender Twin Reverb CLEAN (Tone 89797) with stereo optical compression"
+  },
+  {
+    "id": "tosin-abasi-cafo",
+    "artist": "Animals as Leaders / Tosin Abasi",
+    "song": "CAFO / Physical Education",
+    "year": 2009,
+    "genres": [
+      "Djent",
+      "Progressive Metal",
+      "Jazz Fusion"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/tosin-abasi",
+    "guitars": [
+      "Abasi Concepts Larada 8-string (Fishman Fluence Tosin Abasi signature active pickups)"
+    ],
+    "pedals": [
+      "Ibanez TS9 / Horizon Devices Precision Drive",
+      "Fractal Axe-Fx",
+      "Dunlop Cry Baby"
+    ],
+    "amp": "Morgan AC20 / Bogner Ecstasy / Friedman BE-100 (high definition, ultra-tight low end)",
+    "cab": "Friedman 4x12 (Celestion Vintage 30 / Greenback blend)",
+    "outboard": "Fast FET studio compression & high-pass filtering at 80Hz",
+    "reverb": "Tight studio room (14% wet)",
+    "notes": "Thump technique and 8-string polyrhythmic mastery. Low B/F# strings kept razor-tight with high-pass filtering and fast mid-boosted saturation.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Tight Pre-Drive / Mid Boost"
+      },
+      {
+        "tone": 84864,
+        "gear": "amp-cab",
+        "model": "Red",
+        "name": "Peavey 5150 Red / High Gain Lead"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.14,
+        "name": "Alabs Cetus Tight Room"
+      }
+    ],
+    "stereo_strategy": "Left: 5150 High Gain Red; Right: Mesa Boogie Mark IIC+ (Tone 81803) for ultra-tight multi-scale 8-string articulation"
+  },
+  {
+    "id": "johnny-marr-this-charming-man",
+    "artist": "The Smiths / Johnny Marr",
+    "song": "This Charming Man / How Soon Is Now?",
+    "year": 1983,
+    "genres": [
+      "Jangle Pop",
+      "Indie Pop",
+      "Post-Punk"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/johnny-marr",
+    "guitars": [
+      "1954 Fender Telecaster / 1965 Fender Jaguar / Rickenbacker 330 (bright jangle, bridge pickup)"
+    ],
+    "pedals": [
+      "Boss CE-2 Chorus",
+      "Roland JC-120 onboard chorus",
+      "Ibanez Tube Screamer"
+    ],
+    "amp": "1965 Fender Twin Reverb / Roland JC-120 Jazz Chorus",
+    "cab": "2x12 Jensen C12N / Roland Silver Cone 2x12",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Fender tube spring / studio plate (25% wet)",
+    "notes": "The archetype of 80s indie jangle. High chiming arpeggios picked with clean precision through a Twin Reverb and stereo chorus.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "CLEAN",
+        "name": "1965 Fender Twin Reverb Clean"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.25,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Twin Reverb Clean; Right: Roland JC-120 Bright (Tone 10912) for authentic 80s indie jangle width"
+  },
+  {
+    "id": "robert-smith-just-like-heaven",
+    "artist": "The Cure / Robert Smith",
+    "song": "Just Like Heaven / A Forest / Pictures of You",
+    "year": 1987,
+    "genres": [
+      "Gothic Rock",
+      "Post-Punk",
+      "New Wave"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/robert-smith",
+    "guitars": [
+      "Fender Bass VI / 1960s Woolworth Top Twenty / Schecter UltraCure"
+    ],
+    "pedals": [
+      "Boss BF-2 Flanger",
+      "Boss CH-1 Super Chorus",
+      "Boss PN-2 Tremolo/Pan"
+    ],
+    "amp": "Roland JC-120 Jazz Chorus / Peavey Bandit / Vox AC30",
+    "cab": "2x12 Roland / Celestion",
+    "outboard": "Teletronix LA-2A Optical Compressor",
+    "reverb": "Long ambient hall & plate (35% wet)",
+    "notes": "Lush, sweeping, melancholic modulation. Cold, shimmering solid-state clean tones washed in deep analog flanging and expansive plate reverb.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 10912,
+        "gear": "amp-cab",
+        "model": "Bright Off",
+        "name": "Roland JC-120 Jazz Chorus"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.35,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Roland JC-120; Right: 1961 Vox AC30/4 (Tone 53601) washed in Cetus Cloud reverb"
+  },
+  {
+    "id": "kevin-shields-only-shallow",
+    "artist": "My Bloody Valentine / Kevin Shields",
+    "song": "Only Shallow / Soon / To Here Knows When",
+    "year": 1991,
+    "genres": [
+      "Shoegaze",
+      "Dream Pop",
+      "Noise Pop"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/kevin-shields",
+    "guitars": [
+      "1964 Fender Jazzmaster / 1962 Fender Jaguar (glide guitar technique: holding tremolo bar continuously while strumming)"
+    ],
+    "pedals": [
+      "Roger Mayer Axis Fuzz",
+      "Marshall ShredMaster",
+      "Yamaha SPX90 (Reverse Reverb early reflection program)"
+    ],
+    "amp": "Marshall JCM800 2203 + Vox AC30 (cranked into multi-amp saturation)",
+    "cab": "Marshall 1960 4x12 (Celestion G12T-75) + Vox 2x12 Alnico",
+    "outboard": "Extreme master bus optical compression & microtonal tape pitch drift",
+    "reverb": "Reverse Reverb / Early Reflections (40% wet)",
+    "notes": "The birth of shoegaze. Glide strumming bends pitch dynamically into a wall of reverse reverb feeding saturated Marshall tubes.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "High-Saturation Fuzz / Big Muff"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 + V30 4x12"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Cloud",
+        "mix": 0.4,
+        "name": "Alabs Cetus Cloud Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JCM800 with Fuzz; Right: 1964 Vox AC30 (Tone 82521) for disorienting shoegaze stereo immersion"
+  },
+  {
+    "id": "j-mascis-feel-the-pain",
+    "artist": "Dinosaur Jr. / J Mascis",
+    "song": "Feel the Pain / Freak Scene",
+    "year": 1994,
+    "genres": [
+      "Indie Rock",
+      "Noise Rock",
+      "Grunge"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/j-mascis",
+    "guitars": [
+      "1958 Fender Jazzmaster (original anodized gold pickguard, high-output single coils)"
+    ],
+    "pedals": [
+      "Electro-Harmonix 'Ram's Head' Big Muff",
+      "Tone Bender MK I/II",
+      "Electro-Harmonix Deluxe Electric Mistress"
+    ],
+    "amp": "1968 Marshall Super Lead 100W + Hiwatt DR103 100W (dimed volume stacks)",
+    "cab": "Two Marshall 4x12s + Hiwatt 4x12 (Celestion Greenbacks / Fane Crescendo)",
+    "outboard": "Studio analog tape limiting",
+    "reverb": "Live room ambience (22% wet)",
+    "notes": "Legendary deafening volume. Dual full stacks cranked to 10 pushed by vintage Ram's Head Big Muff for endless, thick harmonic feedback.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "Electro-Harmonix Ram's Head Big Muff"
+      },
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12,000 Series Drive"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.22,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1968 Marshall Super Lead; Right: Hiwatt DR103 Custom 100W (Tone 53037) replicating J's live dual-stack setup"
+  },
+  {
+    "id": "yngwie-malmsteen-far-beyond-the-sun",
+    "artist": "Yngwie Malmsteen",
+    "song": "Far Beyond the Sun / Black Star",
+    "year": 1984,
+    "genres": [
+      "Neoclassical Metal",
+      "Power Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/yngwie-malmsteen",
+    "guitars": [
+      "1971 Fender Stratocaster 'The Duck' (deeply scalloped maple fretboard, Seymour Duncan YJM Fury / DiMarzio HS-3)"
+    ],
+    "pedals": [
+      "DOD 250 Preamp Overdrive / DOD YJM308",
+      "Boss NS-2",
+      "Electro-Harmonix Small Stone"
+    ],
+    "amp": "1971 Marshall 1959 Super Lead 50W/100W non-master volume (cranked all controls to 10)",
+    "cab": "Marshall 1960B 4x12 (Celestion G12T-75)",
+    "outboard": "Studio analog tape delay (subtle slap)",
+    "reverb": "Hall / Large Chamber (26% wet)",
+    "notes": "The birth of neoclassical shred. DOD 250 preamp overdrive boosts the front end of cranked non-master Marshall heads for lightning harmonic articulation.",
+    "t3k_chain": [
+      {
+        "tone": 87264,
+        "gear": "pedal",
+        "model": "BOOST SET 5",
+        "name": "DOD 250 Style Vintage Preamp Boost"
+      },
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12k Cranked"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.26,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall Super Lead Dimed; Right: 1969 Marshall JMP-50 Plexi (Tone 65578) with DOD 250 boost across both"
+  },
+  {
+    "id": "steve-vai-for-the-love-of-god",
+    "artist": "Steve Vai",
+    "song": "For the Love of God",
+    "year": 1990,
+    "genres": [
+      "Instrumental Rock",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/steve-vai",
+    "guitars": [
+      "Ibanez JEM777 / JEM7V 'EVO' (DiMarzio Evolution humbuckers, Floyd Rose locking tremolo)"
+    ],
+    "pedals": [
+      "Boss DS-1 Distortion (Keeley modded)",
+      "Ibanez TS9 Tube Screamer",
+      "Morley Bad Horsie Wah",
+      "Eventide H3000 Ultra-Harmonizer"
+    ],
+    "amp": "Bogner Ecstasy 100W / Carvin Legacy / Marshall JCM800",
+    "cab": "Carvin / Marshall 4x12 (Celestion Vintage 30)",
+    "outboard": "Studio optical tube compression",
+    "reverb": "Eventide Plate & Pitch Reverb (32% wet)",
+    "notes": "Emotional instrumental masterpiece. Fast, expressive whammy bar phrasing into smooth cascading tube saturation with rich, singing harmonic overtones.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "CLASSIC",
+        "name": "Boss DS-1 Distortion"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 / Hot-Rodded British Lead"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.32,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: JCM800 Lead with DS-1; Right: Boogie Mark V Lead (Tone 89805) with Cetus Plate for wide virtuoso stereo sustain"
+  },
+  {
+    "id": "joe-satriani-surfing-with-the-alien",
+    "artist": "Joe Satriani",
+    "song": "Surfing with the Alien / Always with Me, Always with You",
+    "year": 1987,
+    "genres": [
+      "Instrumental Rock",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/joe-satriani",
+    "guitars": [
+      "Ibanez JS Series / Custom Chrome Boy (DiMarzio Fred / PAF Pro humbuckers)"
+    ],
+    "pedals": [
+      "Boss DS-1 Distortion (Tone on 9 o'clock, Distortion max)",
+      "Cry Baby Wah",
+      "DigiTech Whammy"
+    ],
+    "amp": "Marshall 100W Super Lead / Marshall 6100LM Anniversary / Peavey JSX",
+    "cab": "Marshall 1960B 4x12 (Celestion G12T-75)",
+    "outboard": "Studio parametric EQ & stereo limiting",
+    "reverb": "Lexicon Plate & Delay (28% wet)",
+    "notes": "The alien tone. Low-tone Boss DS-1 driving a warm Marshall front end, providing velvety legato sustain without harsh upper frequencies.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "LOW",
+        "name": "Boss DS-1 Distortion (Warm Satch Setting)"
+      },
+      {
+        "tone": 75346,
+        "gear": "amp-cab",
+        "model": "M6100",
+        "name": "Marshall 6100LM 30th Anniversary Half Stack"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.28,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall 6100LM Lead; Right: 1968 Marshall Super Lead (Tone 72145) with warm DS-1 boost"
+  },
+  {
+    "id": "john-petrucci-pull-me-under",
+    "artist": "Dream Theater / John Petrucci",
+    "song": "Pull Me Under / The Glass Prison",
+    "year": 1992,
+    "genres": [
+      "Progressive Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/john-petrucci",
+    "guitars": [
+      "Ernie Ball Music Man Majesty / Ibanez JPM100 (DiMarzio Illuminator / Crunch Lab pickups)"
+    ],
+    "pedals": [
+      "Dunlop JP95 John Petrucci Cry Baby Wah",
+      "TC Electronic Corona Chorus",
+      "MXR EVH Phase 90"
+    ],
+    "amp": "Mesa Boogie TriAxis Preamp + Simul 2:90 power amp / Mesa JP-2C (Mark IIC+ circuit)",
+    "cab": "Mesa Traditional Rectifier 4x12 (Celestion Vintage 30)",
+    "outboard": "Eventide H3000 pitch detune & studio compression",
+    "reverb": "Lexicon 480L Hall Reverb (24% wet)",
+    "notes": "The standard of progressive metal shred. High-headroom Mesa Mark IIC+ lead gain with tight, percussive lower mids and crystal clear polyphonic definition.",
+    "t3k_chain": [
+      {
+        "tone": 81803,
+        "gear": "amp-cab",
+        "model": "Mark IIC",
+        "name": "Mesa Boogie Mark IIC+ Simul-Class"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.24,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Boogie Mark IIC+; Right: Mesa Boogie Mark V Lead (Tone 89805) with 480L Hall spread"
+  },
+  {
+    "id": "tom-delonge-all-the-small-things",
+    "artist": "Blink-182 / Tom DeLonge",
+    "song": "All the Small Things / What's My Age Again? / Dammit",
+    "year": 1999,
+    "genres": [
+      "Pop Punk",
+      "Punk Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/tom-delonge",
+    "guitars": [
+      "Fender Tom DeLonge Signature Stratocaster (single bridge Seymour Duncan SH-8 Invader humbucker, single volume knob)"
+    ],
+    "pedals": [
+      "None in studio (pure high-powered amplifier blend)"
+    ],
+    "amp": "Mesa Boogie Triple Rectifier + Marshall JCM900 / 1959 Super Lead (the Jerry Finn signature blend)",
+    "cab": "Mesa Rectifier 4x12 (Celestion V30) + Marshall 1960A",
+    "outboard": "Empirical Labs Distressor 4:1 + Neve 1073 console EQ",
+    "reverb": "Tight punchy studio room (10% wet)",
+    "notes": "The high-energy 2000s pop-punk guitar anthem tone. Duncan Invader high output slams a Mesa Triple Rectifier and Marshall JCM into an impenetrable wall of sound.",
+    "t3k_chain": [
+      {
+        "tone": 79103,
+        "gear": "amp-cab",
+        "model": "Orange Crunch",
+        "name": "Mesa Boogie Dual/Triple Rectifier"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.1,
+        "name": "Alabs Cetus Tight Room"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Rectifier (Tone 79103); Right: Marshall 1959BJA Super Lead (Tone 78832 v2) for Jerry Finn's exact multi-amp mix"
+  },
+  {
+    "id": "mark-tremonti-metalingus",
+    "artist": "Alter Bridge / Creed / Mark Tremonti",
+    "song": "Metalingus / Higher / My Sacrifice",
+    "year": 2004,
+    "genres": [
+      "Post-Grunge",
+      "Hard Rock",
+      "Heavy Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/mark-tremonti",
+    "guitars": [
+      "PRS Mark Tremonti Signature (solid mahogany body, high-output Tremonti bridge humbucker)"
+    ],
+    "pedals": [
+      "Ibanez TS9 Tube Screamer (Level 10, Drive 0)",
+      "Morley Mark Tremonti Wah",
+      "T-Rex Replica Delay"
+    ],
+    "amp": "Bogner Uberschall + Mesa Boogie Dual Rectifier Rev G (blended for articulate low-end chug)",
+    "cab": "Mesa 4x12 Traditional (Celestion Vintage 30)",
+    "outboard": "Studio optical tube compression",
+    "reverb": "Studio live room (15% wet)",
+    "notes": "Crushing post-grunge/modern metal dropped-D rhythm. Massive low-end punch and mid-range cut achieved by running the TS9 clean boost into high-gain American tube heads.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Clean Boost (Level 10, Drive 0)"
+      },
+      {
+        "tone": 69206,
+        "gear": "amp-cab",
+        "model": "MBDR",
+        "name": "Mesa Boogie Dual Rectifier Rev G"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.15,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Dual Rectifier (Tone 69206); Right: Peavey 5150 Red Channel (Tone 84864) for maximum drop-D rhythm girth"
+  },
+  {
+    "id": "dave-mustaine-holy-wars",
+    "artist": "Megadeth / Dave Mustaine & Marty Friedman",
+    "song": "Holy Wars... The Punishment Due / Symphony of Destruction",
+    "year": 1990,
+    "genres": [
+      "Thrash Metal",
+      "Speed Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/dave-mustaine",
+    "guitars": [
+      "Jackson King V / Gibson Dave Mustaine Flying V (Seymour Duncan Dave Mustaine LiveWire active pickups)"
+    ],
+    "pedals": [
+      "Marshall Guv'nor / Ibanez TS9",
+      "Dunlop Cry Baby"
+    ],
+    "amp": "Marshall JCM800 2203 / Custom modded Marshall 100W heads (EL34 power tubes cranked)",
+    "cab": "Marshall 1960A 4x12 (Celestion Vintage 30)",
+    "outboard": "Studio tape compression & console EQ",
+    "reverb": "Small aggressive room (12% wet)",
+    "notes": "Lightning-fast, technical thrash metal precision. Aggressive upper midrange snarl, tight low end, and cutting high frequencies for complex rhythm gallops.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tight Boost"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 + V30 4x12"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.12,
+        "name": "Alabs Cetus Tight Room"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JCM800 2203; Right: 1969 Marshall JMP Super Lead (Tone 87031) for fierce speed metal rhythm separation"
+  },
+  {
+    "id": "zakk-wylde-no-more-tears",
+    "artist": "Ozzy Osbourne / Zakk Wylde",
+    "song": "No More Tears / Miracle Man",
+    "year": 1991,
+    "genres": [
+      "Heavy Metal",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/zakk-wylde",
+    "guitars": [
+      "1981 Gibson Les Paul Custom 'The Grail' Bullseye (EMG 81 bridge, EMG 85 neck active pickups)"
+    ],
+    "pedals": [
+      "Boss SD-1 Super Overdrive (Level max, Drive 9 o'clock)",
+      "Dunlop Zakk Wylde Cry Baby",
+      "Boss CH-1 Chorus"
+    ],
+    "amp": "Marshall JCM800 2203ZW (loaded with 6550 power tubes for enormous punch and clean headroom)",
+    "cab": "Marshall 1960BV 4x12 (Celestion G12M-70 / Vintage 30)",
+    "outboard": "Studio optical tube compression",
+    "reverb": "Studio live room (18% wet)",
+    "notes": "Signature ferocious pinch harmonics and roaring heavy metal rhythm. 6550 power tubes give massive low-end authority, pushed over the edge by an SD-1.",
+    "t3k_chain": [
+      {
+        "tone": 87914,
+        "gear": "pedal",
+        "model": "Boost-I",
+        "name": "Boss SD-1 Overdrive (Zakk Setting)"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 + V30 4x12"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JCM800 with SD-1; Right: 1968 Marshall Super Lead (Tone 72145) with SD-1 for massive pinch harmonic attack"
+  },
+  {
+    "id": "dimebag-darrell-cowboys-from-hell",
+    "artist": "Pantera / Dimebag Darrell",
+    "song": "Cowboys from Hell / Walk / Cemetery Gates",
+    "year": 1990,
+    "genres": [
+      "Groove Metal",
+      "Thrash Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/dimebag-darrell",
+    "guitars": [
+      "Dean ML 'Dean From Hell' (Bill Lawrence L500XL high output bridge humbucker, Floyd Rose tremolo)"
+    ],
+    "pedals": [
+      "MXR 6-Band Graphic EQ (frown shape pushing 1kHz-3kHz into front end)",
+      "Dunlop Cry Baby From Hell"
+    ],
+    "amp": "Randall RG100ES / Century 200 (100W solid-state head, gain boosted with clipping diodes)",
+    "cab": "Randall 4x12 (Randall Jaguar speakers)",
+    "outboard": "Terry Date console EQ & studio limiter",
+    "reverb": "Tight aggressive studio room (12% wet)",
+    "notes": "The razor-sharp Texas groove metal sound. Solid-state transient attack with scooped midrange and extreme treble bite, giving lightning-fast percussive palm mutes.",
+    "t3k_chain": [
+      {
+        "tone": 89559,
+        "gear": "pedal",
+        "model": "AGRESSIVE",
+        "name": "High Gain Transistor Edge Boost"
+      },
+      {
+        "tone": 84864,
+        "gear": "amp-cab",
+        "model": "Red",
+        "name": "Ultra-High Gain Solid-State / 5150 Saturation"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.12,
+        "name": "Alabs Cetus Tight Room"
+      }
+    ],
+    "stereo_strategy": "Left: Aggressive solid-state bite; Right: Mesa Boogie Mark IIC+ (Tone 81803) for razor-sharp Dimebag palm-mute crunch"
+  },
+  {
+    "id": "derek-trucks-midnight-in-harlem",
+    "artist": "Tedeschi Trucks Band / Derek Trucks",
+    "song": "Midnight in Harlem / Layla (Live)",
+    "year": 2011,
+    "genres": [
+      "Blues",
+      "Southern Rock",
+      "Soul"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/derek-trucks",
+    "guitars": [
+      "Gibson Derek Trucks Signature SG (57 Classic humbuckers, Dunlop Coricidin glass bottle slide, flesh-only picking, Open-E tuning: E-B-E-G#-B-E)"
+    ],
+    "pedals": [
+      "None (zero pedals in signal path, pure guitar-to-amp)"
+    ],
+    "amp": "1965 Fender Super Reverb 4x10 (Pyle Driver / CTS speakers, volume on 7-8)",
+    "cab": "4x10 open-back combo",
+    "outboard": "Teletronix LA-2A Optical Tube Compressor",
+    "reverb": "Fender tube spring reverb (28% wet)",
+    "notes": "Unrivaled vocal slide expressiveness. Bare fingers on glass slide directly into cranked 4x10 Fender Super Reverb tubes, singing with human-voice vibrato.",
+    "t3k_chain": [
+      {
+        "tone": 88775,
+        "gear": "amp-cab",
+        "model": "BFSR",
+        "name": "1965 Fender Super Reverb 4x10"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.28,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Super Reverb; Right: 1965 Fender Twin Reverb WARM (Tone 89797) with spring reverb"
+  },
+  {
+    "id": "dan-auerbach-lonely-boy",
+    "artist": "The Black Keys / Dan Auerbach",
+    "song": "Lonely Boy / Gold on the Ceiling",
+    "year": 2011,
+    "genres": [
+      "Garage Rock",
+      "Blues Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/dan-auerbach",
+    "guitars": [
+      "1964 Harmony Stratotone H47 / Guild Thunderbird / 1953 Gibson Les Paul Goldtop"
+    ],
+    "pedals": [
+      "Shin-ei Companion Fuzz / Sovtek Big Muff",
+      "Electro-Harmonix Pitch Fork",
+      "Boss TR-2 Tremolo"
+    ],
+    "amp": "1960s Fender Quad Reverb / Marshall JTM45 / Supro 1624T",
+    "cab": "2x12 Jensen / Weber speakers",
+    "outboard": "Analog tape compression & studio EQ",
+    "reverb": "Vintage spring / studio room (22% wet)",
+    "notes": "Gritty, explosive modern blues-rock. Vintage pawnshop single-coils driving Soviet-era fuzz circuits into cranked tube combos with greasy attack.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "Sovtek Green Russian Big Muff Fuzz"
+      },
+      {
+        "tone": 54580,
+        "gear": "amp-cab",
+        "model": "SM57",
+        "name": "1960 Fender Tweed Deluxe Breakup"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.22,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Tweed Deluxe with Fuzz; Right: Marshall JTM45 Bluesbreaker (Tone 77706) with spring ambience"
+  },
+  {
+    "id": "albert-hammond-jr-last-nite",
+    "artist": "The Strokes / Albert Hammond Jr. & Nick Valensi",
+    "song": "Last Nite / Reptilia / Someday",
+    "year": 2001,
+    "genres": [
+      "Indie Rock",
+      "Garage Rock Revival",
+      "Post-Punk Revival"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/albert-hammond-jr",
+    "guitars": [
+      "1985 Reissue 1972 Fender Stratocaster (white, maple neck, bridge/middle single coils)"
+    ],
+    "pedals": [
+      "JHS Pedals Albert Hammond Jr. Double Barrel / Ibanez TS9 / Visual Sound Jekyll & Hyde"
+    ],
+    "amp": "Fender Hot Rod DeVille 2x12 / 4x10 (clean channel cranked)",
+    "cab": "2x12 Fender Special Design / Celestion speakers",
+    "outboard": "Gordon Raphael 2-inch tape compression & Avalon U5 DI",
+    "reverb": "Small NYC basement room (15% wet)",
+    "notes": "The defining early-2000s New York garage rock sound. Biting, dry, punchy single-coil chime with crisp overdrive that slices through bass and drums.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Tube Screamer"
+      },
+      {
+        "tone": 65227,
+        "gear": "amp-cab",
+        "model": "Deluxe",
+        "name": "Fender Hot Rod / Deluxe Clean Tube Channel"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.15,
+        "name": "Alabs Cetus Small Room"
+      }
+    ],
+    "stereo_strategy": "Left (Albert Hammond Jr.): Fender Deluxe with TS9; Right (Nick Valensi): 1965 Fender Twin Reverb (Tone 89797) with Jekyll & Hyde overdrive"
+  },
+  {
+    "id": "gary-clark-jr-bright-lights",
+    "artist": "Gary Clark Jr.",
+    "song": "Bright Lights / When My Train Pulls In",
+    "year": 2012,
+    "genres": [
+      "Contemporary Blues",
+      "Blues Rock",
+      "Neo Soul"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/gary-clark-jr",
+    "guitars": [
+      "Epiphone Casino (dual P-90 single coils, hollow body)",
+      "Gibson SG Standard"
+    ],
+    "pedals": [
+      "Analog Man King of Tone (dual overdrive)",
+      "Dunlop Cry Baby Wah",
+      "Malekko Tremolo",
+      "Electro-Harmonix Holy Grail"
+    ],
+    "amp": "1965 Fender Super Reverb 4x10 + Fender Princeton Reverb",
+    "cab": "4x10 Jensen P10R / 1x10 Jensen C10R",
+    "outboard": "Studio analog optical compression",
+    "reverb": "Fender tube spring reverb (28% wet)",
+    "notes": "Gritty, hollowbody Texas blues-fuzz. P-90s feedback organically through cranked 4x10 Fender Super Reverb tubes pushed by the King of Tone.",
+    "t3k_chain": [
+      {
+        "tone": 79454,
+        "gear": "pedal",
+        "model": "mid gain",
+        "name": "Transparent Dual Overdrive / King of Tone"
+      },
+      {
+        "tone": 88775,
+        "gear": "amp-cab",
+        "model": "BFSR",
+        "name": "1965 Fender Super Reverb 4x10"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.28,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Super Reverb 4x10; Right: 1965 Fender Deluxe Reverb (Tone 65227) with spring reverb"
+  },
+  {
+    "id": "mac-demarco-chamber-of-reflection",
+    "artist": "Mac DeMarco",
+    "song": "Chamber of Reflection / Salad Days / Ode to Viceroy",
+    "year": 2014,
+    "genres": [
+      "Slacker Rock",
+      "Indie Rock",
+      "Lo-Fi"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/mac-demarco",
+    "guitars": [
+      "1970s Fender Stratocaster (MIJ) / 1960s Teisco electric guitar"
+    ],
+    "pedals": [
+      "Boss VB-2 Vibrato (unlatch pitch-warble)",
+      "Boss CE-2 Chorus",
+      "Electro-Harmonix Holy Grail Reverb"
+    ],
+    "amp": "Roland JC-120 Jazz Chorus / 1970s Fender Twin Reverb (solid clean headroom)",
+    "cab": "2x12 Roland Silver Cone / Jensen C12N",
+    "outboard": "Fostex A-8 1/4-inch reel-to-reel tape recorder (pitch-varied)",
+    "reverb": "Spring / Plate (30% wet)",
+    "notes": "Warbly, nostalgic, out-of-tune tape aesthetic. Clean solid-state Fender/Roland amplification modulated with true pitch vibrato into vintage tape sat.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 10912,
+        "gear": "amp-cab",
+        "model": "Bright Off",
+        "name": "Roland JC-120 Jazz Chorus"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.3,
+        "name": "Alabs Cetus Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Roland JC-120; Right: 1965 Fender Twin Reverb CLEAN (Tone 89797) with vintage tape saturation"
+  },
+  {
+    "id": "st-vincent-los-ageless",
+    "artist": "St. Vincent / Annie Clark",
+    "song": "Los Ageless / Digital Witness / Cruel",
+    "year": 2017,
+    "genres": [
+      "Art Rock",
+      "Indie Pop",
+      "Post-Punk"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/st-vincent",
+    "guitars": [
+      "Ernie Ball Music Man St. Vincent Signature (three mini-humbuckers, custom ergonomic body)"
+    ],
+    "pedals": [
+      "Z.Vex Woolly Mammoth Fuzz",
+      "Eventide Space Reverb",
+      "Electro-Harmonix Micro POG"
+    ],
+    "amp": "Fender 1965 Deluxe Reverb / Kemper Profiler",
+    "cab": "1x12 Jensen C12K open-back combo",
+    "outboard": "John Congleton extreme master bus compression",
+    "reverb": "Eventide Space / Hall (30% wet)",
+    "notes": "Angular, robotic, jagged fuzz-pop. Sub-bass Woolly Mammoth fuzz gating sharply against tight, pristine boutique clean amps.",
+    "t3k_chain": [
+      {
+        "tone": 61106,
+        "gear": "pedal",
+        "model": "T5 S5",
+        "name": "Gated Woolly Mammoth Fuzz"
+      },
+      {
+        "tone": 65227,
+        "gear": "amp-cab",
+        "model": "Deluxe",
+        "name": "1965 Fender Deluxe Reverb"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.3,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Deluxe Reverb with Gated Fuzz; Right: 2002 Vox AC30 (Tone 70408) for angular art-rock width"
+  },
+  {
+    "id": "alex-lifeson-tom-sawyer",
+    "artist": "Rush / Alex Lifeson",
+    "song": "Tom Sawyer / Limelight / The Spirit of Radio",
+    "year": 1981,
+    "genres": [
+      "Progressive Rock",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/alex-lifeson",
+    "guitars": [
+      "1976 Gibson ES-355TD (white, Gibson PAF humbuckers) / Modified 'Hentor Sportscaster' Strat (Bill Lawrence L500 / Floyd Rose)"
+    ],
+    "pedals": [
+      "Boss CE-1 Chorus Ensemble",
+      "Electro-Harmonix Electric Mistress Flanger",
+      "MXR Distortion+"
+    ],
+    "amp": "Marshall JMP 100W Super Lead + Hiwatt DR103 (custom Terry Brown studio blend)",
+    "cab": "Marshall 4x12 (Celestion G12H) + Hiwatt 4x12 (Fane)",
+    "outboard": "Studio parametric EQ & stereo delay",
+    "reverb": "Le Studio Morin-Heights live room (24% wet)",
+    "notes": "The monumental Canadian prog-rock tone. Rich analog stereo chorus sweeping across cranked Marshall and Hiwatt full stacks.",
+    "t3k_chain": [
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12k"
+      },
+      {
+        "tone": 53037,
+        "gear": "amp-cab",
+        "model": "Bright Overdrive",
+        "name": "Hiwatt DR103 Custom 100W"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Chamber",
+        "mix": 0.24,
+        "name": "Lexicon PCM91 Large Chamber"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall Super Lead; Right: Hiwatt DR103 (Tone 53037) replicating Lifeson's dual full-stack studio blend"
+  },
+  {
+    "id": "soundgarden-black-hole-sun",
+    "artist": "Soundgarden / Chris Cornell & Kim Thayil",
+    "song": "Black Hole Sun / Spoonman / Outshined",
+    "year": 1994,
+    "genres": [
+      "Grunge",
+      "Alternative Metal"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/kim-thayil",
+    "guitars": [
+      "Guild S-100 (original 1970s Guild humbuckers, Drop-D tuning) / Gretsch Duo Jet"
+    ],
+    "pedals": [
+      "DOD FX69 Grunge",
+      "Electro-Harmonix Small Clone",
+      "Dunlop Cry Baby Wah"
+    ],
+    "amp": "Mesa Boogie Dual Rectifier Rev G + Peavey VTM 120 (hot-rodded Marshall JCM800 circuit)",
+    "cab": "Mesa Traditional 4x12 (Celestion Vintage 30)",
+    "outboard": "Leslie 16 rotary speaker cabinet (used on Black Hole Sun verse) + SSL console EQ",
+    "reverb": "Bad Animals Studio Seattle live room (22% wet)",
+    "notes": "Dark, sludgy, Sabbath-inspired Drop-D grunge riffs. Swirling Leslie speaker cleans for the verses, exploding into crushing Rectifier roar.",
+    "t3k_chain": [
+      {
+        "tone": 79103,
+        "gear": "amp-cab",
+        "model": "Orange Crunch",
+        "name": "Mesa Boogie Dual Rectifier Rev G"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.22,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Rectifier Orange Crunch; Right: Marshall JCM800 2203 (Tone 87735) for crushing Seattle grunge grit"
+  },
+  {
+    "id": "dean-deleo-plush",
+    "artist": "Stone Temple Pilots / Dean DeLeo",
+    "song": "Plush / Interstate Love Song / Vasoline",
+    "year": 1992,
+    "genres": [
+      "Grunge",
+      "Alternative Rock",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/dean-deleo",
+    "guitars": [
+      "1978 Gibson Les Paul Standard (natural finish, Seymour Duncan JB bridge humbucker)"
+    ],
+    "pedals": [
+      "Boss CE-1 Chorus Ensemble",
+      "Dunlop Cry Baby Wah",
+      "Boss BF-2 Flanger"
+    ],
+    "amp": "Demeter TGP-3 Tube Guitar Preamp + VHT Classic Stereo Power Amp + 1960s Vox AC30 (Brendan O'Brien's signature blend)",
+    "cab": "Marshall 1960B 4x12 (Celestion Vintage 30) + Vox 2x12 Alnico",
+    "outboard": "Brendan O'Brien SSL console limiting",
+    "reverb": "Criteria Studios live room (20% wet)",
+    "notes": "Complex jazz-chording in a hard rock framework. Demeter high-gain preamp tightness layered with the warm midrange breakup of an AC30.",
+    "t3k_chain": [
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall / Demeter Tube Lead"
+      },
+      {
+        "tone": 82521,
+        "gear": "amp-cab",
+        "model": "VX TB30",
+        "name": "1964 Vox AC30 Top Boost"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.2,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall/Demeter Lead; Right: 1964 Vox AC30 (Tone 82521) for Brendan O'Brien's multi-amp STP tone"
+  },
+  {
+    "id": "robin-trower-bridge-of-sighs",
+    "artist": "Robin Trower",
+    "song": "Bridge of Sighs / Day of the Eagle",
+    "year": 1974,
+    "genres": [
+      "Blues Rock",
+      "Psychedelic Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/robin-trower",
+    "guitars": [
+      "1973 Fender Stratocaster (alder body, maple neck, single coils)"
+    ],
+    "pedals": [
+      "Shin-ei Uni-Vibe",
+      "Electro-Harmonix Big Muff / Custom Overdrive",
+      "Dunlop Cry Baby"
+    ],
+    "amp": "1973 Marshall 100W Super Lead JMP 1959 (low inputs, cranked power stage)",
+    "cab": "Marshall 1960 4x12 (Celestion G12H 30W)",
+    "outboard": "Olympic Studios tape delay & optical limiting",
+    "reverb": "Studio live chamber (28% wet)",
+    "notes": "Monolithic, swirling psych-blues thunder. Saturated Marshall power section driven by swirling Uni-Vibe chorus/vibrato for deep cosmic sustain.",
+    "t3k_chain": [
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12k Drive"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.28,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1968 Marshall Super Lead (Tone 72145); Right: 1969 Marshall JMP-50 Plexi (Tone 65578) with Hall ambience"
+  },
+  {
+    "id": "bradley-nowell-san-teria",
+    "artist": "Sublime / Bradley Nowell",
+    "song": "Santeria / What I Got / Wrong Way",
+    "year": 1996,
+    "genres": [
+      "Ska Punk",
+      "Reggae Rock",
+      "Alternative Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/bradley-nowell",
+    "guitars": [
+      "Custom Dan MacDonald 'Brown' guitar (humbucker/single coil blend) / 1960s Fender Jaguar"
+    ],
+    "pedals": [
+      "Boss OS-2 OverDrive/Distortion"
+    ],
+    "amp": "Mesa Boogie Dual Rectifier (Tremoverb) 100W Combo",
+    "cab": "2x12 Celestion Vintage 30",
+    "outboard": "Paul Leary / Studio rest stop console compression",
+    "reverb": "Spring / Plate (24% wet)",
+    "notes": "Sweet, melodic reggae-punk lead guitar. Warm neck pickup tone with singing midrange sustain on the iconic 'Santeria' guitar solo.",
+    "t3k_chain": [
+      {
+        "tone": 87914,
+        "gear": "pedal",
+        "model": "Drive-II",
+        "name": "Boss Overdrive"
+      },
+      {
+        "tone": 79103,
+        "gear": "amp-cab",
+        "model": "Orange Crunch",
+        "name": "Mesa Boogie Dual Rectifier Tremoverb"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.24,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Rectifier Orange Crunch; Right: 1965 Fender Deluxe Reverb (Tone 65227) for reggae chime"
+  },
+  {
+    "id": "deryck-whibley-fat-lip",
+    "artist": "Sum 41 / Deryck Whibley & Dave Baksh",
+    "song": "Fat Lip / In Too Deep",
+    "year": 2001,
+    "genres": [
+      "Pop Punk",
+      "Melodic Hardcore",
+      "Punk Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/deryck-whibley",
+    "guitars": [
+      "Fender Deryck Whibley Telecaster Deluxe (single Seymour Duncan JB humbucker) / PRS Custom 24"
+    ],
+    "pedals": [
+      "Ibanez TS9 Tube Screamer",
+      "ProCo Rat 2"
+    ],
+    "amp": "Marshall JCM800 2203 + Marshall JCM900 SL-X",
+    "cab": "Marshall 1960A 4x12 (Celestion Vintage 30)",
+    "outboard": "Studio SSL console limiting",
+    "reverb": "Tight punchy room (12% wet)",
+    "notes": "Snappy, aggressive Canadian pop-punk crunch. High-speed palm mutes backed by roaring Marshall EL34 distortion.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Ibanez TS9 Clean Boost"
+      },
+      {
+        "tone": 87735,
+        "gear": "amp-cab",
+        "model": "JCM800",
+        "name": "Marshall JCM800 2203 + V30 4x12"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.12,
+        "name": "Alabs Cetus Tight Room"
+      }
+    ],
+    "stereo_strategy": "Left: Marshall JCM800 2203; Right: Marshall 1959BJA Super Lead (Tone 78832 v2) for twin pop-punk guitar energy"
+  },
+  {
+    "id": "justin-hawkins-i-believe-in-a-thing-called-love",
+    "artist": "The Darkness / Justin Hawkins & Dan Hawkins",
+    "song": "I Believe in a Thing Called Love / Love Is Only a Feeling",
+    "year": 2003,
+    "genres": [
+      "Glam Metal",
+      "Hard Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/justin-hawkins",
+    "guitars": [
+      "Gibson Les Paul Standard (Goldtop / Silverburst, Seymour Duncan humbuckers)"
+    ],
+    "pedals": [
+      "ProCo Rat",
+      "Dunlop Cry Baby"
+    ],
+    "amp": "1968 Marshall 1959 Super Lead 100W / Marshall 1987X 50W (cranked all controls to 10)",
+    "cab": "Marshall 1960AX 4x12 (Celestion G12M Greenbacks)",
+    "outboard": "Neve console EQ & 1176 limiting",
+    "reverb": "Studio live room (18% wet)",
+    "notes": "70s/80s arena rock resurrection. Pure Les Paul bridge humbucker pushing cranked Marshall Plexis into triumphant, harmonic feedback.",
+    "t3k_chain": [
+      {
+        "tone": 72145,
+        "gear": "amp-cab",
+        "model": "SL68",
+        "name": "1968 Marshall Super Lead 12k Drive"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Room",
+        "mix": 0.18,
+        "name": "Alabs Cetus Room Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: 1968 Marshall Super Lead (Tone 72145); Right: 1969 Marshall JMP-50 Plexi (Tone 65578) for arena rock width"
+  },
+  {
+    "id": "joe-bonamassa-slo-gin",
+    "artist": "Joe Bonamassa",
+    "song": "Sloe Gin / Ballamosa",
+    "year": 2007,
+    "genres": [
+      "Modern Blues Rock",
+      "Blues"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/joe-bonamassa",
+    "guitars": [
+      "1959 Gibson Les Paul Standard 'Burst' (original PAF pickups)"
+    ],
+    "pedals": [
+      "Way Huge Overrated Special Overdrive",
+      "Ibanez TS808",
+      "Dunlop JB95 Joe Bonamassa Cry Baby Wah"
+    ],
+    "amp": "Four-amp rig: Dumble Overdrive Special + Marshall Silver Jubilee 2555 + Fender High Power Tweed Twin + Van Weelden Twinkleland",
+    "cab": "Marshall 1960B 4x12 (Celestion EVM12L / G12-65)",
+    "outboard": "Studio optical tube compression",
+    "reverb": "Abbey Road / Ocean Way studio plate (26% wet)",
+    "notes": "The four-amp modern blues titan sound. Dumble smooth singing sustain blended with Marshall Silver Jubilee mid bite and Tweed Twin bottom-end roar.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Smooth Overdrive / TS808"
+      },
+      {
+        "tone": 89805,
+        "gear": "amp-cab",
+        "model": "LEAD",
+        "name": "Dumble / Mesa Mark Style Singing Lead"
+      },
+      {
+        "tone": 88473,
+        "gear": "space",
+        "model": "Plate",
+        "mix": 0.26,
+        "name": "Lexicon PCM91 Plate Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Singing Dumble/Mark Lead; Right: 1968 Marshall Super Lead (Tone 72145) for Bonamassa's dual-amp majesty"
+  },
+  {
+    "id": "jerry-garcia-touch-of-grey",
+    "artist": "Grateful Dead / Jerry Garcia",
+    "song": "Touch of Grey / Dark Star / Scarlet Begonias",
+    "year": 1977,
+    "genres": [
+      "Jam Band",
+      "Psychedelic Rock",
+      "Roots Rock"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/jerry-garcia",
+    "guitars": [
+      "Custom Doug Irwin 'Tiger' / 'Wolf' (stratoblasters onboard preamp, DiMarzio Dual Sound / SDS-1 pickups, OBEL onboard effects loop)"
+    ],
+    "pedals": [
+      "Mu-Tron III Envelope Filter",
+      "MXR Distortion+",
+      "Boss OD-1"
+    ],
+    "amp": "Fender Twin Reverb preamp stage tapped into McIntosh MC2300 300W solid-state power amplifier (zero distortion headroom)",
+    "cab": "Custom 3x12 / 2x12 with JBL E120 speakers (aluminum dust caps)",
+    "outboard": "Studio optical compression",
+    "reverb": "Fender tube spring / live room (25% wet)",
+    "notes": "The crystal-clear, hi-fi 'Jerry tone'. Onboard buffer preamp feeding a Fender Twin preamp into a massive McIntosh solid state power amp for pristine, piano-like attack.",
+    "t3k_chain": [
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 89797,
+        "gear": "amp-cab",
+        "model": "CLEAN",
+        "name": "1965 Fender Twin Reverb / JBL E120 Clean"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Spring",
+        "mix": 0.25,
+        "name": "Alabs Cetus Spring Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Fender Twin Reverb Clean; Right: 1960 Fender Tweed Deluxe (Tone 54580) with clean buffer"
+  },
+  {
+    "id": "trey-anastasio-you-enjoy-myself",
+    "artist": "Phish / Trey Anastasio",
+    "song": "You Enjoy Myself / Chalk Dust Torture",
+    "year": 1993,
+    "genres": [
+      "Jam Band",
+      "Progressive Rock",
+      "Funk"
+    ],
+    "equipboard_url": "https://equipboard.com/pros/trey-anastasio",
+    "guitars": [
+      "Paul Languedoc Custom G2 (fully hollow curly maple body, Seymour Duncan '59 humbuckers)"
+    ],
+    "pedals": [
+      "Two Ibanez TS9 Tube Screamers in series (one set as clean boost, second as screaming gain boost)",
+      "Ross Compressor"
+    ],
+    "amp": "Mesa Boogie Mark III (loaded with 6L6/EL34 Simul-Class) / Fender Deluxe Reverb",
+    "cab": "Languedoc 2x12 with Celestion G12K-85 speakers",
+    "outboard": "Ross Compressor clone / Studio optical compression",
+    "reverb": "Alesis MicroVerb / Cetus Hall (24% wet)",
+    "notes": "Hollowbody sustain machine. The dual stacked Tube Screamers drive the hollowbody resonance into singing, controllable feedback at any volume.",
+    "t3k_chain": [
+      {
+        "tone": 86314,
+        "gear": "pedal",
+        "model": "TS9",
+        "name": "Stacked TS9 Overdrive Pair"
+      },
+      {
+        "tone": 89805,
+        "gear": "amp-cab",
+        "model": "LEAD",
+        "name": "Mesa Boogie Mark Series Lead"
+      },
+      {
+        "tone": 69103,
+        "gear": "outboard",
+        "model": "LA-2A",
+        "name": "Teletronix LA-2A Tube Compressor"
+      },
+      {
+        "tone": 88038,
+        "gear": "space",
+        "model": "Hall",
+        "mix": 0.24,
+        "name": "Alabs Cetus Hall Reverb"
+      }
+    ],
+    "stereo_strategy": "Left: Mesa Mark Lead with dual TS9; Right: 1965 Fender Deluxe Reverb (Tone 65227) for Trey's hollowbody warmth"
+  }
+]
