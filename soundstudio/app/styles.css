@@ -252,6 +252,9 @@ textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:1
 .rec-media video,.rec-media audio{width:100%;border-radius:10px;display:block}
 .rec-media video{background:#000;aspect-ratio:16/9}
 .rec-dl{text-align:center;text-decoration:none}
+.rec-pick{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--raised);border:1px solid var(--line)}
+.rec-pick button{flex:1;border:0;background:transparent;color:var(--muted);border-radius:9px;padding:8px 6px;font-weight:700;font-size:.85rem;cursor:pointer}
+.rec-pick button[aria-pressed="true"]{background:var(--amber);color:#1a1500}
 .rec-report{display:grid;gap:6px}
 .rec-report .stat{display:flex;justify-content:space-between;gap:10px;padding:8px 11px;border-radius:10px;background:var(--raised);border:1px solid var(--line);font-size:.86rem;font-variant-numeric:tabular-nums}
 .rec-report .stat b{font-weight:700}

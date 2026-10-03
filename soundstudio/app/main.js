@@ -674,13 +674,20 @@ async function toggleRecording(){
   clearInterval(recTimer); recTimer = null; btn.disabled = true; $('#recStatus').textContent = 'Finishing…';
   try{
     const r = await recording.stop();
-    recUrls.forEach(u => URL.revokeObjectURL(u)); recUrls = [r.take.url, r.timingUrl, r.tracksUrl].filter(Boolean);
-    const el = document.createElement(r.take.video ? 'video' : 'audio'); el.controls = true; el.src = r.take.url; if(r.take.video) el.playsInline = true;
-    $('#recMedia').replaceChildren(el);
+    recUrls.forEach(u => URL.revokeObjectURL(u)); recUrls = [...r.versions.map(v => v.url), r.timingUrl, r.tracksUrl].filter(Boolean);
     const stamp = 'airband-' + new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-    $('#recDownload').href = r.take.url; $('#recDownload').download = stamp + '.' + r.take.ext;
+    // pick a version (video, the whole jam, just you): the preview and the download follow
+    const pick = v => {
+      const el = document.createElement(v.video ? 'video' : 'audio'); el.controls = true; el.src = v.url; if(v.video) el.playsInline = true;
+      $('#recMedia').replaceChildren(el);
+      $('#recDownload').href = v.url; $('#recDownload').download = stamp + (v.key === 'me' ? '-me' : '') + '.' + v.ext;
+      $('#recDownload').textContent = v.video ? 'Download video' : v.key === 'me' ? 'Download just me (WAV)' : 'Download audio (WAV)';
+      $('#recPick').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v.key)));
+    };
+    $('#recPick').replaceChildren(...r.versions.map(v => { const b = document.createElement('button'); b.type = 'button'; b.dataset.v = v.key; b.textContent = v.label; b.onclick = () => pick(v); return b; }));
+    $('#recPick').hidden = r.versions.length < 2;
+    pick(r.take);
     $('#recTracksDl').hidden = !r.tracksUrl; if(r.tracksUrl){ $('#recTracksDl').href = r.tracksUrl; $('#recTracksDl').download = stamp + '-tracks.zip'; }
-    $('#recDownload').textContent = r.take.video ? 'Download video' : 'Download audio';
     $('#recTiming').href = r.timingUrl; $('#recResult').hidden = false;
     const q = r.report, notes = [];
     const row = (who, ms) => `<div class="stat"><span>${who}</span><span><b>${ms == null ? '—' : signed(ms)}</b> <span class="muted">${timing(ms)}</span></span></div>`;

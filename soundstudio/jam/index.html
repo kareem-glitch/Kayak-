@@ -247,6 +247,7 @@ window.__audioContexts = [];
           <label class="check small" id="recTracksRow"><input type="checkbox" id="recTracks"> Also save separate tracks: one WAV per player and the band, lined up, in a .zip for your DAW</label>
           <p class="muted small" id="recEmpty">Hit ● at the bottom. Your take shows up here.</p>
           <div class="rec-result" id="recResult" hidden>
+          <div class="rec-pick" id="recPick" role="group" aria-label="Version" hidden></div>
           <div class="rec-media" id="recMedia"></div>
           <a class="btn btn-primary rec-dl" id="recDownload" href="#" download>Download</a>
           <a class="btn btn-quiet rec-dl" id="recTracksDl" href="#" download hidden>Download tracks (.zip)</a>

@@ -58,6 +58,12 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     await A.uncheck('#recTracks');
     const vid = await take('video', 5);
     assert.match(vid.name, /\.(webm|mp4)$/); assert.equal(vid.tag, 'VIDEO'); assert.match(vid.label, /Download video/); assert.ok(vid.size > 50000, `video file has content (${vid.size})`);
+    // after a video take: pick the audio-only versions, and the preview and download follow
+    assert.deepEqual(await A.$$eval('#recPick button', bs => bs.map(b => b.dataset.v)), ['video', 'all', 'me'], 'video, whole jam and just me on offer');
+    await A.click('#recPick [data-v="all"]');
+    assert.equal(await A.evaluate(() => document.querySelector('#recMedia audio, #recMedia video').tagName), 'AUDIO', 'audio-only preview');
+    assert.match(await A.textContent('#recDownload'), /Download audio/); assert.match(await A.getAttribute('#recDownload', 'download'), /\.wav$/);
+    await A.click('#recPick [data-v="me"]'); assert.match(await A.getAttribute('#recDownload', 'download'), /-me\.wav$/);
     const scr = await take('screen', 4);
     assert.equal(scr.tag, 'VIDEO'); assert.ok(scr.size > 50000, `screen recording has content (${scr.size})`);
     assert.ok(await A.evaluate(() => window.__screenShared), 'it asked to share the screen');

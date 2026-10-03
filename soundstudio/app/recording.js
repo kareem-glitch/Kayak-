@@ -57,13 +57,17 @@ export async function stop(){
   };
   const timingUrl = URL.createObjectURL(new Blob([wav(left, right, sr)], { type: 'audio/wav' }));
   const mixed = mix && await mix;
-  const t = await tracks.stop({ zip: split, mix: !mixed && what !== 'me', me: what === 'me' });
-  const tracksUrl = t && t.zipUrl, wavMix = !mixed && t && t.mixUrl;
+  const t = await tracks.stop({ zip: split, mix: what !== 'me', me: true });   // the audio versions are made for every take: pick one after
+  const tracksUrl = t && t.zipUrl;
   const why = mixFailed && (mixFailed.name === 'NotAllowedError' ? 'the screen share was cancelled' : mixFailed.message || mixFailed);
   const note = mixFailed ? (what === 'video' ? 'Video recording isn’t available in this browser/app (' + why + '), so this is the whole jam as audio. Chrome records video.'
     : what === 'screen' ? 'The screen wasn’t recorded (' + why + '), so this is the whole jam as audio. Chrome records the screen: pick "This tab" when it asks.' : '') : '';
   split = false;
-  const meUrl = t && t.meUrl;
-  const take = mixed || (wavMix ? { url: wavMix, type: 'audio/wav', ext: 'wav', video: false, note } : { url: meUrl || URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false });
-  return { take, timingUrl, tracksUrl, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
+  // the versions of this take: video (if recorded), the whole jam and just you (WAVs)
+  const versions = [];
+  if(mixed) versions.push(Object.assign({ key: 'video', label: 'Video' }, mixed));
+  if(t && t.mixUrl) versions.push({ key: 'all', label: 'Whole jam', url: t.mixUrl, type: 'audio/wav', ext: 'wav', video: false, note });
+  versions.push({ key: 'me', label: 'Just me', url: (t && t.meUrl) || URL.createObjectURL(new Blob([wav(you, you, sr)], { type: 'audio/wav' })), type: 'audio/wav', ext: 'wav', video: false });
+  const take = versions[0];
+  return { take, versions, timingUrl, tracksUrl, seconds: n / sr, report, beats: beats.length, correctedMs: inMs + outMs };
 }
