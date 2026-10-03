@@ -40,7 +40,7 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
 - `plugin/` — JUCE "air.band Send" (AU/VST3), streams a DAW track into the app.
 - `test/` — unit tests (`npm test`) and browser end-to-end tests (`npm run test:e2e`).
 - `download/` — git-ignored; app and plugin downloads, deployed with the site. Files keep
-  their version in the name (`air.band-0.6.3-Mac.zip`, …); `APP_VERSION` in `app/main.js` points the links.
+  their version in the name (`air.band-0.6.4-Mac.zip`, …); `APP_VERSION` in `app/main.js` points the links.
 
 ## Releasing the desktop app (it auto-updates from 0.6.1)
 
