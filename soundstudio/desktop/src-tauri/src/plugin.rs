@@ -23,7 +23,10 @@ const ACK_EVERY: Duration = Duration::from_millis(300);
 
 pub fn listen(sh: Arc<Shared>) {
     std::thread::spawn(move || {
-        let sock = match UdpSocket::bind(("127.0.0.1", link::PORT)) { Ok(s) => s, Err(e) => { eprintln!("plugin link unavailable: {e}"); return; } };
+        // keep trying: after an update the old app is still closing as this one starts, and holds the port for a moment
+        let sock = loop {
+            match UdpSocket::bind(("127.0.0.1", link::PORT)) { Ok(s) => break s, Err(e) => { eprintln!("plugin link waiting: {e}"); std::thread::sleep(Duration::from_millis(500)); } }
+        };
         sock.set_read_timeout(Some(Duration::from_millis(50))).ok();
         run(&sock, &sh);
     });
