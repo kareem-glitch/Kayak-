@@ -124,6 +124,24 @@ h1 span{color:var(--orange)}
 .person .near.far i{background:var(--accent)}
 .person .jam{padding:8px 14px;font-size:.86rem}
 @media (max-width:600px){ .person{grid-template-columns:40px 1fr auto} .person .near{display:none} }
+.works{padding:0;margin:26px 0 0;flex-direction:column;align-items:flex-start;gap:10px}
+.hero-logos{justify-content:flex-start;gap:10px 22px;color:#7d7984}
+.hero-logos span{font-size:.92rem}
+.hero-logos svg{width:19px;height:19px}
+.kit{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:34px auto 0}
+.kit div{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 10px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;transition:transform .25s,border-color .25s}
+.kit div:hover{transform:translateY(-4px) rotate(-1deg);border-color:rgba(20,19,23,.2)}
+.kit svg{height:80px;width:100%}
+.kit span{font-weight:700;font-size:.9rem}
+.gear{position:absolute;z-index:2;pointer-events:none;filter:drop-shadow(0 16px 26px rgba(40,25,10,.18));animation:gbob 8s ease-in-out infinite}
+.g-amp{width:140px;right:-96px;bottom:-80px}
+.g-guitar{width:66px;left:-104px;top:-30px;transform:rotate(-16deg);animation-duration:9s}
+@keyframes gbob{50%{translate:0 -10px}}
+@media (max-width:1180px){ .g-amp,.g-guitar{display:none} }
+@media (max-width:1000px){ .kit{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:600px){ .kit{grid-template-columns:repeat(2,minmax(0,1fr))} .hero-logos{gap:8px 16px} }
+.setup{display:flex;align-items:flex-end;gap:16px;margin-bottom:18px}
+.setup svg{height:84px;width:auto;filter:drop-shadow(0 10px 16px rgba(40,25,10,.12))}
 /* sections */
 section{padding:110px 0}
 .head{max-width:660px;margin:0 0 44px}
@@ -210,6 +228,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
     <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#f0d2a4"/><stop offset="1" stop-color="#dcb27a"/></linearGradient>
     <radialGradient id="cym" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#ffe38a"/><stop offset="1" stop-color="#e0a92a"/></radialGradient>
+<pattern id="grille" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#5c5046"/><rect width="4" height="8" fill="#6e6155"/></pattern>
 </defs>
   <symbol id="moss" viewBox="0 0 200 200">
     <ellipse cx="100" cy="192" rx="80" ry="6" fill="#17151c" opacity=".08"/>
@@ -254,6 +273,83 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     <g class="eyes" fill="#8fe8ff"><rect x="84" y="76.5" width="11" height="7" rx="3.5"/><rect x="105" y="76.5" width="11" height="7" rx="3.5"/></g>
     <path d="M94 93q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
   </symbol>
+  <!-- combo amp -->
+  <symbol id="amp" viewBox="0 0 220 200">
+    <rect x="78" y="6" width="64" height="18" rx="9" fill="none" stroke="#2b2730" stroke-width="8"/>
+    <rect x="8" y="20" width="204" height="174" rx="20" fill="#2b2730"/>
+    <rect x="20" y="32" width="180" height="38" rx="9" fill="#f2e6cc"/>
+    <g fill="#1e1b22"><circle cx="44" cy="51" r="9"/><circle cx="70" cy="51" r="9"/><circle cx="96" cy="51" r="9"/><circle cx="122" cy="51" r="9"/><circle cx="148" cy="51" r="9"/></g>
+    <g stroke="#ffcc00" stroke-width="2.5" stroke-linecap="round"><path d="M44 51l-4-6M70 51l3-7M96 51l-6-3M122 51l5-5M148 51l0-7"/></g>
+    <circle cx="180" cy="51" r="6" fill="#ff5a4f"/><circle cx="178.5" cy="49.5" r="2" fill="#ffb3ad"/>
+    <rect x="20" y="80" width="180" height="102" rx="12" fill="url(#grille)"/>
+    <rect x="86" y="92" width="48" height="16" rx="5" fill="#f2e6cc"/>
+    <text x="110" y="104" text-anchor="middle" font-size="11" font-weight="800" fill="#2b2730" font-family="system-ui,sans-serif">air.</text>
+  </symbol>
+  <!-- electric guitar -->
+  <symbol id="guitar" viewBox="0 0 120 260">
+    <path d="M46 4h28l3 32H43z" fill="url(#wood)"/>
+    <g fill="#c9c3cf"><circle cx="40" cy="12" r="4"/><circle cx="40" cy="24" r="4"/><circle cx="80" cy="12" r="4"/><circle cx="80" cy="24" r="4"/></g>
+    <rect x="51" y="34" width="18" height="114" fill="url(#wood)"/>
+    <g stroke="#b89060" stroke-width="1.5"><path d="M51 52h18M51 68h18M51 84h18M51 100h18M51 116h18M51 132h18"/></g>
+    <path d="M60 138c-10-8-26-16-36-6-8 9-2 22 2 30-14 8-20 26-14 44 7 26 30 44 48 44s41-18 48-44c6-18 0-36-14-44 4-8 10-21 2-30-10-10-26-2-36 6z" fill="var(--g,#ff8a5c)"/>
+    <path d="M60 150c-8-4-18-6-22 2-3 7 4 14 4 20-10 6-14 18-10 30 5 16 18 24 28 24s23-8 28-24c4-12 0-24-10-30 0-6 7-13 4-20-4-8-14-6-22-2z" fill="#fff8ee" opacity=".92"/>
+    <g fill="#2b2730"><rect x="48" y="166" width="24" height="7" rx="3"/><rect x="48" y="184" width="24" height="7" rx="3"/><rect x="48" y="202" width="24" height="7" rx="3"/><rect x="44" y="222" width="32" height="8" rx="3"/></g>
+    <g fill="#ffcc00"><circle cx="86" cy="212" r="5"/><circle cx="90" cy="228" r="5"/></g>
+    <g stroke="#9a94a3" stroke-width="1"><path d="M55 8v218M58.3 8v218M61.6 8v218M65 8v218"/></g>
+  </symbol>
+  <!-- keyboard -->
+  <symbol id="keys" viewBox="0 0 300 110">
+    <rect x="4" y="4" width="292" height="102" rx="14" fill="#2b2730"/>
+    <rect x="18" y="14" width="56" height="16" rx="4" fill="#9fe6c8"/>
+    <g fill="#ffcc00"><circle cx="96" cy="22" r="7"/><circle cx="118" cy="22" r="7"/><circle cx="140" cy="22" r="7"/></g>
+    <g fill="#5a5361"><rect x="200" y="17" width="78" height="10" rx="5"/></g>
+    <rect x="14" y="38" width="272" height="60" rx="6" fill="#fffdf8"/>
+    <g stroke="#d8d2cb" stroke-width="2"><path d="M33.4 38v60M52.9 38v60M72.3 38v60M91.7 38v60M111.1 38v60M130.6 38v60M150 38v60M169.4 38v60M188.9 38v60M208.3 38v60M227.7 38v60M247.1 38v60M266.6 38v60"/></g>
+    <g fill="#2b2730"><rect x="27" y="38" width="12" height="36" rx="2"/><rect x="47" y="38" width="12" height="36" rx="2"/><rect x="86" y="38" width="12" height="36" rx="2"/><rect x="105" y="38" width="12" height="36" rx="2"/><rect x="124" y="38" width="12" height="36" rx="2"/><rect x="163" y="38" width="12" height="36" rx="2"/><rect x="183" y="38" width="12" height="36" rx="2"/><rect x="221" y="38" width="12" height="36" rx="2"/><rect x="241" y="38" width="12" height="36" rx="2"/><rect x="260" y="38" width="12" height="36" rx="2"/></g>
+  </symbol>
+  <!-- drum kit -->
+  <symbol id="drums" viewBox="0 0 240 200">
+    <g stroke="#6b6672" stroke-width="4" stroke-linecap="round"><path d="M44 46v130M200 70v106M30 186l14-10 14 10M186 186l14-10 14 10"/></g>
+    <ellipse cx="44" cy="44" rx="40" ry="9" fill="url(#cym)"/>
+    <ellipse cx="200" cy="66" rx="30" ry="7" fill="url(#cym)"/><ellipse cx="200" cy="72" rx="30" ry="7" fill="url(#cym)" opacity=".8"/>
+    <rect x="132" y="86" width="56" height="34" rx="6" fill="#9fd2ff"/><ellipse cx="160" cy="86" rx="28" ry="8" fill="#eaf4ff"/>
+    <rect x="66" y="74" width="50" height="34" rx="6" fill="#ff8fb1"/><ellipse cx="91" cy="74" rx="25" ry="7" fill="#fff0f5"/>
+    <circle cx="120" cy="140" r="52" fill="#c4b5ff"/><circle cx="120" cy="140" r="40" fill="#f4f0ff"/>
+    <text x="120" y="146" text-anchor="middle" font-size="16" font-weight="800" fill="#2b2730" font-family="system-ui,sans-serif">air.</text>
+  </symbol>
+  <!-- bass guitar -->
+  <symbol id="bass" viewBox="0 0 120 280">
+    <path d="M48 2h24l2 40H46z" fill="url(#wood)"/>
+    <g fill="#c9c3cf"><circle cx="40" cy="10" r="4.5"/><circle cx="40" cy="24" r="4.5"/><circle cx="80" cy="10" r="4.5"/><circle cx="80" cy="24" r="4.5"/></g>
+    <rect x="52" y="40" width="16" height="130" fill="url(#wood)"/>
+    <g stroke="#b89060" stroke-width="1.5"><path d="M52 62h16M52 82h16M52 102h16M52 122h16M52 142h16"/></g>
+    <path d="M60 160c-12-10-30-18-38-6-6 9 0 20 2 28-14 8-18 28-12 46 7 24 28 46 48 46s41-22 48-46c6-18 2-38-12-46 2-8 8-19 2-28-8-12-26-4-38 6z" fill="#7cc7ff"/>
+    <g fill="#2b2730"><rect x="46" y="196" width="28" height="9" rx="3"/><rect x="44" y="236" width="32" height="9" rx="3"/></g>
+    <g stroke="#9a94a3" stroke-width="1.3"><path d="M56 6v236M59 6v236M62 6v236M65 6v236"/></g>
+  </symbol>
+  <!-- microphone -->
+  <symbol id="mic" viewBox="0 0 100 200">
+    <rect x="28" y="6" width="44" height="70" rx="22" fill="#d9d4de"/>
+    <g stroke="#a9a2b3" stroke-width="2"><path d="M30 26h40M30 38h40M30 50h40M30 62h40M40 8v66M50 6v70M60 8v66"/></g>
+    <rect x="34" y="76" width="32" height="34" rx="8" fill="#2b2730"/><circle cx="50" cy="93" r="4" fill="#ffcc00"/>
+    <path d="M50 110v66M24 190h52" stroke="#6b6672" stroke-width="6" stroke-linecap="round"/>
+  </symbol>
+  <!-- headphones -->
+  <symbol id="phones" viewBox="0 0 160 150">
+    <path d="M22 96V78a58 58 0 0 1 116 0v18" fill="none" stroke="#2b2730" stroke-width="12" stroke-linecap="round"/>
+    <rect x="8" y="84" width="38" height="58" rx="16" fill="#8fe3c3"/><rect x="114" y="84" width="38" height="58" rx="16" fill="#8fe3c3"/>
+    <rect x="18" y="94" width="18" height="38" rx="8" fill="#5fc9a3"/><rect x="124" y="94" width="18" height="38" rx="8" fill="#5fc9a3"/>
+  </symbol>
+  <!-- audio interface -->
+  <symbol id="interface" viewBox="0 0 200 96">
+    <rect x="4" y="10" width="192" height="80" rx="14" fill="#9fd2ff"/>
+    <rect x="4" y="10" width="192" height="18" rx="9" fill="#7cbcf0"/>
+    <g fill="#2b2730"><circle cx="38" cy="58" r="16"/><circle cx="86" cy="58" r="16"/></g>
+    <g fill="#eef6ff"><circle cx="38" cy="58" r="6"/><circle cx="86" cy="58" r="6"/></g>
+    <g stroke="#ffcc00" stroke-width="3" stroke-linecap="round"><path d="M38 58l-8-9M86 58l9-8"/></g>
+    <g><rect x="122" y="42" width="8" height="8" rx="2" fill="#2ecc71"/><rect x="134" y="42" width="8" height="8" rx="2" fill="#2ecc71"/><rect x="146" y="42" width="8" height="8" rx="2" fill="#ffcc00"/><rect x="158" y="42" width="8" height="8" rx="2" fill="#2b2730" opacity=".25"/></g>
+    <circle cx="170" cy="66" r="10" fill="#2b2730"/><circle cx="170" cy="66" r="4" fill="#9fd2ff"/>
+  </symbol>
 </svg>
 <nav><div class="wrap">
   <a class="logo" href="/"><img class="mark" src="/logo.svg" alt="" width="30" height="30">airband</a>
@@ -274,20 +370,22 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
         <div class="ctas"><a class="btn btn-primary" href="/jam/">Open a room</a><a class="btn" href="#apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Get the app</a></div>
         <form class="invite" id="inviteForm"><input id="inviteInput" placeholder="Paste an invite link" aria-label="Invite link" autocomplete="off"><button class="btn btn-accent" type="submit">Join</button></form>
         <p class="hint">Free. Runs in your browser; the app gets you even tighter.</p>
+        <div class="works"><em>Plays from your DAW</em><div class="dawlogos hero-logos" aria-label="Works with your DAW"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 6.4v11.2h1.6V6.4zm3.2 0v11.2h1.6V6.4zm3.2 0v11.2H8V6.4zm3.2 0v11.2h1.6V6.4zm3.2 0V8H24V6.4zm0 3.2v1.6H24V9.6zm0 3.2v1.6H24v-1.6zm0 3.2v1.6H24V16z"/></svg>Ableton Live</span><span>Logic Pro</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4807 12.6291c.6422-.371.6422-1.0092 0-1.3792L14.711 8.4954c-.6422-.371-1.1952-.052-1.1952.6901v5.508c0 .741.553 1.0601 1.1952.69zm-7.4812-9.9036c5.1219 0 9.2745 4.1526 9.2745 9.2745s-4.1526 9.2745-9.2745 9.2745S2.726 17.122 2.726 12s4.1516-9.2745 9.2735-9.2745m0-2.7255C5.3834 0 .0005 5.3829.0005 12s5.3829 12 12 12 11.999-5.3829 11.999-12-5.3829-12-12-12z"/></svg>Cubase</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.15 7.782a1.59 1.59 0 1 1 3.181 0 1.59 1.59 0 0 1-3.181 0zm5.741 1.591a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zm4.218 0a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zm4.15 0a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zM5.741 10.409a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm8.368 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm4.15 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm4.15 3.182a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zM1.591 10.409a1.591 1.591 0 1 0 0 3.182 1.591 1.591 0 0 0 0-3.182zm4.15 4.218a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm12.518 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm4.15 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm-20.818 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181m8.3-4.218a1.591 1.591 0 1 0 0 3.182 1.591 1.591 0 0 0 0-3.182Z"/></svg>Bitwig Studio</span><span>FL Studio</span><span>Reaper</span><span>Studio One</span></div></div>
       </div>
       <div style="position:relative">
         <div class="session" aria-hidden="true">
           <div class="top"><b>Slow funk · Em · 96</b><div class="right"><span class="chip"><span class="dot"></span>18 MS</span><span class="chip">BARS 8</span></div></div>
           <div class="tiles">
-            <div class="t on" style="--c1:#ffd6c2;--c2:#ffb48f"><svg class="who" viewBox="0 0 100 100"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><div class="name"><b>Kareem</b><small>Guitar</small></div><div class="meter"><i></i></div></div>
-            <div class="t" style="--c1:#e3dcff;--c2:#c4b5ff"><span class="ms">22 ms</span><svg class="who" viewBox="0 0 100 100"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><div class="name"><b>Maya</b><small>Keys · Dublin</small></div><div class="meter"><i style="animation-delay:-.3s"></i></div></div>
+            <div class="t on" style="--c1:#ffd6c2;--c2:#ffb48f"><svg class="who" viewBox="0 0 100 100"><rect x="32" y="4" width="36" height="36" rx="13"/><path d="M14 100V72c0-12 9-22 21-22h30c12 0 21 10 21 22v28z"/></svg><div class="name"><b>Alex</b><small>Guitar</small></div><div class="meter"><i></i></div></div>
+            <div class="t" style="--c1:#e3dcff;--c2:#c4b5ff"><span class="ms">22 ms</span><svg class="who" viewBox="0 0 100 100"><rect x="32" y="4" width="36" height="36" rx="13"/><path d="M14 100V72c0-12 9-22 21-22h30c12 0 21 10 21 22v28z"/></svg><div class="name"><b>Maya</b><small>Keys · Dublin</small></div><div class="meter"><i style="animation-delay:-.3s"></i></div></div>
             <div class="t" style="--c1:#d2f5e7;--c2:#8fe3c3"><span class="ai">AI</span><svg class="char" viewBox="0 0 200 200"><use href="#moss"/></svg><div class="name"><b>Moss</b><small>Drums</small></div><div class="meter"><i style="animation-delay:-.5s"></i></div></div>
             <div class="t" style="--c1:#d9eeff;--c2:#9fd2ff"><span class="ai">AI</span><svg class="char" viewBox="0 0 200 200" style="animation-delay:-.31s"><use href="#juno"/></svg><div class="name"><b>Juno</b><small>Bass</small></div><div class="meter"><i style="animation-delay:-.2s"></i></div></div>
           </div>
           <div class="bars"><b>Your 8 bars</b><div class="lights" id="lights"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="mono">NEXT: MAYA</span></div>
         </div>
+        <svg class="gear g-amp" viewBox="0 0 220 200" aria-hidden="true"><use href="#amp"/></svg><svg class="gear g-guitar" viewBox="0 0 120 260" aria-hidden="true"><use href="#guitar"/></svg>
         <div class="readout lat"><span class="mono">YOU → MAYA</span><b>18<small>ms</small></b><div class="spark" id="spark"></div></div>
-        <div class="readout daw"><span class="plug"><img src="/logo.svg" alt=""></span><div><span class="mono">AIR.BAND SEND</span><div style="font-weight:700">Live from Ableton</div></div></div>
+        <div class="readout daw"><span class="plug"><img src="/logo.svg" alt=""></span><div><span class="mono">AIRBAND SEND</span><div style="font-weight:700">Live from Ableton</div></div></div>
       </div>
     </div>
 
@@ -298,7 +396,14 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
       <div><b>24-bit</b><span>Separate tracks per player</span></div>
       <div><b>AU · VST3</b><span>Play from your DAW</span></div>
     </div>
-    <div class="works"><em>Plays from your DAW, via airband Send</em><div class="dawlogos" aria-label="Works with your DAW"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 6.4v11.2h1.6V6.4zm3.2 0v11.2h1.6V6.4zm3.2 0v11.2H8V6.4zm3.2 0v11.2h1.6V6.4zm3.2 0V8H24V6.4zm0 3.2v1.6H24V9.6zm0 3.2v1.6H24v-1.6zm0 3.2v1.6H24V16z"/></svg>Ableton Live</span><span>Logic Pro</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4807 12.6291c.6422-.371.6422-1.0092 0-1.3792L14.711 8.4954c-.6422-.371-1.1952-.052-1.1952.6901v5.508c0 .741.553 1.0601 1.1952.69zm-7.4812-9.9036c5.1219 0 9.2745 4.1526 9.2745 9.2745s-4.1526 9.2745-9.2745 9.2745S2.726 17.122 2.726 12s4.1516-9.2745 9.2735-9.2745m0-2.7255C5.3834 0 .0005 5.3829.0005 12s5.3829 12 12 12 11.999-5.3829 11.999-12-5.3829-12-12-12z"/></svg>Cubase</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.15 7.782a1.59 1.59 0 1 1 3.181 0 1.59 1.59 0 0 1-3.181 0zm5.741 1.591a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zm4.218 0a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zm4.15 0a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zM5.741 10.409a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm8.368 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm4.15 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm4.15 3.182a1.59 1.59 0 1 0 0-3.181 1.59 1.59 0 0 0 0 3.181zM1.591 10.409a1.591 1.591 0 1 0 0 3.182 1.591 1.591 0 0 0 0-3.182zm4.15 4.218a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm12.518 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm4.15 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181zm-20.818 0a1.59 1.59 0 1 0 0 3.181 1.59 1.59 0 0 0 0-3.181m8.3-4.218a1.591 1.591 0 1 0 0 3.182 1.591 1.591 0 0 0 0-3.182Z"/></svg>Bitwig Studio</span><span>FL Studio</span><span>Reaper</span><span>Studio One</span></div></div>
+    <div class="kit" aria-label="Bring your instrument">
+      <div><svg viewBox="0 0 120 260"><use href="#guitar"/></svg><span>Guitar</span></div>
+      <div><svg viewBox="0 0 120 280"><use href="#bass"/></svg><span>Bass</span></div>
+      <div><svg viewBox="0 0 300 110"><use href="#keys"/></svg><span>Keys</span></div>
+      <div><svg viewBox="0 0 240 200"><use href="#drums"/></svg><span>Drums</span></div>
+      <div><svg viewBox="0 0 100 200"><use href="#mic"/></svg><span>Vocals</span></div>
+      <div><svg viewBox="0 0 220 200"><use href="#amp"/></svg><span>Your rig</span></div>
+    </div>
   </div>
 </header>
 
@@ -365,7 +470,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
   <div class="split">
     <div class="recview" aria-hidden="true">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><b>Take 3</b><span class="chip">04:12</span><span class="chip" style="margin-left:auto">24-BIT · 48 KHZ</span></div>
-      <div class="trk"><div><b>Kareem</b><small>GUITAR</small></div><svg viewBox="0 0 300 34" id="w1"></svg></div>
+      <div class="trk"><div><b>Alex</b><small>GUITAR</small></div><svg viewBox="0 0 300 34" id="w1"></svg></div>
       <div class="trk"><div><b>Maya</b><small>KEYS</small></div><svg viewBox="0 0 300 34" id="w2"></svg></div>
       <div class="trk"><div><b>Moss</b><small>DRUMS</small></div><svg viewBox="0 0 300 34" id="w3"></svg></div>
       <div class="trk"><div><b>Juno</b><small>BASS</small></div><svg viewBox="0 0 300 34" id="w4"></svg></div>
@@ -382,8 +487,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 <section id="apps" style="padding-top:20px"><div class="wrap">
   <div class="head c"><span class="kicker">Downloads</span><h2>Tighter still, with the app.</h2><p>The browser works anywhere. The app is built for your interface.</p></div>
   <div class="apps">
-    <div class="app"><h3>airband for Mac and Windows</h3><p>Native audio engine, your interface’s own drivers, and the shortest path between players. Updates itself.</p><div class="meta">CORE AUDIO · ASIO · AUTO-UPDATE</div><div class="dl" id="dlApp"><a class="btn btn-primary" href="/download/">Download for Mac</a><a class="btn" href="/download/">Windows</a></div></div>
-    <div class="app"><h3>airband Send</h3><p>Stream any track from your DAW into the room, with your whole chain on it.</p><div class="meta">AU · VST3 · MAC · WINDOWS</div><div class="dl" id="dlPlugin"><a class="btn btn-primary" href="/download/">Plugin for Mac</a><a class="btn" href="/download/">Windows</a></div></div>
+    <div class="app"><div class="setup"><svg viewBox="0 0 200 96"><use href="#interface"/></svg><svg viewBox="0 0 160 150"><use href="#phones"/></svg></div><h3>airband for Mac and Windows</h3><p>Native audio engine, your interface’s own drivers, and the shortest path between players. Updates itself.</p><div class="meta">CORE AUDIO · ASIO · AUTO-UPDATE</div><div class="dl" id="dlApp"><a class="btn btn-primary" href="/download/">Download for Mac</a><a class="btn" href="/download/">Windows</a></div></div>
+    <div class="app"><div class="setup"><svg viewBox="0 0 120 260" style="--g:#ff8fb1"><use href="#guitar"/></svg><svg viewBox="0 0 220 200"><use href="#amp"/></svg></div><h3>airband Send</h3><p>Stream any track from your DAW into the room, with your whole chain on it.</p><div class="meta">AU · VST3 · MAC · WINDOWS</div><div class="dl" id="dlPlugin"><a class="btn btn-primary" href="/download/">Plugin for Mac</a><a class="btn" href="/download/">Windows</a></div></div>
   </div>
 </div></section>
 
