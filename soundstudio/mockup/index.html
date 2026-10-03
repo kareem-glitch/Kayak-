@@ -163,15 +163,36 @@ button,input,select{font:inherit;color:inherit}
   .start{grid-template-columns:1fr}
 }
 @media (max-width:640px){
-  .switch{right:50%;transform:translateX(50%);bottom:12px}
-  .room{padding:12px 12px 80px;grid-template-columns:minmax(0,1fr)}
-  .players{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .switch{position:static;transform:none;margin:0 auto 100px;width:max-content}
+  .room{padding:12px 12px 24px;grid-template-columns:minmax(0,1fr);gap:12px}
+  .players{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .p{border-radius:20px;padding:12px}
   .top .right .btn{padding:9px 14px}
-  .hud{grid-template-columns:1fr}
+  /* the players are the focus: key, tempo and the turn shrink to two slim strips */
+  .hud{grid-template-columns:1fr;gap:8px}
+  .display{min-width:0;padding:8px 10px 8px 14px;border-radius:16px;display:flex;align-items:center;gap:10px}
+  .display>div:first-child{display:none !important}
+  .display .big span{white-space:nowrap}
+  .p .char{width:62%;top:4%} .p .who{width:50%;top:7%}
+  .display .big{margin:0;gap:6px}
+  .display .big b{font-size:1.3rem}
+  .display .big span{font-size:.85rem}
+  .steps{margin:0 0 0 auto;gap:6px}
+  .steps .stp{font-size:.74rem;padding:3px;gap:4px}
+  .steps .stp button{width:24px;height:24px;font-size:.8rem}
+  .turn{flex-direction:row;align-items:center;gap:10px;padding:10px 14px;border-radius:16px}
+  .turn .line{gap:6px;flex:none}
+  .turn .line b{font-size:.92rem}
+  .turn .line .count{font-size:1rem;order:-1;margin:0}
+  .turn .bars{flex:1;gap:4px}
+  .turn .bars i{height:6px}
+  .turn .next{display:none}
+  /* the controls stay at hand, at the bottom of the screen */
+  .dock{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--line);gap:10px}
 
   .top .song,.top .chip.hide-sm{display:none}
   .gearrow{display:none}
-  .dock .round{width:48px;height:48px} .dock .play{width:62px;height:62px}
+  .dock .round{width:44px;height:44px} .dock .play{width:56px;height:56px}
 }
 @media (prefers-reduced-motion: reduce){ *{animation:none !important} }
 </style>
