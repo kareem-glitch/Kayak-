@@ -62,6 +62,7 @@ button,input,textarea,select{font:inherit;color:inherit}
 button.badge{border:0;cursor:pointer}
 .logo{font:800 1.15rem/1 var(--wide);font-stretch:125%;letter-spacing:.01em;margin-right:4px}
 .logo b{color:var(--amber)}
+.logo{display:inline-flex;align-items:center} .logo .mark{width:26px;height:26px;margin-right:8px;flex:none;font-stretch:normal}
 .badge{flex:none;white-space:nowrap;padding:5px 9px;border-radius:6px;border:1px solid #3a3b40;background:transparent;color:var(--ink);font:400 .76rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
 .conn-dot{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:6px;border:1px solid var(--line);background:var(--raised);font:500 .78rem/1 var(--mono);cursor:pointer}
 .conn-dot i{width:9px;height:9px;border-radius:2px;background:var(--muted)}

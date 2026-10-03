@@ -366,6 +366,23 @@ const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.spli
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/air.band-${APP_VERSION}-Mac.zip` : `/download/air.band-${APP_VERSION}-Windows-setup.exe`;
 // From 0.6.1 the app updates itself; older ones need one download.
 if(audio.IN_APP && older(window.__SS_NATIVE.version, '0.6.1')) $('#appNote').innerHTML = `A new version of the app is available, and from this one on it updates itself. <a href="https://air.band${dl()}">Download it</a> and reinstall.`;
+// In the app, the web view ignores download links: takes (blob: links) are handed to the
+// app instead, which saves them in Downloads and shows them (0.6.3 on; older apps: update).
+if(audio.IN_APP) document.addEventListener('click', async e => {
+  const a = e.target.closest && e.target.closest('a[download]');
+  if(!a || !/^blob:/.test(a.href)) return;
+  e.preventDefault();
+  if(older(window.__SS_NATIVE.version, '0.6.3')){ ui.notice('Saving takes needs the newest app: quit air.band and open it again to update.'); return; }
+  const was = a.textContent;
+  try{
+    a.textContent = 'Saving…';
+    const blob = await (await fetch(a.href)).blob();
+    const r = await (await fetch(`/__save?t=${window.__SS_NATIVE.token}&name=${encodeURIComponent(a.download || 'airband-take')}`, { method: 'POST', body: blob })).json();
+    if(!r.ok) throw new Error(r.error);
+    ui.notice('Saved to Downloads: ' + r.path.split(/[\\/]/).pop());
+  }catch(err){ ui.notice('Couldn’t save the file (' + (err.message || err) + ').'); }
+  a.textContent = was;
+});
 // The app downloaded a newer version in the background: offer to restart now (else it installs when you quit).
 let updateShown = false;
 setInterval(() => {

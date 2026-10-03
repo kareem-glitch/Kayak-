@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>air.band: jam room mock-up</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,6 +29,7 @@ button,input,select{font:inherit;color:inherit}
 .glow span:nth-child(2){width:420px;height:420px;right:-100px;top:10%;background:var(--lilac)}
 .glow span:nth-child(3){width:380px;height:380px;left:35%;bottom:-160px;background:var(--mint)}
 .logo{font-weight:800;font-size:1.2rem;letter-spacing:-.03em;text-decoration:none;color:inherit}
+.logo{display:inline-flex;align-items:center} .logo .mark{width:30px;height:30px;margin-right:8px;flex:none}
 .logo i{font-style:normal;color:var(--accent);-webkit-text-stroke:.5px var(--accent-deep)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;box-shadow:var(--shadow);text-decoration:none}
 .btn-primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;box-shadow:0 8px 22px rgba(255,204,0,.32)}
@@ -304,7 +306,7 @@ button,input,select{font:inherit;color:inherit}
 
 <!-- ======== START SCREEN ======== -->
 <main class="start" id="startView" hidden>
-  <header><a class="logo" href="/">air<i>.</i>band</a></header>
+  <header><a class="logo" href="/"><img class="mark" src="/logo.svg" alt="" width="30" height="30">air<i>.</i>band</a></header>
   <section class="welcome">
     <span class="chip"><span class="dot"></span>Kareem invited you</span>
     <h1>Ready to <em>play?</em></h1>
@@ -343,7 +345,7 @@ button,input,select{font:inherit;color:inherit}
 <!-- ======== THE ROOM ======== -->
 <main class="room" id="roomView">
   <div class="top">
-    <a class="logo" href="/">air<i>.</i>band</a>
+    <a class="logo" href="/"><img class="mark" src="/logo.svg" alt="" width="30" height="30">air<i>.</i>band</a>
     <span class="song">Slow funk in E minor</span>
     <span class="chip hide-sm">BARS 8</span>
     <div class="right">

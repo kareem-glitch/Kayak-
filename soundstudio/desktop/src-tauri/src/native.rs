@@ -53,7 +53,7 @@ pub fn serve() -> std::io::Result<(u16, String)> {
             let (w, sh, tok, dr) = (writer.clone(), shared.clone(), tok.clone(), direct.clone());
             std::thread::spawn(move || {
                 if is_websocket(&stream) { if let Err(e) = client(stream, &tok, w, sh, dr) { eprintln!("audio link closed: {e}"); } }
-                else if let Err(e) = proxy(stream) { eprintln!("page request failed: {e}"); }
+                else if let Err(e) = proxy(stream, &tok) { eprintln!("page request failed: {e}"); }
             });
         }
     });
@@ -73,7 +73,7 @@ fn is_websocket(stream: &TcpStream) -> bool {
 }
 
 /// Pass one HTTP request through to the live website and send back its answer.
-fn proxy(mut stream: TcpStream) -> Result<(), String> {
+fn proxy(mut stream: TcpStream, token: &str) -> Result<(), String> {
     use std::io::{Read, Write};
     let mut data = Vec::new(); let mut buf = [0u8; 8192];
     let end = loop {
@@ -89,7 +89,15 @@ fn proxy(mut stream: TcpStream) -> Result<(), String> {
     let header = |name: &str| head.split("\r\n").find_map(|l| { let (k, v) = l.split_once(':')?; (k.trim().eq_ignore_ascii_case(name)).then(|| v.trim().to_string()) });
     let len: usize = header("content-length").and_then(|v| v.parse().ok()).unwrap_or(0);
     let mut body = data[end..].to_vec();
+    if len > 2 << 30 { return Err("request too large".into()); }
     while body.len() < len { let n = stream.read(&mut buf).map_err(|e| e.to_string())?; if n == 0 { break; } body.extend_from_slice(&buf[..n]); }
+    if method == "POST" && path.starts_with("/__save?") {
+        // a take from the page (a blob the web view won't download): into Downloads, shown in Finder / Explorer
+        let reply = save(&path, &body, token);
+        let msg = match &reply { Ok(p) => serde_json::json!({ "ok": true, "path": p }), Err(e) => serde_json::json!({ "ok": false, "error": e }) }.to_string();
+        let out = format!("HTTP/1.1 {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{msg}", if reply.is_ok() { "200 OK" } else { "400 Bad Request" }, msg.len());
+        return stream.write_all(out.as_bytes()).map_err(|e| e.to_string());
+    }
     let url = format!("{}{}", crate::SITE.trim_end_matches('/'), path);
     static AGENT: std::sync::OnceLock<ureq::Agent> = std::sync::OnceLock::new();
     // the system's certificates and proxy settings, like a browser would use
@@ -105,6 +113,28 @@ fn proxy(mut stream: TcpStream) -> Result<(), String> {
     let mut out = Vec::new(); resp.into_reader().take(64 * 1024 * 1024).read_to_end(&mut out).map_err(|e| e.to_string())?;
     let head = format!("HTTP/1.1 {status} OK\r\nContent-Type: {ctype}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n", out.len());
     stream.write_all(head.as_bytes()).and_then(|_| stream.write_all(&out)).map_err(|e| e.to_string())
+}
+
+/// Saves a file the page hands over (POST /__save?t=<token>&name=<file name>) in the
+/// Downloads folder, never overwriting one that's there, and shows it.
+fn save(path: &str, body: &[u8], token: &str) -> Result<String, String> {
+    let query = path.split_once('?').map(|(_, q)| q).unwrap_or("");
+    let get = |k: &str| query.split('&').find_map(|kv| kv.split_once('=').filter(|(a, _)| *a == k).map(|(_, v)| v.to_string()));
+    if get("t").as_deref() != Some(token) { return Err("not allowed".into()); }
+    let raw = get("name").unwrap_or_default();
+    let name: String = raw.chars().filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_')).collect();
+    let name = name.trim_start_matches('.').to_string();
+    if name.is_empty() || body.is_empty() { return Err("nothing to save".into()); }
+    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).ok_or("no home folder")?;
+    let dir = std::path::Path::new(&home).join("Downloads");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let (stem, ext) = match name.rsplit_once('.') { Some((a, b)) if !a.is_empty() => (a.to_string(), format!(".{b}")), _ => (name.clone(), String::new()) };
+    let mut file = dir.join(&name);
+    for n in 1.. { if !file.exists() { break; } file = dir.join(format!("{stem} ({n}){ext}")); }
+    std::fs::write(&file, body).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")] let _ = std::process::Command::new("open").arg("-R").arg(&file).spawn();
+    #[cfg(target_os = "windows")] let _ = std::process::Command::new("explorer").arg(format!("/select,{}", file.display())).spawn();
+    Ok(file.display().to_string())
 }
 
 fn client(stream: TcpStream, token: &str, writer: Writer, sh: Arc<Shared>, direct: Option<Arc<crate::direct::Direct>>) -> Result<(), String> {
