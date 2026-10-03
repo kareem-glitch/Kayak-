@@ -26,14 +26,14 @@ export async function startServers({ internet = false, fakeAudio = null } = {}){
       res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify({ stems, seconds: 30 }));
     }
     if(u.pathname.startsWith('/api/')){ res.statusCode = 501; return res.end(); }   // arrangement API off: built-in interpreter
-    const f = path.join(ROOT, u.pathname === '/' ? 'index.html' : u.pathname);
+    const f = path.join(ROOT, u.pathname.endsWith('/') ? u.pathname + 'index.html' : u.pathname);
     if(!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()){ res.statusCode = 404; return res.end(); }
     res.setHeader('content-type', TYPES[path.extname(f)] || 'application/octet-stream'); fs.createReadStream(f).pipe(res);
   });
   await new Promise(r => web.listen(0, '127.0.0.1', r));
   const brokerPort = 9000 + Math.floor(Math.random() * 900);
   const broker = await new Promise(r => { const s = PeerServer({ port:brokerPort, path:'/', host:'127.0.0.1' }, srv => r(srv)); });
-  const base = `http://127.0.0.1:${web.address().port}/?broker=127.0.0.1:${brokerPort}`;
+  const base = `http://127.0.0.1:${web.address().port}/jam/?broker=127.0.0.1:${brokerPort}`;
   const proxy = internet && process.env.E2E_PROXY ? [`--proxy-server=${process.env.E2E_PROXY}`] : ['--no-proxy-server'];
   const browser = await chromium.launch({ args:[...proxy, '--autoplay-policy=no-user-gesture-required', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', ...(fakeAudio ? [`--use-file-for-fake-audio-capture=${fakeAudio}`] : [])] });
   const errors = [];

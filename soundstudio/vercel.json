@@ -4,5 +4,12 @@
     "api/stems.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/jam",
+      "destination": "/jam/",
+      "permanent": false
+    }
+  ]
 }

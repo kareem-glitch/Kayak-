@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>air.band</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:wdth,wght@125,600;125,700;125,800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script>
+// Remember every AudioContext the page creates, including the one inside Tone.js,
+// so the output device picker can switch all of them (AudioContext.setSinkId).
+window.__audioContexts = [];
+(() => { const Orig = window.AudioContext; if (!Orig) return;
+  window.AudioContext = class extends Orig { constructor(...a) { super(...a); window.__audioContexts.push(this); } }; })();
+</script>
+<script src="/vendor/tone-14.8.49.js"></script>
+<link rel="stylesheet" href="/app/styles.css">
+</head>
+<body>
+
+<div class="join" id="joinView">
+  <div class="join-card">
+    <h1><a href="/" class="home-link">air.band</a></h1>
+    <h2>Jam room</h2>
+    <p class="muted small" id="roomLine">Camera and live audio, straight from browser to browser.</p>
+    <label for="nameInput">Your name</label>
+    <div class="name-row"><input id="nameInput" autocomplete="nickname" maxlength="40" placeholder="What should the band call you?"><button type="button" id="nameDice" class="dice" title="Shuffle name" aria-label="Shuffle name"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></button></div>
+    <div class="look-pick">
+      <span class="muted small">Camera</span>
+      <div class="modes" id="camPick" role="radiogroup" aria-label="Camera"><button type="button" role="radio" data-cam="1">On</button><button type="button" role="radio" data-cam="0">Off</button></div>
+    </div>
+    <div class="look-pick">
+      <span class="muted small">I play</span>
+      <div class="modes parts" id="partPick" role="radiogroup" aria-label="What you play">
+        <button type="button" role="radio" data-part="none" title="Solo over the full band, no part of your own">Lead</button><button type="button" role="radio" data-part="guitar">Guitar</button><button type="button" role="radio" data-part="bass">Bass</button><button type="button" role="radio" data-part="keys">Keys</button><button type="button" role="radio" data-part="drums">Drums</button>
+      </div>
+    </div>
+    <div id="gamePick" class="game-pick">
+      <span class="muted small">Game (you can change it in the room)</span>
+      <div class="modes" role="radiogroup" aria-label="Game">
+        <span class="modes-label" aria-hidden="true">BARS</span>
+        <button type="button" role="radio" data-pick="4" aria-checked="false" aria-label="BARS 4">4</button>
+        <button type="button" role="radio" data-pick="8" aria-checked="true">8</button>
+        <button type="button" role="radio" data-pick="16" aria-checked="false">16</button>
+        <button type="button" role="radio" data-pick="32" aria-checked="false">32</button>
+        <button type="button" role="radio" data-pick="free" aria-checked="false">Free jam</button>
+      </div>
+      <p class="muted small" id="pickNote"></p>
+    </div>
+    <div id="inviteField" hidden><label for="inviteInput">Invite link (leave empty to start a new jam)</label>
+    <input id="inviteInput" autocomplete="off" placeholder="Paste the link someone sent you"></div>
+    <section class="rate-card" id="rateCard" hidden aria-labelledby="rateTitle">
+      <b id="rateTitle">Would you jam with them again?</b>
+      <div id="rateList"></div>
+    </section>
+    <section class="profile-box" id="profileBox" aria-labelledby="pfTitle">
+      <div class="pf-head"><b id="pfTitle">Your profile</b><button type="button" class="linkbtn" id="pfToggle" aria-expanded="false">Edit</button></div>
+      <p class="muted small" id="pfLine">Saved on this device. Add your email to keep it everywhere.</p>
+      <div id="pfBody" hidden>
+        <span class="muted small sc-label">Instruments</span>
+        <div class="chips" id="pfInstruments"></div>
+        <span class="muted small sc-label">Styles you like</span>
+        <div class="chips" id="pfGenres"></div>
+        <span class="muted small sc-label">Level</span>
+        <div class="modes four" id="pfLevel" role="radiogroup" aria-label="Level"></div>
+        <button type="button" class="btn btn-quiet pf-google" id="pfGoogle" hidden><svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>Continue with Google</button>
+        <label for="pfEmail">Email (to keep your profile and jams on every device)</label>
+        <div class="name-row"><input id="pfEmail" type="email" autocomplete="email" placeholder="you@example.com"><button type="button" class="btn btn-quiet pf-save" id="pfSaveEmail">Save</button></div>
+        <p class="small pf-msg" id="pfMsg" aria-live="polite"></p>
+        <p class="muted small pf-links"><button type="button" class="linkbtn" id="pfSignIn">Already have an account? Sign in</button><span id="pfSignedLinks" hidden> · <button type="button" class="linkbtn" id="pfSignOut">Sign out</button></span> · <button type="button" class="linkbtn" id="pfDelete">Delete my account</button></p>
+      </div>
+    </section>
+    <section class="sound-check" id="soundCheck" aria-labelledby="scTitle">
+      <div class="sc-head"><span class="sc-step" aria-hidden="true"></span><b id="scTitle">Sound check</b><span class="muted small" id="scState">Before you join</span></div>
+      <p class="muted small" id="scIntro">Plug in your instrument or audio interface and wired headphones, then check you can hear yourself.</p>
+      <button type="button" class="btn btn-quiet" id="scStart">Set up my sound</button>
+      <div id="scBody" hidden>
+        <label for="scIn">Input (your audio interface or mic)</label>
+        <select id="scIn" class="devsel"></select>
+        <label for="scCh">Which input on it</label>
+        <select id="scCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2 (mono)</option><option value="stereo">Inputs 1 + 2 as stereo</option></select>
+        <div class="level sc-level"><span>Play something <span class="small" id="scDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0"><i id="scLevel"></i><b id="scHold"></b></div></div>
+        <p class="small sc-msg" id="scMsg" aria-live="polite">Play your instrument: the bar should move.</p>
+        <label for="scOut">Output (your headphones or interface)</label>
+        <select id="scOut" class="devsel"></select>
+        <p class="muted small" id="scOutNote" hidden>This browser plays through your computer’s sound output: set that to your headphones or interface. (Chrome or Edge let you choose here.)</p>
+        <div class="sc-row"><button type="button" class="btn btn-quiet" id="scBeep">Play a test sound</button><button type="button" class="btn btn-quiet" id="scHear" aria-pressed="false">Hear myself</button></div>
+        <label class="check small" id="scSpeakerRow"><input type="checkbox" id="scSpeaker"> Echo cancellation: turn on if you use a microphone without headphones (the others hear themselves otherwise)</label>
+        <p class="muted small" id="scHearNote">“Hear myself” plays your input back through air.band, the way the room will hear you. Make sure you can hear yourself, then turn it off.</p>
+        <span class="muted small sc-label">Amp</span>
+        <div class="modes tones sc-amps" id="scAmps" role="radiogroup" aria-label="Amp"></div>
+        <p class="muted small" id="scAmpNote"></p>
+      </div>
+    </section>
+    <p class="muted small" style="margin-top:14px">Use wired headphones. Bluetooth adds too much delay to play in time.</p>
+    <button class="btn btn-primary" id="joinBtn">Join the jam</button>
+    <p class="err" id="joinErr" role="alert"></p>
+    <p class="muted small app-note" id="appNote"></p>
+  </div>
+</div>
+
+<div id="roomView" class="room" hidden>
+  <header class="top">
+    <span class="logo" aria-hidden="true">air<b>.</b>band</span>
+    <h1 id="roomTitle" class="sr-only">air.band jam</h1>
+    <button class="badge" id="gameBadge" type="button" data-open="band" title="Game and band">Free jam</button>
+    <span class="spacer"></span>
+    <button class="conn-dot" id="connDot" type="button" data-open="stats" title="Connection"><i id="connJewel"></i><span id="connDotText" class="sr-only">Connecting…</span></button>
+    <button class="btn btn-primary pill" id="inviteBtn">Invite</button>
+    <button class="icon-btn" id="setBtn" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  </header>
+
+  <main class="main">
+    <section class="stage" aria-label="Stage">
+      <div class="notice" id="notice" role="status" hidden><span id="noticeText"></span><button class="btn btn-primary" id="noticeAct" type="button" hidden></button><button class="close" id="noticeClose" type="button" aria-label="Dismiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="stage-top">
+        <div class="lcd" id="bandTile">
+          <div class="label" id="bandTileTitle">The band is waiting for someone to run it</div>
+          <div class="lcd-row"><span class="now-chord" id="nowChord"></span><span class="count" id="countNum"></span><span class="beats" id="beats" aria-hidden="true"><span></span><span></span><span></span><span></span></span></div>
+          <div class="lcd-pop" id="lcdPop" hidden>
+            <div class="lcd-step"><span>Key</span><button type="button" data-tr="-1" aria-label="Transpose down a semitone">−</button><b id="popKey"></b><button type="button" data-tr="1" aria-label="Transpose up a semitone">+</button></div>
+            <div class="lcd-step"><span>Tempo</span><button type="button" data-bpm="-1" aria-label="Slower">−</button><b id="popBpm"></b><button type="button" data-bpm="1" aria-label="Faster">+</button></div>
+            <p class="lcd-note" id="popNote"></p>
+          </div>
+        </div>
+        <div class="turn-bar" id="turnBar" aria-live="polite">
+          <div class="turn-main"><span class="turn-label" id="turnLine">Free jam</span><span class="leds" id="leds" aria-hidden="true"></span></div>
+          <div class="turn-side"><span class="turn-big"><b id="turnCount">–</b><i id="turnOf"></i></span><span class="turn-next" id="turnNext"></span></div>
+        </div>
+      </div>
+      <div class="hud" id="hud" aria-label="Live latency" hidden></div>
+      <div class="players-box"><div class="players" id="players"></div></div>
+    </section>
+
+    <aside class="side" aria-label="Setup">
+      <nav class="rail" role="tablist" aria-label="Setup">
+        <button class="tab" role="tab" data-drawer-tab="band" aria-selected="false" aria-label="Band" title="Band"><svg viewBox="0 0 24 24"><circle cx="7" cy="17" r="3"/><circle cx="17" cy="15" r="3"/><path d="M10 17V5l10-2v12"/></svg></button>
+        <button class="tab" role="tab" data-drawer-tab="tone" aria-selected="false" aria-label="Tone" title="Tone"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="12" cy="14" r="3.5"/><path d="M8 8h.01M12 8h.01M16 8h.01"/></svg></button>
+        <button class="tab" role="tab" data-drawer-tab="audio" aria-selected="false" aria-label="Audio" title="Audio"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+        <button class="tab" role="tab" data-drawer-tab="record" aria-selected="false" aria-label="Takes" title="Takes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></button>
+      </nav>
+      <div class="drawer" id="drawer" hidden>
+        <section class="pane" data-drawer="band" hidden>
+          <div class="pane-head"><h2>Band</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <div class="modes game-seg" role="radiogroup" aria-label="Game" id="gameBox">
+            <span class="modes-label" aria-hidden="true">BARS</span>
+            <button type="button" role="radio" data-game="4" aria-checked="false" aria-label="BARS 4">4</button>
+            <button type="button" role="radio" data-game="8" aria-checked="false">8</button>
+            <button type="button" role="radio" data-game="16" aria-checked="false">16</button>
+            <button type="button" role="radio" data-game="32" aria-checked="false">32</button>
+            <button type="button" role="radio" data-game="free" aria-checked="true">Free jam</button>
+          </div>
+          <div id="hostSection">
+          <div class="hostbox" id="claimBox">
+          <p class="small">One person runs the band from their device and everyone hears it. Whoever runs it controls the prompt and play button.</p>
+          <div class="row"><button class="btn btn-primary" id="claimBtn">Run the band from here</button></div>
+          <p class="status" id="claimStatus"></p>
+        </div>
+        <div id="hostControls" hidden>
+          <div class="modes" role="tablist" aria-label="Where the band comes from">
+            <button role="tab" id="mode-stock" data-mode="stock" aria-selected="true">Stock tracks</button>
+            <button role="tab" id="mode-prompt" data-mode="prompt" aria-selected="false">Prompt → stems</button>
+            <button role="tab" id="mode-live" data-mode="live" aria-selected="false">Live band</button>
+          </div>
+          <p class="muted small" id="modeNote"></p>
+          <div class="stock" id="stockList"></div>
+          <div id="promptBox">
+            <label class="muted small" for="prompt">What are we playing?</label>
+            <textarea id="prompt" placeholder="Slow funk in E minor, 96 bpm"></textarea>
+            <div id="codeRow" hidden><label class="muted small" for="stemsCode">Access code (while we're testing)</label><input id="stemsCode" class="devsel" autocomplete="off"></div>
+            <div class="row"><button class="btn btn-primary" id="genBtn">Generate backing band</button></div>
+            <div class="chips" id="examples"></div>
+          </div>
+          <p class="status" id="genStatus" role="status"></p>
+        </div>
+          </div>
+          <h2 id="arrTitle">No band yet</h2>
+          <div class="facts" id="facts"></div>
+          <p class="muted small" id="arrNotes"></p>
+          <ol class="chords" id="chords" aria-label="Chord loop"></ol>
+          <div class="opts" id="transport" hidden>
+            <label><input type="checkbox" id="countIn" checked> Count in</label>
+            <label><input type="checkbox" id="clickAll"> Click</label>
+            <label>BPM <input type="number" id="bpm" min="50" max="200"></label>
+          </div>
+          <label class="check small" id="keepAIRow"><input type="checkbox" id="keepAI"> Keep the AI band in the rotation</label>
+          <p class="muted small" id="gameNote"></p>
+          <div class="strips" id="strips"></div>
+        </section>
+        <section class="pane" data-drawer="tone" hidden>
+          <div class="pane-head"><h2>Tone</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <p class="muted small" id="toneEmpty" hidden>Amps aren’t in the app’s own audio engine yet. To use one, pick it on the start screen (Sound check → Amp): the app switches to browser audio, which adds a few ms. Or use your own amp, pedals or modeller, or your DAW with the air.band Send plugin.</p>
+          <div id="toneSection">
+                    <div class="modes tones" role="radiogroup" aria-label="Tone" id="toneBox"></div>
+          <div class="eq" id="eqBox" hidden>
+            <label>Bass <input type="range" min="-12" max="12" step="1" value="0" data-eq="bass"></label>
+            <label>Mid <input type="range" min="-12" max="12" step="1" value="0" data-eq="mid"></label>
+            <label>Treble <input type="range" min="-12" max="12" step="1" value="0" data-eq="treble"></label>
+            <label>Level <input type="range" min="-12" max="12" step="1" value="0" data-eq="level"></label>
+            <label class="fx">Chorus <input type="range" min="0" max="100" step="1" value="0" data-eq="chorus"></label>
+            <label class="fx">Reverb <input type="range" min="0" max="100" step="1" value="0" data-eq="reverb"></label>
+            <button type="button" class="linkbtn" id="toneReset">Reset this amp</button>
+          </div>
+          <p class="muted small" id="toneNote"></p>
+        </div>
+        </section>
+        <section class="pane" data-drawer="audio" hidden>
+          <div class="pane-head"><h2>Audio</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <h3>Your mix (just for you)</h3>
+          <label class="slider"><span>Band <span id="bandVolDb"></span></span><input type="range" id="bandVol" min="-40" max="6" step="1" value="-6" aria-label="Band volume"></label>
+          <div class="mix-players" id="mixPlayers"></div>
+          <h3>Your input</h3>
+          <label class="slider"><span>Boost what you send <span id="inGainDb"></span></span><input type="range" id="inGain" min="0" max="24" step="1" value="0" aria-label="Input boost"></label>
+          <div class="level"><span>Your level <span class="small" id="inDb">– dB</span></span><div class="inmeter" role="meter" aria-label="Input level" aria-valuemin="-60" aria-valuemax="0" id="inMeter"><i id="inLevel"></i><b id="inHold"></b></div></div>
+          <div class="synth-set" id="synthSet" hidden>
+            <h3>Synth</h3>
+            <label class="slider"><span>Synth volume <span id="synthVolDb"></span></span><input type="range" id="synthVol" min="-40" max="12" step="1" value="0" aria-label="Synth volume"></label>
+            <div class="modes two" role="radiogroup" aria-label="Which notes"><button type="button" role="radio" data-scale="key">In key</button><button type="button" role="radio" data-scale="all">All notes</button></div>
+            <div class="row"><button type="button" class="btn btn-quiet" id="synthTest">Test my delay</button><span class="synth-lat muted small"></span></div>
+            <p class="muted small" id="synthNote" hidden></p>
+          </div>
+          <div class="plugin-row" id="pluginRow" hidden>
+          <div class="plugin-text"><b>Play through your DAW</b><span class="muted small" id="pluginStatus">Put the air.band Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.</span></div>
+          <button class="btn btn-quiet" id="pluginInstall" type="button">Install the plugin</button>
+        </div>
+        <label class="muted small" for="inDev">Input (mic or audio interface)</label>
+        <select id="inDev" class="devsel"></select>
+                <label class="muted small" for="inCh">Input channel</label>
+        <select id="inCh" class="devsel"><option value="1">Input 1</option><option value="2">Input 2</option><option value="mix">Inputs 1 + 2 (mono)</option><option value="stereo">Inputs 1 + 2 as stereo</option></select>
+        
+        <label class="muted small" for="outDev">Output (headphones or interface)</label>
+        <select id="outDev" class="devsel"></select>
+        <button type="button" class="btn btn-quiet" id="testSound">Play a test sound</button>
+        <label class="muted small" for="engine" id="engineLabel" hidden>Sound engine (desktop app)</label>
+        <select id="engine" class="devsel" hidden><option value="native">App engine (lowest delay)</option><option value="web">Browser engine (backup)</option></select>
+        <p class="muted small" id="outNote" hidden>This browser uses your computer’s sound output. To choose here, use Chrome or Edge.</p>
+        <label class="check small"><input type="checkbox" id="speaker"> Echo cancellation (turn on if you’re not using headphones)</label>
+        <label class="check small"><input type="checkbox" id="smoother"> Smoother sound (fewer dropouts, a few ms more delay)</label>
+        <label class="check small"><input type="checkbox" id="studio"> Studio quality (32-bit audio, about twice the bandwidth)</label>
+        </section>
+        <section class="pane" data-drawer="record" hidden>
+          <div class="pane-head"><h2>Takes</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <label class="muted small" for="recWhat">Record</label>
+          <select id="recWhat" class="devsel"><option value="me">Just me</option><option value="all">The whole jam</option><option value="video">Jam + video</option><option value="screen">Jam + screen (this tab)</option></select>
+          <label class="check small" id="recTracksRow"><input type="checkbox" id="recTracks"> Also save separate tracks: one WAV per player and the band, lined up, in a .zip for your DAW</label>
+          <p class="muted small" id="recEmpty">Hit ● at the bottom. Your take shows up here.</p>
+          <div class="rec-result" id="recResult" hidden>
+          <div class="rec-media" id="recMedia"></div>
+          <a class="btn btn-primary rec-dl" id="recDownload" href="#" download>Download</a>
+          <a class="btn btn-quiet rec-dl" id="recTracksDl" href="#" download hidden>Download tracks (.zip)</a>
+          <div class="rec-report" id="recReport"></div>
+          <p class="muted small">Timing check: start the band and clap on the beat. <a id="recTiming" href="#" download="airband-timing.wav">Timing file</a> (left: you, right: the others, clicks: the beat). To measure the delay between two devices, put them side by side and clap.</p>
+        </div>
+        </section>
+        <section class="pane" data-drawer="stats" hidden>
+          <div class="pane-head"><h2>Connection</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+          <ul class="lat" id="latList"></ul>
+          <div class="stats" id="connStats">Waiting for others…</div>
+          <label class="check small"><input type="checkbox" id="hudOn"> Show latency on screen (like an FPS counter)</label>
+          <label class="check small"><input type="checkbox" id="echoTest"> Echo test: send the others' audio straight back to them (for measuring latency)</label>
+          <label class="check small"><input type="checkbox" id="farApart"> Pretend we're far apart (adds 150 ms, for testing at home)</label>
+          <h3>Setup check</h3>
+          <ul class="tips" id="tips"><li class="muted">Join to check your setup.</li></ul>
+          <div class="stats" id="connDebug" style="opacity:.7"></div>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="dock">
+    <div class="synth" id="synthPanel" hidden>
+      <button type="button" class="oct" data-oct="-1" aria-label="Lower"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="synth-pads" role="group" aria-label="Synth keys"></div>
+      <button type="button" class="oct" data-oct="1" aria-label="Higher"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      <p class="synth-warn" hidden>Lots of delay: usually Bluetooth headphones. Wired ones feel instant.</p>
+    </div>
+    <div class="track"><b id="dockTitle">No band yet</b><span id="dockMeta">Waiting for the band</span></div>
+    <div class="controls">
+      <button class="ctl" id="micBtn" aria-pressed="true" aria-label="Mic" title="Mic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="off" d="M4 4l16 16"/></svg></button>
+      <button class="ctl" id="camToggle" aria-pressed="true" aria-label="Camera on" title="Camera on (tap to turn it off)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/><path class="off" d="M3 4l18 17"/></svg></button>
+      <button class="ctl" id="synthBtn" aria-pressed="false" aria-label="Synth" title="Play a synth on screen" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v7M12 6v7M16 6v7"/></svg></button>
+      <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+      <button class="ctl rec" id="recBtn" aria-pressed="false" aria-label="Record" title="Record"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel"></span></button>
+      <button class="ctl leave" id="leaveBtn" aria-label="Leave" title="Leave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 17l5-5-5-5M21 12H9M12 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/></svg></button>
+    </div>
+    <span class="dock-end muted small" id="recStatus"></span>
+  </footer>
+</div>
+
+<script src="/vendor/peerjs-1.5.4.min.js"></script>
+<script type="module" src="/app/main.js"></script>
+</body>
+</html>

@@ -26,7 +26,7 @@ try{ if(joinId && (sessionStorage.getItem('ss.hostId') === joinId || myRooms().i
 let inviteLink = null, media = null, cameraProblem = null, engineFellBack = false, engineWhy = '';
 // Invite links always point at the website, which the desktop app's rooms share
 // (the app's own page address means nothing to anyone else).
-const SITE = audio.IN_APP ? 'https://air.band/' : location.origin + location.pathname;
+const SITE = audio.IN_APP ? 'https://air.band/jam/' : location.origin + location.pathname;
 // A pasted invite: a full link (?join=...) or just the room code.
 const inviteId = text => { const t = (text || '').trim(); if(!t) return null; const m = t.match(/[?&]join=([^&#\s]+)/); return m ? decodeURIComponent(m[1]) : (/^[\w-]{8,}$/.test(t) ? t : null); };
 const store = { get: k => { try{ return localStorage.getItem(k); }catch(e){ return null; } }, set: (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} } };

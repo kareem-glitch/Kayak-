@@ -21,7 +21,7 @@ test('accounts: silent sign-up, jam history, profile, jam again', { timeout: 120
     assert.equal(a.jam, b.jam, 'the same jam');
     await A.waitForFunction(() => [...window.jamPeers.values()].some(p => p.uid), null, { timeout: 15000 });
     // B sees both players in the jam (the database rules let you see your own jams' players)
-    const rows = await B.evaluate(async jam => (await window.jamAccount.client().from('jam_players').select('user_id, instrument').eq('jam_id', jam)).data, a.jam);
+    const rows = await B.evaluate(async jam => (await window.jamAccount.db().from('jam_players').select('user_id, instrument').eq('jam_id', jam)).data, a.jam);
     assert.equal(rows.length, 2, `both players recorded (${JSON.stringify(rows)})`);
     // profile: tap an instrument, it saves
     await A.click('#leaveBtn'); await A.waitForSelector('#joinView:not([hidden])');

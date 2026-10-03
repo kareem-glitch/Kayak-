@@ -7,6 +7,7 @@
 const SB_URL = 'https://kjfhwttykgghpbjjovwu.supabase.co';
 const KEY = 'sb_publishable_NLZCXqiCj_LMsHzfU1VziA_Y2yh9oh3';   // public by design: the database rules decide what it can do
 const LIB = '/vendor/supabase-2.117.2.js';
+const JAM = window.__SS_NATIVE ? 'https://air.band/jam/' : location.origin + '/jam/';   // where sign-in links and Google bring you back (the app's own address only works on that computer)
 
 let sb = null, user = null, ready = null, watching = false;
 export const hooks = { onChange: () => {} };   // signed in / profile saved
@@ -26,10 +27,15 @@ export function init(name){
     ready = null; return null;
   })());
 }
+// The connection, without signing anyone in (the landing page uses just this).
+async function client(){
+  const lib = await load();
+  if(!sb) sb = lib.createClient(SB_URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'ss.auth' } });
+  return sb;
+}
 async function attempt(name){
   try{
-    const lib = await load();
-    if(!sb) sb = lib.createClient(SB_URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'ss.auth' } });
+    await client();
     let { data } = await sb.auth.getSession();
     if(!data.session){ const r = await sb.auth.signInAnonymously({ options: { data: { display_name: name || '' } } }); if(r.error) throw r.error; data = r.data; }
     user = data.session.user;
@@ -58,13 +64,13 @@ export async function saveProfile(p){
 // Keep this account: an email to confirm (a link). Same account, same history.
 export async function addEmail(address){
   if(!await init()) throw new Error('Accounts are offline right now');
-  const { error } = await sb.auth.updateUser({ email: address }, { emailRedirectTo: 'https://air.band/' });
+  const { error } = await sb.auth.updateUser({ email: address }, { emailRedirectTo: JAM });
   if(error) throw error;
 }
 // Already have an account (another device): a sign-in link by email.
 export async function signIn(address){
   if(!await init()) throw new Error('Accounts are offline right now');
-  const { error } = await sb.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false, emailRedirectTo: 'https://air.band/' } });
+  const { error } = await sb.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false, emailRedirectTo: JAM } });
   if(error) throw error;
 }
 // Google: offered only once it's switched on in the project (it needs Google's keys).
@@ -75,7 +81,7 @@ export async function googleOn(){
 // Google account already has an air.band account, signs in to that one instead.
 export async function google(){
   if(!await init()) throw new Error('Accounts are offline right now');
-  const opts = { provider: 'google', options: { redirectTo: location.origin + location.pathname } };
+  const opts = { provider: 'google', options: { redirectTo: JAM } };
   if(user.is_anonymous){ const { error } = await sb.auth.linkIdentity(opts); if(!error) return; if(!/already|exists|linked/i.test(error.message)) throw error; }
   const { error } = await sb.auth.signInWithOAuth(opts); if(error) throw error;
 }
@@ -107,4 +113,25 @@ export async function rate(jamId, otherId, again){
   return !error;
 }
 export const currentJam = () => jam;
-export const client = () => sb;   // tests
+export const db = () => sb;   // tests
+
+// ---- the landing page: sign up / sign in without making an anonymous account first ----
+// Whoever is signed in on this device already (a full account), or null.
+export async function current(){
+  try{ await client(); const { data } = await sb.auth.getSession(); const u = data.session && data.session.user; return u && !u.is_anonymous ? u : null; }catch(e){ return null; }
+}
+// Continue with email: a link that signs you in (and makes the account if it's new).
+export async function emailLink(address){
+  await client();
+  const { data } = await sb.auth.getSession();
+  if(data.session && data.session.user.is_anonymous){ user = data.session.user; return addEmail(address); }   // keep this device's jams
+  const { error } = await sb.auth.signInWithOtp({ email: address, options: { shouldCreateUser: true, emailRedirectTo: JAM } });
+  if(error) throw error;
+}
+export async function googleIn(){
+  await client();
+  const { data } = await sb.auth.getSession();
+  if(data.session){ user = data.session.user; return google(); }
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: JAM } }); if(error) throw error;
+}
+export async function signOutHere(){ await client(); await sb.auth.signOut(); user = null; ready = null; }

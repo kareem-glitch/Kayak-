@@ -22,7 +22,9 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
 
 ## Layout
 
-- `index.html`, `app/` — the site (also what the desktop app shows).
+- `index.html` — the landing page (sign up / sign in, downloads). Invite links (`/?join=`),
+  sign-in links coming back and the desktop app go straight on to the jam room.
+- `jam/index.html`, `app/` — the jam room at /jam/ (also what the desktop app shows).
 - `app/audio/web-io.js` / `native-io.js` — audio in the browser / in the desktop app (same exports).
 - `api/` — Vercel functions (`stems.js`: prompt → ElevenLabs music → stems).
 - `app/account.js`, `supabase/migrations/` — accounts and jam history (Supabase project
