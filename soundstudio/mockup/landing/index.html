@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>airband: rehearse with your band, from anywhere</title>
+<title>airband: play with anyone, from anywhere</title>
 <link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-180.png">
-<meta name="description" content="Low-latency jam rooms for musicians. Plug in your interface or play from your DAW, and rehearse with your band from anywhere.">
+<meta name="description" content="Low-latency jam rooms for musicians. Plug in your interface or play from your DAW, and play with friends, your band, or musicians you’ve just met.">
 <meta name="theme-color" content="#f7f5f1">
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,6 +109,16 @@ h1 span{color:var(--orange)}
 .dawlogos svg{width:22px;height:22px;fill:currentColor}
 .works{flex-direction:column;gap:16px}
 .split .dawlogos{justify-content:flex-start;margin-top:26px;gap:12px 22px}
+.people{display:grid;gap:10px}
+.person{display:grid;grid-template-columns:44px 1fr auto auto;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow)}
+.person .av{width:44px;height:44px;border-radius:14px;background:linear-gradient(160deg,var(--c1),var(--c2));display:grid;place-items:center;font-weight:800;color:rgba(20,19,23,.7)}
+.person b{display:block;font-size:.98rem}
+.person small{color:var(--muted);font-size:.84rem}
+.person .near{display:inline-flex;align-items:center;gap:6px;font:700 .74rem var(--mono);color:var(--ink-2)}
+.person .near i{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.person .near.far i{background:var(--accent)}
+.person .jam{padding:8px 14px;font-size:.86rem}
+@media (max-width:600px){ .person{grid-template-columns:40px 1fr auto} .person .near{display:none} }
 /* sections */
 section{padding:110px 0}
 .head{max-width:660px;margin:0 0 44px}
@@ -241,7 +251,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 <nav><div class="wrap">
   <a class="logo" href="/"><img class="mark" src="/logo.svg" alt="" width="30" height="30">airband</a>
   <div class="links">
-    <a class="txt" href="#features">Features</a><a class="txt" href="#studio">For your studio</a><a class="txt" href="#apps">Download</a>
+    <a class="txt" href="#features">Features</a><a class="txt" href="#people">Community</a><a class="txt" href="#studio">For your studio</a><a class="txt" href="#apps">Download</a>
     <a class="btn btn-ghost" href="#account">Sign in</a>
     <a class="btn btn-primary" href="/jam/">Open a room</a>
   </div>
@@ -252,8 +262,8 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
     <div class="grid">
       <div>
         <span class="kicker">Low-latency jam rooms</span>
-        <h1>Rehearse with your band. <span>From anywhere.</span></h1>
-        <p class="lead">Plug in your interface or play straight from your DAW. airband keeps everyone tight, so a session across town feels like a session in the same room.</p>
+        <h1>Play with anyone. <span>From anywhere.</span></h1>
+        <p class="lead">Your band, your friends, or musicians you haven’t met yet. Plug in your interface or play straight from your DAW, and airband keeps everyone tight, so a jam across town feels like the same room.</p>
         <div class="ctas"><a class="btn btn-primary" href="/jam/">Open a room</a><a class="btn" href="#apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Get the app</a></div>
         <form class="invite" onsubmit="return false"><input placeholder="Paste an invite link" aria-label="Invite link"><button class="btn btn-accent" type="submit">Join</button></form>
         <p class="hint">Free. Runs in your browser; the app gets you even tighter.</p>
@@ -286,14 +296,36 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 </header>
 
 <section id="features"><div class="wrap">
-  <div class="head"><span class="kicker">Built for the session</span><h2>Everything a rehearsal needs. Nothing it doesn’t.</h2><p>Made by musicians who were tired of video calls that weren’t made for music.</p></div>
+  <div class="head"><span class="kicker">Built for the session</span><h2>Everything a jam needs. Nothing it doesn’t.</h2><p>Made by musicians who were tired of video calls that weren’t made for music.</p></div>
   <div class="feat">
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg></div><h3>Tight, live timing</h3><p>A native audio engine with small buffers, and a direct line between players whenever the network allows.</p><span class="tag">DIRECT · LOW LATENCY</span></div>
-    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="3" height="8" rx="1"/><rect x="8" y="8" width="3" height="8" rx="1"/><rect x="13" y="8" width="3" height="8" rx="1"/><rect x="18" y="8" width="3" height="8" rx="1"/></svg></div><h3>Trade bars</h3><p>Far apart? Take turns in 4, 8 or 16 bars. Every phrase lands on the one, wherever your bandmates are.</p><span class="tag">4 · 8 · 16 · 32</span></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="3" height="8" rx="1"/><rect x="8" y="8" width="3" height="8" rx="1"/><rect x="13" y="8" width="3" height="8" rx="1"/><rect x="18" y="8" width="3" height="8" rx="1"/></svg></div><h3>Trade bars</h3><p>Far apart? Take turns in 4, 8 or 16 bars. Every phrase lands on the one, wherever everyone is.</p><span class="tag">4 · 8 · 16 · 32</span></div>
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></div><h3>A rhythm section on call</h3><p>Pick a groove or describe one. Drums and bass lock in, and step aside when a player takes the part.</p><span class="tag">AI DRUMS · BASS · KEYS</span></div>
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h3>Multitrack recording</h3><p>Every player on their own lined-up 24-bit WAV, ready to drag into your DAW and mix.</p><span class="tag">WAV · ZIP · VIDEO</span></div>
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div><h3>Key and tempo</h3><p>Transpose the band by a semitone or nudge the tempo, live. Drums stay crisp; nothing warps.</p><span class="tag">TRANSPOSE · TEMPO</span></div>
     <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div><h3>See each other</h3><p>Cameras on when you want them, off when you don’t. The music always comes first.</p><span class="tag">VIDEO OPTIONAL</span></div>
+  </div>
+</div></section>
+
+<section id="people" style="padding-top:20px"><div class="wrap">
+  <div class="split">
+    <div>
+      <span class="kicker">Community</span>
+      <h2>No band? Meet one.</h2>
+      <p class="lead" style="margin:0">Not everyone has a band, and you don’t need one. Jam with friends, or with players you’ve never met: the parts you’re missing, the styles you love, at your level, close enough to play live.</p>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>A profile with your instruments, styles and level</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>After every jam: would you play with them again?</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>The more you play, the better your matches</li>
+      </ul>
+      <span class="chip" style="margin-top:22px">MATCHED JAMS · COMING SOON</span>
+    </div>
+    <div class="people" aria-hidden="true">
+      <div class="person"><span class="av" style="--c1:#e3dcff;--c2:#c4b5ff">M</span><div><b>Maya</b><small>Keys · Neo soul, funk</small></div><span class="near"><i></i>14 ms</span><span class="btn btn-accent jam">Jam</span></div>
+      <div class="person"><span class="av" style="--c1:#d9eeff;--c2:#9fd2ff">D</span><div><b>Dev</b><small>Bass · Funk, R&amp;B</small></div><span class="near"><i></i>19 ms</span><span class="btn jam">Jam</span></div>
+      <div class="person"><span class="av" style="--c1:#d2f5e7;--c2:#8fe3c3">S</span><div><b>Sofia</b><small>Drums · Rock, indie</small></div><span class="near"><i></i>23 ms</span><span class="btn jam">Jam</span></div>
+      <div class="person"><span class="av" style="--c1:#ffe0cf;--c2:#ffb48f">L</span><div><b>Leo</b><small>Vocals · Blues, soul</small></div><span class="near far"><i></i>68 ms</span><span class="btn jam">Trade bars</span></div>
+    </div>
   </div>
 </div></section>
 
