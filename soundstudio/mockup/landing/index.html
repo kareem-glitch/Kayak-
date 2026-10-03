@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>air.band: rehearse with your band, from anywhere</title>
+<link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-180.png">
+<meta name="description" content="Low-latency jam rooms for musicians. Plug in your interface or play from your DAW, and rehearse with your band from anywhere.">
+<meta name="theme-color" content="#f7f5f1">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f7f5f1; --card:#ffffff; --card-2:#f2efe9; --ink:#141317; --ink-2:#2a282e; --muted:#67636d; --line:rgba(20,19,23,.10); --line-2:rgba(20,19,23,.06);
+  --accent:#ffcc00; --accent-ink:#1a1500; --orange:#f26a12; --orange-2:#ff8a2a; --ok:#1fa463;
+  --shadow:0 1px 2px rgba(20,19,23,.05),0 8px 28px rgba(20,19,23,.06); --shadow-lg:0 2px 6px rgba(20,19,23,.05),0 40px 90px rgba(40,25,10,.14);
+  --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg);scroll-behavior:smooth;overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.6 var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:8px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.logo{display:inline-flex;align-items:center;font-weight:800;font-size:1.25rem;letter-spacing:-.03em;text-decoration:none}
+.logo .mark{width:30px;height:30px;margin-right:9px}
+.logo i{font-style:normal;color:var(--orange)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:13px 22px;font-weight:700;font-size:.98rem;text-decoration:none;cursor:pointer;transition:transform .15s,background .2s,border-color .2s}
+.btn:hover{transform:translateY(-1px);border-color:rgba(20,19,23,.2)}
+.btn-primary{background:var(--ink);color:#fff;border-color:transparent}
+.btn-primary:hover{background:#000}
+.btn-accent{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn svg{width:18px;height:18px}
+.kicker{font-family:var(--mono);font-size:.76rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+.mono{font-family:var(--mono)}
+/* nav */
+nav{position:sticky;top:0;z-index:10;backdrop-filter:saturate(1.4) blur(14px);background:color-mix(in srgb,var(--bg) 80%,transparent);border-bottom:1px solid var(--line-2)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:66px}
+nav .links{display:flex;gap:4px;margin-left:auto;align-items:center}
+nav .links a.txt{text-decoration:none;color:var(--muted);font-weight:600;font-size:.93rem;padding:8px 12px;border-radius:10px}
+nav .links a.txt:hover{color:var(--ink)}
+nav .btn{padding:9px 16px;font-size:.92rem}
+/* hero */
+.hero{position:relative;padding:84px 0 0;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0 0 auto;height:760px;z-index:-1;background:
+  radial-gradient(60% 50% at 78% 18%,rgba(255,138,42,.16),transparent 70%),
+  radial-gradient(50% 40% at 12% 30%,rgba(255,204,0,.12),transparent 70%);}
+.hero .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+h1{font-size:clamp(2.7rem,5.6vw,4.7rem);line-height:1.0;letter-spacing:-.045em;font-weight:800;margin:18px 0 22px}
+h1 span{color:var(--orange)}
+.lead{font-size:clamp(1.05rem,1.6vw,1.22rem);color:var(--muted);max-width:31em;margin:0 0 30px}
+.ctas{display:flex;flex-wrap:wrap;gap:12px}
+.invite{display:flex;gap:8px;max-width:440px;margin:18px 0 0;padding:5px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.invite input{flex:1;min-width:0;border:0;background:none;padding:0 12px;outline:none;font-size:.95rem}
+.invite .btn{padding:9px 16px;border-radius:10px}
+.hint{color:var(--muted);font-size:.86rem;margin:12px 0 0}
+/* the session window */
+.session{background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-lg);padding:14px;position:relative}
+.session .top{display:flex;align-items:center;gap:10px;padding:2px 4px 12px}
+.session .top b{font-size:.92rem}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:var(--card-2);border:1px solid var(--line-2);font:700 .72rem var(--mono);letter-spacing:.04em;color:var(--ink-2)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(31,164,99,.16)}
+.session .top .right{margin-left:auto;display:flex;gap:6px}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.t{position:relative;aspect-ratio:1/1;border-radius:16px;background:linear-gradient(165deg,var(--c1),var(--c2));overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:12px}
+.t .who{position:absolute;left:50%;top:10%;width:52%;transform:translateX(-50%);fill:rgba(255,255,255,.72)}
+.t .char{position:absolute;left:50%;top:5%;width:70%;transform:translateX(-50%);animation:bob .625s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translate(-50%,-4px)}}
+.t .name{position:relative;display:flex;align-items:baseline;gap:7px}
+.t .name b{font-size:.92rem;color:#141317}
+.t .name small{font-size:.74rem;font-weight:700;color:rgba(20,19,23,.6)}
+.t .ms{position:absolute;top:10px;right:10px;font:700 .68rem var(--mono);padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.78);color:#141317}
+.t .ai{position:absolute;top:10px;left:10px;font:700 .64rem var(--mono);padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.78);color:#141317;letter-spacing:.06em}
+.t.on{box-shadow:inset 0 0 0 3px var(--accent)}
+.t .meter{position:relative;height:4px;border-radius:9px;background:rgba(20,19,23,.12);margin-top:8px;overflow:hidden}
+.t .meter i{display:block;height:100%;background:#141317;opacity:.55;border-radius:9px;animation:lv .8s ease-in-out infinite alternate}
+@keyframes lv{from{width:30%}to{width:72%}}
+.bars{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--card-2);border:1px solid var(--line-2)}
+.bars b{font-size:.88rem;white-space:nowrap}
+.bars .lights{flex:1;display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.bars .lights i{height:7px;border-radius:9px;background:var(--line)}
+.bars .lights i.on{background:var(--accent)}
+.bars .mono{font-size:.74rem;color:var(--muted);white-space:nowrap}
+/* floating readouts */
+.readout{position:absolute;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:10px 14px;font-size:.8rem}
+.readout .mono{font-size:.7rem;color:var(--muted);letter-spacing:.06em}
+.readout b{display:block;font:700 1.25rem var(--mono);letter-spacing:-.02em}
+.readout b small{font-size:.72rem;color:var(--muted);font-weight:500;margin-left:3px}
+.readout.lat{left:-70px;top:110px}
+.readout.daw{right:-22px;top:-58px;display:flex;align-items:center;gap:10px}
+.readout.daw .plug{width:34px;height:34px;border-radius:9px;background:#1d1b20;display:grid;place-items:center}
+.readout.daw .plug img{width:22px}
+.spark{display:flex;gap:2px;align-items:flex-end;height:22px;margin-top:4px}
+.spark i{width:4px;border-radius:2px;background:var(--ok);opacity:.8}
+/* spec strip */
+.specs{margin:88px 0 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr)}
+.specs div{padding:22px 18px;border-left:1px solid var(--line-2)}
+.specs div:first-child{border-left:0}
+.specs b{display:block;font:700 1.35rem var(--mono);letter-spacing:-.03em}
+.specs span{font-size:.84rem;color:var(--muted)}
+.works{display:flex;flex-wrap:wrap;align-items:center;gap:10px 26px;justify-content:center;padding:26px 0 0;color:var(--muted);font-weight:700;font-size:.95rem}
+.works em{font-style:normal;font:700 .72rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);opacity:.8}
+/* sections */
+section{padding:110px 0}
+.head{max-width:660px;margin:0 0 44px}
+.head.c{margin:0 auto 44px;text-align:center}
+h2{font-size:clamp(2rem,3.8vw,3rem);line-height:1.05;letter-spacing:-.04em;font-weight:800;margin:12px 0 14px}
+.head p{color:var(--muted);font-size:1.1rem;margin:0}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.f{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px;transition:border-color .2s}
+.f:hover{border-color:rgba(20,19,23,.2)}
+.f .ic{width:42px;height:42px;border-radius:11px;background:var(--card-2);border:1px solid var(--line-2);display:grid;place-items:center;margin-bottom:18px}
+.f .ic svg{width:21px;height:21px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.f h3{font-size:1.12rem;letter-spacing:-.015em;margin:0 0 6px}
+.f p{margin:0;color:var(--muted);font-size:.96rem}
+.f .tag{display:inline-block;margin-top:14px;font:700 .7rem var(--mono);letter-spacing:.06em;color:var(--ink-2);padding:4px 8px;border-radius:7px;background:var(--card-2)}
+/* split rows */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.split ul{list-style:none;padding:0;margin:26px 0 0;display:grid;gap:14px}
+.split li{display:flex;gap:12px;align-items:flex-start;color:var(--ink-2)}
+.split li svg{flex:none;width:20px;height:20px;margin-top:3px;stroke:var(--orange);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+/* the plugin, drawn */
+.plugin{background:#1b1a1e;border-radius:20px;padding:22px;color:#eee;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.plugin::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0 2px,transparent 2px 5px);pointer-events:none}
+.plugin .ph{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.plugin .ph img{width:28px}
+.plugin .ph b{font-size:.98rem}
+.plugin .ph .chip{margin-left:auto;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.08);color:#d9d6de}
+.plugin .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.knob{background:#242228;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px 10px;text-align:center}
+.knob .k{width:54px;height:54px;margin:0 auto 10px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3a373f,#141317);box-shadow:inset 0 0 0 2px rgba(255,255,255,.06),0 0 0 4px rgba(242,106,18,.18);position:relative}
+.knob .k::after{content:"";position:absolute;left:50%;top:7px;width:3px;height:15px;margin-left:-1.5px;border-radius:2px;background:var(--orange-2);transform-origin:50% 20px;transform:rotate(var(--r,0deg))}
+.knob span{font:700 .68rem var(--mono);letter-spacing:.1em;color:#a9a5b0}
+.knob b{display:block;font:700 .9rem var(--mono);color:#fff;margin-top:2px}
+.vu{display:flex;gap:3px;margin-top:16px;height:10px}
+.vu i{flex:1;border-radius:2px;background:#2d2b31}
+.vu i.g{background:#2fcf7b}.vu i.y{background:var(--accent)}
+.daws{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.daws span{padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:.85rem}
+/* recording card */
+.recview{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-lg)}
+.trk{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line-2)}
+.trk:first-of-type{border-top:0}
+.trk b{font-size:.86rem}
+.trk small{display:block;font:500 .7rem var(--mono);color:var(--muted)}
+.trk svg{width:100%;height:34px}
+.recview .foot{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+/* apps */
+.apps{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.app{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px}
+.app h3{font-size:1.3rem;letter-spacing:-.02em;margin:0 0 8px}
+.app p{color:var(--muted);margin:0}
+.app .meta{font:600 .76rem var(--mono);color:var(--muted);margin-top:14px}
+.dl{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+/* account */
+.auth{display:grid;grid-template-columns:1fr 420px;gap:56px;align-items:center}
+.box{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
+.box label{display:block;font-weight:600;margin:0 0 8px;font-size:.9rem}
+.box input{width:100%;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card-2);outline:none}
+.box .btn{width:100%;margin-top:12px}
+.or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.84rem;margin:16px 0 4px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.fine{color:var(--muted);font-size:.84rem;margin:14px 0 0;text-align:center}
+footer{padding:36px 0 56px;color:var(--muted);font-size:.88rem;border-top:1px solid var(--line)}
+footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
+.note{position:fixed;left:16px;bottom:16px;z-index:20;padding:8px 14px;border-radius:10px;background:var(--ink);color:#fff;font-size:.8rem;font-weight:700}
+@media (max-width:1000px){
+  .hero .grid,.split,.auth{grid-template-columns:minmax(0,1fr)}
+  .readout.lat{left:12px;top:auto;bottom:-30px} .readout.daw{right:12px}
+  .specs{grid-template-columns:repeat(2,1fr)} .specs div{border-top:1px solid var(--line-2)}
+  .feat{grid-template-columns:1fr 1fr} .apps{grid-template-columns:minmax(0,1fr)}
+  nav .links a.txt{display:none}
+}
+@media (max-width:600px){
+  .wrap{padding:0 16px} .hero{padding-top:44px} section{padding:72px 0}
+  .feat{grid-template-columns:minmax(0,1fr)} .specs{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .ctas .btn{flex:1} .readout.daw{display:none} nav .btn-ghost{display:none}
+  .plugin .row{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stop-color="#f0d2a4"/><stop offset="1" stop-color="#dcb27a"/></linearGradient>
+    <radialGradient id="cym" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#ffe38a"/><stop offset="1" stop-color="#e0a92a"/></radialGradient>
+</defs>
+  <symbol id="moss" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="80" ry="6" fill="#17151c" opacity=".08"/>
+    <path d="M78 116 52 92M122 116l26-24" stroke="#0984e3" stroke-width="15" stroke-linecap="round"/>
+    <rect x="68" y="98" width="64" height="62" rx="26" fill="#0984e3"/><path d="M80 104q20 10 40 0" stroke="#0a6fc0" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <g class="sticks" stroke="#e2b46a" stroke-width="5" stroke-linecap="round"><path d="M52 92 34 62M148 92l18-30"/></g>
+    <circle cx="52" cy="92" r="8" fill="#e8b48f"/><circle cx="148" cy="92" r="8" fill="#e8b48f"/>
+    <circle cx="100" cy="70" r="30" fill="#e8b48f"/>
+    <ellipse cx="72" cy="76" rx="6" ry="9" fill="#d8a444"/><ellipse cx="128" cy="76" rx="6" ry="9" fill="#d8a444"/>
+    <path d="M68 68q0-34 32-34t32 34z" fill="#2f8f4e"/><rect x="66" y="58" width="68" height="13" rx="6.5" fill="#236b3a"/><circle cx="100" cy="32" r="7" fill="#2f8f4e"/>
+    <rect x="74" y="74" width="52" height="17" rx="8.5" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="79" width="11" height="7" rx="3.5"/><rect x="105" y="79" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 95q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g stroke="#6b6672" stroke-width="3" stroke-linecap="round"><path d="M30 116v72M170 112v76"/></g>
+    <ellipse cx="30" cy="114" rx="24" ry="5.5" fill="url(#cym)"/><ellipse cx="170" cy="110" rx="22" ry="5" fill="url(#cym)"/>
+    <rect x="58" y="124" width="34" height="22" rx="5" fill="#ff8fb1"/><ellipse cx="75" cy="124" rx="17" ry="5" fill="#fff0f5"/>
+    <rect x="108" y="124" width="34" height="22" rx="5" fill="#9fd2ff"/><ellipse cx="125" cy="124" rx="17" ry="5" fill="#eaf4ff"/>
+    <circle cx="100" cy="160" r="32" fill="#236b3a"/><circle cx="100" cy="160" r="25" fill="#f4f1ea"/>
+    <text x="100" y="165" text-anchor="middle" font-size="13" font-weight="800" fill="#2b2730" font-family="system-ui,sans-serif">air.</text>
+  </symbol>
+  <symbol id="juno" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="64" ry="6" fill="#17151c" opacity=".08"/>
+    <rect x="64" y="40" width="72" height="92" rx="32" fill="#7b4fd6"/>
+    <rect x="84" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/><rect x="103" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/>
+    <ellipse cx="89" cy="187" rx="10" ry="5" fill="#1b1b1b"/><ellipse cx="111" cy="187" rx="10" ry="5" fill="#1b1b1b"/>
+    <rect x="72" y="102" width="56" height="58" rx="22" fill="#29a19c"/>
+    <path d="M124 114q16 2 28-8" stroke="#29a19c" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-36 100 140)">
+      <rect x="96" y="134" width="88" height="9" rx="3" fill="url(#wood)"/>
+      <path d="M182 131h16l3 15h-19z" fill="url(#wood)"/>
+      <g fill="#c9ced6"><circle cx="188" cy="128" r="3"/><circle cx="196" cy="128" r="3"/><circle cx="188" cy="149" r="3"/><circle cx="196" cy="149" r="3"/></g>
+      <path d="M100 138c-6-12-22-18-34-14-10 3-10 9-6 14-10 2-14 10-10 18s14 10 22 6c4 6 14 8 22 2 8-6 10-16 6-26z" fill="#2a9d8f"/>
+      <path d="M92 132c-8-4-18-2-22 4 6 2 8 8 4 14 8 4 18 2 22-6z" fill="#f4f1ea" opacity=".9"/>
+      <rect x="76" y="134" width="4" height="10" rx="1.5" fill="#2b2730"/><rect x="86" y="134" width="4" height="10" rx="1.5" fill="#2b2730"/>
+      <g stroke="#9a94a3" stroke-width="1"><path d="M70 136.5h126M70 140.5h126"/></g>
+    </g>
+    <path d="M78 116q-4 18 10 30" stroke="#29a19c" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <circle class="strum" cx="90" cy="146" r="7.5" fill="#c68a62"/><circle cx="153" cy="104" r="7.5" fill="#c68a62"/>
+    <circle cx="100" cy="72" r="28" fill="#c68a62"/>
+    <path d="M71 74q1-34 29-34t29 34q-12-16-29-15t-29 15z" fill="#7b4fd6"/>
+    <rect x="75" y="72" width="50" height="16" rx="8" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="76.5" width="11" height="7" rx="3.5"/><rect x="105" y="76.5" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 93q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </symbol>
+</svg>
+<nav><div class="wrap">
+  <a class="logo" href="/"><img class="mark" src="/logo.svg" alt="" width="30" height="30">air<i>.</i>band</a>
+  <div class="links">
+    <a class="txt" href="#features">Features</a><a class="txt" href="#studio">For your studio</a><a class="txt" href="#apps">Download</a>
+    <a class="btn btn-ghost" href="#account">Sign in</a>
+    <a class="btn btn-primary" href="/jam/">Open a room</a>
+  </div>
+</div></nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <span class="kicker">Low-latency jam rooms</span>
+        <h1>Rehearse with your band. <span>From anywhere.</span></h1>
+        <p class="lead">Plug in your interface or play straight from your DAW. air.band keeps everyone tight, so a session across town feels like a session in the same room.</p>
+        <div class="ctas"><a class="btn btn-primary" href="/jam/">Open a room</a><a class="btn" href="#apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Get the app</a></div>
+        <form class="invite" onsubmit="return false"><input placeholder="Paste an invite link" aria-label="Invite link"><button class="btn btn-accent" type="submit">Join</button></form>
+        <p class="hint">Free. Runs in your browser; the app gets you even tighter.</p>
+      </div>
+      <div style="position:relative">
+        <div class="session" aria-hidden="true">
+          <div class="top"><b>Slow funk · Em · 96</b><div class="right"><span class="chip"><span class="dot"></span>18 MS</span><span class="chip">BARS 8</span></div></div>
+          <div class="tiles">
+            <div class="t on" style="--c1:#ffd6c2;--c2:#ffb48f"><svg class="who" viewBox="0 0 100 100"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><div class="name"><b>Kareem</b><small>Guitar</small></div><div class="meter"><i></i></div></div>
+            <div class="t" style="--c1:#e3dcff;--c2:#c4b5ff"><span class="ms">22 ms</span><svg class="who" viewBox="0 0 100 100"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><div class="name"><b>Maya</b><small>Keys · Dublin</small></div><div class="meter"><i style="animation-delay:-.3s"></i></div></div>
+            <div class="t" style="--c1:#d2f5e7;--c2:#8fe3c3"><span class="ai">AI</span><svg class="char" viewBox="0 0 200 200"><use href="#moss"/></svg><div class="name"><b>Moss</b><small>Drums</small></div><div class="meter"><i style="animation-delay:-.5s"></i></div></div>
+            <div class="t" style="--c1:#d9eeff;--c2:#9fd2ff"><span class="ai">AI</span><svg class="char" viewBox="0 0 200 200" style="animation-delay:-.31s"><use href="#juno"/></svg><div class="name"><b>Juno</b><small>Bass</small></div><div class="meter"><i style="animation-delay:-.2s"></i></div></div>
+          </div>
+          <div class="bars"><b>Your 8 bars</b><div class="lights" id="lights"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="mono">NEXT: MAYA</span></div>
+        </div>
+        <div class="readout lat"><span class="mono">YOU → MAYA</span><b>18<small>ms</small></b><div class="spark" id="spark"></div></div>
+        <div class="readout daw"><span class="plug"><img src="/logo.svg" alt=""></span><div><span class="mono">AIR.BAND SEND</span><div style="font-weight:700">Live from Ableton</div></div></div>
+      </div>
+    </div>
+
+    <div class="specs">
+      <div><b>48 kHz</b><span>Sound, end to end</span></div>
+      <div><b>128</b><span>Sample buffers in the app</span></div>
+      <div><b>4</b><span>Players per room</span></div>
+      <div><b>24-bit</b><span>Separate tracks per player</span></div>
+      <div><b>AU · VST3</b><span>Play from your DAW</span></div>
+    </div>
+    <div class="works"><em>Works with</em><span>Logic Pro</span><span>Ableton Live</span><span>Reaper</span><span>Bitwig</span><span>Core Audio</span><span>ASIO</span></div>
+  </div>
+</header>
+
+<section id="features"><div class="wrap">
+  <div class="head"><span class="kicker">Built for the session</span><h2>Everything a rehearsal needs. Nothing it doesn’t.</h2><p>Made by musicians who were tired of video calls that weren’t made for music.</p></div>
+  <div class="feat">
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5"/></svg></div><h3>Tight, live timing</h3><p>A native audio engine with small buffers, and a direct line between players whenever the network allows.</p><span class="tag">DIRECT · LOW LATENCY</span></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="3" height="8" rx="1"/><rect x="8" y="8" width="3" height="8" rx="1"/><rect x="13" y="8" width="3" height="8" rx="1"/><rect x="18" y="8" width="3" height="8" rx="1"/></svg></div><h3>Trade bars</h3><p>Far apart? Take turns in 4, 8 or 16 bars. Every phrase lands on the one, wherever your bandmates are.</p><span class="tag">4 · 8 · 16 · 32</span></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></div><h3>A rhythm section on call</h3><p>Pick a groove or describe one. Drums and bass lock in, and step aside when a player takes the part.</p><span class="tag">AI DRUMS · BASS · KEYS</span></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><h3>Multitrack recording</h3><p>Every player on their own lined-up 24-bit WAV, ready to drag into your DAW and mix.</p><span class="tag">WAV · ZIP · VIDEO</span></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg></div><h3>Key and tempo</h3><p>Transpose the band by a semitone or nudge the tempo, live. Drums stay crisp; nothing warps.</p><span class="tag">TRANSPOSE · TEMPO</span></div>
+    <div class="f"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg></div><h3>See each other</h3><p>Cameras on when you want them, off when you don’t. The music always comes first.</p><span class="tag">VIDEO OPTIONAL</span></div>
+  </div>
+</div></section>
+
+<section id="studio" style="padding-top:20px"><div class="wrap">
+  <div class="split">
+    <div>
+      <span class="kicker">For your studio</span>
+      <h2>Your rig. Your tone. In the room.</h2>
+      <p class="lead" style="margin:0">Put air.band Send on a track in your DAW and play into the room with your whole chain: amp sims, pedals, synths and all.</p>
+      <ul>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>AU and VST3, for Mac and Windows</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Any Core Audio or ASIO interface in the app</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Monitor through your DAW or interface, just as you always do</li>
+      </ul>
+      <div class="daws"><span>Logic Pro</span><span>Ableton Live</span><span>Reaper</span><span>Bitwig</span></div>
+    </div>
+    <div class="plugin" aria-hidden="true">
+      <div class="ph"><img src="/logo.svg" alt=""><b>air.band Send</b><span class="chip"><span class="dot"></span>LIVE</span></div>
+      <div class="row">
+        <div class="knob"><div class="k" style="--r:-30deg"></div><span>INPUT</span><b>-6 dB</b></div>
+        <div class="knob"><div class="k" style="--r:40deg"></div><span>MONITOR</span><b>OFF</b></div>
+        <div class="knob"><div class="k" style="--r:0deg"></div><span>ROOM</span><b>18 ms</b></div>
+      </div>
+      <div class="vu" id="vu"></div>
+    </div>
+  </div>
+</div></section>
+
+<section style="padding-top:20px"><div class="wrap">
+  <div class="split">
+    <div class="recview" aria-hidden="true">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><b>Take 3</b><span class="chip">04:12</span><span class="chip" style="margin-left:auto">24-BIT · 48 KHZ</span></div>
+      <div class="trk"><div><b>Kareem</b><small>GUITAR</small></div><svg viewBox="0 0 300 34" id="w1"></svg></div>
+      <div class="trk"><div><b>Maya</b><small>KEYS</small></div><svg viewBox="0 0 300 34" id="w2"></svg></div>
+      <div class="trk"><div><b>Moss</b><small>DRUMS</small></div><svg viewBox="0 0 300 34" id="w3"></svg></div>
+      <div class="trk"><div><b>Juno</b><small>BASS</small></div><svg viewBox="0 0 300 34" id="w4"></svg></div>
+      <div class="foot"><span class="btn btn-accent" style="padding:9px 14px;font-size:.88rem">Download mix</span><span class="btn" style="padding:9px 14px;font-size:.88rem">Separate tracks (.zip)</span></div>
+    </div>
+    <div>
+      <span class="kicker">Recording</span>
+      <h2>Every take, ready to mix.</h2>
+      <p class="lead" style="margin:0">Record the session as you heard it, or each player on their own track, lined up and ready for your DAW. Video too, when the moment deserves it.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="apps" style="padding-top:20px"><div class="wrap">
+  <div class="head c"><span class="kicker">Downloads</span><h2>Tighter still, with the app.</h2><p>The browser works anywhere. The app is built for your interface.</p></div>
+  <div class="apps">
+    <div class="app"><h3>air.band for Mac and Windows</h3><p>Native audio engine, your interface’s own drivers, and the shortest path between players. Updates itself.</p><div class="meta">CORE AUDIO · ASIO · AUTO-UPDATE</div><div class="dl"><a class="btn btn-primary" href="/download/">Download for Mac</a><a class="btn" href="/download/">Windows</a></div></div>
+    <div class="app"><h3>air.band Send</h3><p>Stream any track from your DAW into the room, with your whole chain on it.</p><div class="meta">AU · VST3 · MAC · WINDOWS</div><div class="dl"><a class="btn btn-primary" href="/download/">Plugin for Mac</a><a class="btn" href="/download/">Windows</a></div></div>
+  </div>
+</div></section>
+
+<section id="account" style="padding-top:20px"><div class="wrap"><div class="auth">
+  <div><span class="kicker">Your account</span><h2>Keep your sessions.</h2><p class="lead" style="margin:0">Your profile and every jam, on all your devices. Who you played with, and who you’d play with again.</p></div>
+  <div class="box">
+    <button class="btn" type="button">Continue with Google</button>
+    <div class="or">or</div>
+    <label for="email">Email</label><input id="email" type="email" placeholder="you@example.com">
+    <button class="btn btn-primary" type="button">Continue with email</button>
+    <p class="fine">We’ll email you a link. No password to remember.</p>
+  </div>
+</div></div></section>
+
+<footer><div class="wrap"><span>© air.band</span><span>Made for musicians, everywhere.</span></div></footer>
+<div class="note">Mock-up · the live landing page is unchanged</div>
+
+<script>
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const lights = [...document.querySelectorAll('#lights i')]; let k = 0;
+const step = () => { k = (k + 1) % 9; lights.forEach((l, i) => l.classList.toggle('on', i < k)); };
+step(); if(!still) setInterval(step, 625 * 4);
+const spark = document.getElementById('spark'); for(let i = 0; i < 18; i++){ const b = document.createElement('i'); b.style.height = (8 + Math.round(6 * Math.abs(Math.sin(i * 1.7)))) + 'px'; spark.appendChild(b); }
+const vu = document.getElementById('vu'); for(let i = 0; i < 24; i++){ const s = document.createElement('i'); vu.appendChild(s); }
+const segs = [...vu.children]; const vuTick = () => { const n = 10 + Math.round(Math.random() * 8); segs.forEach((s, i) => s.className = i < n ? (i < 16 ? 'g' : 'y') : ''); };
+vuTick(); if(!still) setInterval(vuTick, 120);
+const wave = (id, seed, color) => { let d = ''; for(let x = 0; x < 300; x += 3){ const a = Math.abs(Math.sin(x * .05 + seed) * Math.sin(x * .013 + seed * 2)) * 14 + 1.5; d += `M${x} ${17 - a}v${a * 2}`; } document.getElementById(id).innerHTML = `<path d="${d}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>`; };
+wave('w1', 1, '#f2895a'); wave('w2', 2.3, '#9b87f5'); wave('w3', 4.1, '#36b98a'); wave('w4', 5.7, '#4aa3e8');
+</script>
+</body>
+</html>
