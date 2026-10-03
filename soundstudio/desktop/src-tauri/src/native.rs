@@ -122,6 +122,10 @@ fn save(path: &str, body: &[u8], token: &str) -> Result<String, String> {
     let get = |k: &str| query.split('&').find_map(|kv| kv.split_once('=').filter(|(a, _)| *a == k).map(|(_, v)| v.to_string()));
     if get("t").as_deref() != Some(token) { return Err("not allowed".into()); }
     let raw = get("name").unwrap_or_default();
+    let raw = { let b = raw.as_bytes(); let mut out = Vec::new(); let mut i = 0;   // %XX (encodeURIComponent)
+        while i < b.len() { if b[i] == b'%' && i + 2 < b.len() { if let Some(v) = std::str::from_utf8(&b[i + 1..i + 3]).ok().and_then(|h| u8::from_str_radix(h, 16).ok()) { out.push(v); i += 3; continue; } } out.push(b[i]); i += 1; }
+        String::from_utf8_lossy(&out).to_string() };
+    let raw = raw.rsplit(['/', '\\']).next().unwrap_or("").to_string();   // a name, never a path
     let name: String = raw.chars().filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_')).collect();
     let name = name.trim_start_matches('.').to_string();
     if name.is_empty() || body.is_empty() { return Err("nothing to save".into()); }
@@ -342,5 +346,18 @@ mod tests {
         let (tx, _rx) = crossbeam_channel::unbounded(); let sh = crate::audio::Shared::new(tx);
         super::deliver_at(&b, &sh);
         match sh.cmd_rx.try_recv() { Ok(crate::audio::Cmd::DeliverAt(id, at, l, r)) => { assert_eq!((id.as_str(), at, l, r), ("ab", 1234.5, vec![0.25, -0.5, 1.0], None)); } _ => panic!("no DeliverAt") }
+    }
+
+    #[test]
+    fn saves_takes_in_downloads() {
+        let home = std::env::temp_dir().join(format!("ab-save-{}", std::process::id()));
+        std::env::set_var("HOME", &home);
+        assert!(super::save("/__save?t=nope&name=a.wav", b"RIFF", "tok").is_err(), "needs the token");
+        let a = super::save("/__save?t=tok&name=..%2F..%2Fairband-take.wav", b"RIFF", "tok").unwrap();
+        let b = super::save("/__save?t=tok&name=airband-take.wav", b"RIFF2", "tok").unwrap();
+        assert!(a.ends_with("airband-take.wav") && a.contains("Downloads"), "{a}");
+        assert!(b.ends_with("airband-take (1).wav"), "never overwrites: {b}");
+        assert_eq!(std::fs::read(&b).unwrap(), b"RIFF2");
+        let _ = std::fs::remove_dir_all(&home);
     }
 }
