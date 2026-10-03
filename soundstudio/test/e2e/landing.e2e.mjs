@@ -15,7 +15,7 @@ test('landing page: start, paste an invite, old links, the app', { timeout: 6000
     assert.match(await A.textContent('h1'), /Jam with anyone/);
     if(SHOTS){ await A.waitForTimeout(800); await A.screenshot({ path: SHOTS + '/landing.png', fullPage: true }); }
     await A.click('.hero .btn-primary'); await A.waitForURL(/\/jam\/$/);
-    assert.ok(await A.isVisible('#joinBtn'), 'Start a jam opens the room');
+    assert.ok(await A.isVisible('#joinBtn'), 'Open a room opens the room');
     await A.goto(root); await A.fill('#inviteInput', 'https://air.band/?join=abcdef1234&g=8'); await A.click('#inviteForm button');
     await A.waitForURL(/\/jam\/\?join=abcdef1234/);
     await A.goto(root + '?join=room-from-an-old-link'); await A.waitForURL(/\/jam\/\?join=room-from-an-old-link/);
