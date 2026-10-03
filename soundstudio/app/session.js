@@ -54,24 +54,48 @@ async function generateStems(prompt, code){
   if(S.playing) await startBand(false);
   return { note:'Your track is ready. Press play.' + (j.reworded ? ` (Real artists and songs can’t be named, so it made: “${j.reworded}”)` : '') };
 }
-// Send the parts to one player (or everyone) in small pieces over the room's connections.
-const CHUNK = 48000;
-function shareStems(to){
+// Send the parts to one player (or everyone) in small pieces over the room's connections,
+// a little at a time: the audio shares that connection, and a few megabytes sent in one
+// go would hold everyone's audio up behind it.
+const CHUNK = 16000;
+const ackd = {};   // pack id -> players who have the whole track
+let sharing = 0;
+async function shareStems(to){
   const data = stems.payload(); if(!data || !S.arr || S.arr.engine !== 'stems') return;
-  const id = S.arr.pack.id;
+  const id = S.arr.pack.id, mine = ++sharing;
   for(const [name, b64] of Object.entries(data)){
     if(!S.arr.pack.parts.includes(name)) continue;
     const n = Math.ceil(b64.length / CHUNK);
-    for(let i = 0; i < n; i++) room.send({ t:'stemdata', id, name, i, n, d:b64.slice(i * CHUNK, (i + 1) * CHUNK) }, to);
+    for(let i = 0; i < n; i++){
+      while(room.backlog(to) > 48000){ await new Promise(r => setTimeout(r, 15)); if(!S.arr || S.arr.pack.id !== id) return; }
+      room.send({ t:'stemdata', id, name, i, n, d:b64.slice(i * CHUNK, (i + 1) * CHUNK) }, to);
+    }
   }
 }
 const incoming = {};   // pack id -> part name -> chunks
-function gotStemData(m){
+function gotStemData(m, from){
   if(!S.arr || !S.arr.pack || S.arr.pack.id !== m.id || stems.ready(m.id)) return;
   const pack = incoming[m.id] || (incoming[m.id] = {}), part = pack[m.name] || (pack[m.name] = new Array(m.n));
   part[m.i] = m.d;
-  const done = S.arr.pack.parts.every(p => pack[p] && pack[p].every(x => typeof x === 'string'));
-  if(done){ const data = {}; for(const p of S.arr.pack.parts) data[p] = pack[p].join(''); delete incoming[m.id]; stems.loadData(m.id, S.arr.bpm, data); }
+  const parts = S.arr.pack.parts, have = parts.reduce((a, p) => a + (pack[p] ? pack[p].filter(x => typeof x === 'string').length : 0), 0), all = parts.reduce((a, p) => a + (pack[p] ? pack[p].length : 0), 0);
+  if(all && m.i % 8 === 0) hooks.onNote(`Getting the track from ${S.hostName || 'the host'}… ${Math.round(have / Math.max(all, 1) * 100)}%`);
+  const done = parts.every(p => pack[p] && pack[p].every(x => typeof x === 'string'));
+  if(done){
+    const data = {}; for(const p of parts) data[p] = pack[p].join(''); delete incoming[m.id];
+    stems.loadData(m.id, S.arr.bpm, data).then(() => { room.send({ t:'stemsok', id:m.id }, from); hooks.onNote('Track ready.'); });
+  }
+}
+// Before the band starts on a prompted track: wait (up to 25 s) until everyone has it,
+// so nobody starts in silence.
+async function everyoneHasTrack(){
+  if(!S.arr || S.arr.engine !== 'stems' || S.arr.pack.source !== 'prompt') return;
+  const id = S.arr.pack.id, t0 = clk();
+  while(clk() - t0 < 25000){
+    const missing = room.named().filter(p => !(ackd[id] || new Set()).has(p));
+    if(!missing.length) return;
+    hooks.onNote(`Sharing the track with ${missing.map(p => (room.peers.get(p) || {}).name).join(', ')}…`);
+    await new Promise(r => setTimeout(r, 250));
+  }
 }
 let bandT0 = 0, bandCounter0 = 0;   // band host only: when and where the band started
 
@@ -93,6 +117,7 @@ export async function claimBand(){
 export async function startBand(countIn){
   if(S.arr.engine === 'lyria'){ if(await startLyria()) return; }
   if(S.arr.engine === 'stems'){   // no count-in; a little longer for everyone to be ready
+    await everyoneHasTrack();
     const at = clk() + 1500; bandT0 = at; bandCounter0 = 0;
     broadcastState(); room.send({ t:'start', at, counter:0 });
     await band.playAt(at, 0); broadcastState(); return;
@@ -194,7 +219,8 @@ export async function generate(prompt, opts = {}){
 // Band messages from the room.
 export function handleMessage(m, id){
   if(m.t === 'hello'){ if(me.isHost){ broadcastState(id); if(S.arr && S.arr.engine === 'stems' && S.arr.pack.source === 'prompt') shareStems(id); sendCatchUp(id); } return; }
-  if(m.t === 'stemdata' && !me.isHost){ gotStemData(m); return; }
+  if(m.t === 'stemdata' && !me.isHost){ gotStemData(m, id); return; }
+  if(m.t === 'stemsok' && me.isHost){ (ackd[m.id] || (ackd[m.id] = new Set())).add(id); return; }
   if(m.t === 'state' && !me.isHost){ const playing = S.playing; Object.assign(S, { arr:m.arr, seats:m.seats, levels:m.levels || S.levels, game:m.game || S.game, hostId:m.hostId, hostName:m.hostName }); listen(); band.applyMutes(); if(S.arr && S.arr.engine === 'stems') stems.match(S.arr.bpm, S.arr.transpose || 0); hooks.onChange(); S.playing = playing; }
   else if(m.t === 'start' && !me.isHost){ const go = () => band.playAt(m.at - room.offsetTo(id), m.counter); if(room.clockSynced(id)) go(); else setTimeout(go, 1300); }   // wait for the clocks to sync
   else if(m.t === 'stop' && !me.isHost){ band.stopLocal(); }

@@ -44,6 +44,14 @@ export const roomCount = () => 1 + [...peers.values()].filter(p => p.name).lengt
 export const offsetTo = id => (peers.get(id) || {}).offset || 0;   // their clock - mine (ms)
 export const clockSynced = id => ((peers.get(id) || {}).samples || []).length >= 3;
 export function send(msg, to){ for(const [id, p] of peers) if((!to || to === id) && p.conn && p.conn.open) p.conn.send(msg); }
+// How much is still waiting to go out on the control channel to these players (bytes):
+// big transfers wait on this so they never crowd out anyone's audio (it shares the connection).
+export function backlog(to){
+  let n = 0;
+  for(const [id, p] of peers) if((!to || to === id) && p.conn && p.conn.open){ const dc = p.conn.dataChannel; n = Math.max(n, (dc ? dc.bufferedAmount : 0) + (p.conn.bufferSize || 0) * 16000); }
+  return n;
+}
+export const named = () => [...peers.entries()].filter(([, p]) => p.name).map(([id]) => id);
 
 // Your instrument: one packet per 128-frame block ([mono] or [left, right]), sent to every open audio channel.
 // capturedAt: wall-clock ms the block was captured, so receivers can measure

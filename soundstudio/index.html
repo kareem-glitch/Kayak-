@@ -65,6 +65,7 @@ window.__audioContexts = [];
         <select id="scOut" class="devsel"></select>
         <p class="muted small" id="scOutNote" hidden>This browser plays through your computer’s sound output: set that to your headphones or interface. (Chrome or Edge let you choose here.)</p>
         <div class="sc-row"><button type="button" class="btn btn-quiet" id="scBeep">Play a test sound</button><button type="button" class="btn btn-quiet" id="scHear" aria-pressed="false">Hear myself</button></div>
+        <label class="check small" id="scSpeakerRow"><input type="checkbox" id="scSpeaker"> Echo cancellation: turn on if you use a microphone without headphones (the others hear themselves otherwise)</label>
         <p class="muted small" id="scHearNote">“Hear myself” plays your input back through air.band, the way the room will hear you. Make sure you can hear yourself, then turn it off.</p>
         <span class="muted small sc-label">Amp</span>
         <div class="modes tones sc-amps" id="scAmps" role="radiogroup" aria-label="Amp"></div>

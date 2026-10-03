@@ -58,6 +58,9 @@ test('trade bars: turns alternate, only the soloist is heard, on the beat', { ti
     assert.ok(last.a.muted > 100 && last.b.muted > 100, `off-turn playing isn't heard (${last.a.muted}, ${last.b.muted} blocks held back)`);
     assert.ok(last.a.late + last.b.late < 20, `the soloist's audio arrives in time to play on the beat (late blocks: ${last.a.late + last.b.late})`);
 
+    // the listener's band moved later at the handovers without a pause: re-timed bars, not silence
+    const glides = (await A.evaluate(() => window.jamStems.debug().glides)) + (await B.evaluate(() => window.jamStems.debug().glides));
+    assert.ok(glides >= 1, `handovers glide instead of pausing (${glides})`);
     // back to free jam: everyone returns to the shared timing
     await h.drawer(A, 'band'); await A.click('[data-game="free"]'); await sleep(3000);
     const fa = await peek(A), fb = await peek(B);

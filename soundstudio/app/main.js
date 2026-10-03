@@ -64,15 +64,11 @@ async function join(){
   me.name = name; $('#joinBtn').disabled = true; $('#joinErr').textContent = ''; cameraProblem = null;
   Tone.start();   // unlock audio inside the click so the band can start later without another tap
   try{
-    if(audioReady){   // the sound check already started your audio: just the camera now
-      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); cameraProblem = e; }
-    } else if(audio.NATIVE){   // the desktop app handles audio natively: the page only needs the camera
-      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); cameraProblem = e; }
-    } else {
-      try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 }, audio:micRequest() }); }
-      catch(e){ media = await navigator.mediaDevices.getUserMedia({ audio:micRequest() }); }
-    }
-    const audioProblem = await setupAudio(media);
+    // Your input is always opened on its own, never bundled with the camera: Chrome
+    // could otherwise give a microphone the camera's sound settings (it came out echoey
+    // until echo cancellation was switched on and off again, which reopened it alone).
+    const audioProblem = await setupAudio();
+    try{ media = await navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }); }catch(e){ media = new MediaStream(); cameraProblem = e; }
     soundCheckDone();
     const videoOnly = new MediaStream(media.getVideoTracks());
     await room.open({ join:joinId, broker:params.get('broker'), videoStream:videoOnly });
@@ -96,7 +92,7 @@ async function join(){
 // Your audio, started once: by the sound check on the join screen, or by Join.
 // In the desktop app, if its native engine won't start or never plays, the
 // browser's audio takes over. Resolves to the problem, or null when it works.
-const micRequest = () => { const savedIn = store.get('ss.inDev') || ''; return Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ ideal:savedIn } } : {}); };
+const micRequest = () => { const savedIn = store.get('ss.inDev') || ''; return Object.assign(audio.micOptions($('#speaker').checked), savedIn ? { deviceId:{ exact:savedIn } } : {}); };
 let audioReady = null, audioOn = false;
 function setupAudio(stream){ return audioReady || (audioReady = startAudioOnce(stream)); }
 async function startAudioOnce(stream){
@@ -104,7 +100,11 @@ async function startAudioOnce(stream){
   let problem = null;
   const startAudio = async () => { audio.setInputChannel($('#inCh').value); await audio.start(own, room.sendBlock); audio.setBufferLimit(BUFFER_LIMIT); audio.setFeel(feel); };
   try{
-    if(!audio.NATIVE && !own.getAudioTracks().length) (await navigator.mediaDevices.getUserMedia({ audio:micRequest() })).getAudioTracks().forEach(t => own.addTrack(t));
+    if(!audio.NATIVE && !own.getAudioTracks().length){
+      let s; try{ s = await navigator.mediaDevices.getUserMedia({ audio:micRequest() }); }
+      catch(e){ if(e.name !== 'OverconstrainedError' && e.name !== 'NotFoundError') throw e; s = await navigator.mediaDevices.getUserMedia({ audio:audio.micOptions($('#speaker').checked) }); }   // the saved device is unplugged: the default one
+      s.getAudioTracks().forEach(t => own.addTrack(t));
+    }
     await startAudio();
   }catch(e){ problem = e; console.error('audio setup failed', e); }
   const why = audio.IN_APP && audio.NATIVE ? (problem ? problem.message || String(problem) : await audio.alive()) : '';
@@ -349,7 +349,7 @@ $('#outDev').onchange = () => chooseOutput($('#outDev').value);
 // Echo cancellation: on by default for phones (often used on loudspeaker), off for computers.
 if(audio.NATIVE) $('#speaker').closest('label').hidden = true;   // no browser echo cancellation in the app
 $('#speaker').checked = store.get('ss.speaker') !== null ? store.get('ss.speaker') === '1' : audio.isPhone();
-$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(audioOn) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.notice('Couldn’t switch the microphone: ' + (e.name || e))); checkSetup(room.connectionStats()); };
+$('#speaker').onchange = () => { store.set('ss.speaker', $('#speaker').checked ? '1' : '0'); if(audioOn) audio.useInput($('#inDev').value, $('#speaker').checked).then(showChannels).catch(e => ui.notice('Couldn’t switch the microphone: ' + (e.name || e))); try{ checkSetup(room.connectionStats()); }catch(e){} };
 $('#studio').checked = store.get('ss.studio') === '1'; room.setBits($('#studio').checked ? 32 : 16);
 $('#studio').onchange = () => { room.setBits($('#studio').checked ? 32 : 16); store.set('ss.studio', $('#studio').checked ? '1' : '0'); };
 if(store.get('ss.inCh')) $('#inCh').value = $('#scCh').value = store.get('ss.inCh');
@@ -446,6 +446,9 @@ $('#scCh').onchange = () => { scHeard = 0; scStarted = performance.now(); choose
 $('#scOut').onchange = () => chooseOutput($('#scOut').value);
 $('#scBeep').onclick = testBeep;
 $('#scHear').onclick = () => setHear(!hearing);
+// echo cancellation, here too (the same setting as in Audio): browser audio only
+$('#scSpeakerRow').hidden = audio.NATIVE; $('#scSpeaker').checked = $('#speaker').checked;
+$('#scSpeaker').onchange = () => { $('#speaker').checked = $('#scSpeaker').checked; $('#speaker').onchange(); };
 // Joining: the sound check stops (your own playback is off in the room; use your interface's direct monitoring)
 function soundCheckDone(){ if(hearing) setHear(false); clearInterval(scTimer); scTimer = null; }
 

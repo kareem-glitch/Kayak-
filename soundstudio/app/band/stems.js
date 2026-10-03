@@ -41,7 +41,7 @@ async function decodeAll(id, bpm, files, data){
   stopSources(); current = { id, bpm, buffers, data, orig: buffers, origBpm: bpm, semis: 0 }; gains = {};
   if(wasPlaying !== null) schedule();
   applySeats(); hooks.onReady(id);
-  if(S.arr && S.arr.engine === 'stems') match(S.arr.bpm, S.arr.transpose || 0);
+  if(S.arr && S.arr.engine === 'stems' && S.arr.pack && S.arr.pack.id === id) match(S.arr.bpm, S.arr.transpose || 0);   // only for this track's own settings
 }
 
 // Tempo and transpose: the parts re-made from the originals in a worker (pitch and
@@ -88,8 +88,11 @@ export async function loadData(id, bpm, data){
 }
 
 // Loop length: the longest whole number of bars that fits in the recording.
+// Prompted tracks (made by the AI music service) fade out at the end, so they loop a
+// whole 4-bar phrase that stops before the last two seconds: no dip at every repeat.
 function loopLength(){
   const shortest = Math.min(...Object.values(current.buffers).map(b => b.duration)), bar = 240 / (current.bpm || 120);
+  if(current.data){ const phrases = Math.floor((shortest - 2) / (4 * bar)); if(phrases >= 1) return phrases * 4 * bar; }
   const bars = Math.floor(shortest / bar + 0.02);
   return bars >= 2 ? Math.min(bars * bar, shortest) : shortest;
 }
@@ -128,6 +131,40 @@ export function shiftAt(boundaryPos, newStart){
   }
   setTimeout(() => old.forEach(s => { try{ s.disconnect(); }catch(e){} }), Math.max(0, (tOld - cx.currentTime) * 1000 + 200));
   start = newStart;
+  glide(tOld, tNew, pos, sources);
+}
+// No pause at the handover: the first bar or two after it are re-timed (pitch kept)
+// to soak up the move, so the band slows or hurries a touch instead of stopping.
+// Made in the worker during the ~0.7 s before the handover; if it isn't ready in
+// time, the plain switch above (a short breath) plays instead.
+let glideId = 0, glides = 0;
+async function glide(tOld, tNew, posNew, planned){
+  const mine = ++glideId, cur = current, cx = ctx(), L = loopLength();
+  const moveS = tNew - tOld, bar = 240 / (cur.bpm || 120);
+  if(moveS <= 0.003 || moveS > bar * 0.5 || tOld - cx.currentTime < 0.12) return;
+  const segS = moveS > bar * 0.15 ? 2 * bar : bar;            // stretch over one bar, or two for a bigger move
+  const startPos = (posNew % L + L) % L;                      // the old timing reaches this song position at tOld, the new one at tNew
+  if(!worker) worker = new Worker(new URL('./stretch-worker.js', import.meta.url));
+  const parts = Object.entries(cur.buffers), out = {};
+  for(const [name, buf] of parts){
+    const sr = buf.sampleRate, n = Math.round(segS * sr), i0 = Math.round(startPos * sr), loopN = Math.round(L * sr), chans = [];
+    for(let c = 0; c < buf.numberOfChannels; c++){ const d = buf.getChannelData(c), seg = new Float32Array(n); for(let i = 0; i < n; i++) seg[i] = d[(i0 + i) % loopN] || 0; chans.push(seg); }
+    const id = 'g' + mine + ':' + name;
+    const res = await new Promise(r => { const on = e => { if(e.data.id !== id) return; worker.removeEventListener('message', on); r(e.data.channels); }; worker.addEventListener('message', on); worker.postMessage({ id, channels: chans, tempo: segS / (segS + moveS), semis: 0 }, chans.map(c => c.buffer)); });
+    if(mine !== glideId || current !== cur) return;
+    const b = cx.createBuffer(res.length, res[0].length, sr); res.forEach((d, c) => b.copyToChannel(d, c)); out[name] = b;
+  }
+  if(mine !== glideId || current !== cur || sources !== planned || cx.currentTime > tOld - 0.03) return;   // too late, or something changed: keep the plain switch
+  // swap the planned switch for the glide: the stretched bars from tOld, then the loop on the new timing
+  planned.forEach(s => { try{ s.stop(); }catch(e){} });
+  if(seam){ const g = seam.gain; g.cancelScheduledValues(cx.currentTime); g.setValueAtTime(g.value, cx.currentTime); g.setValueAtTime(1, tOld); }
+  const tLoop = tOld + segS + moveS, next = [];
+  for(const [name, b] of Object.entries(out)){
+    const seg = cx.createBufferSource(); seg.buffer = b; seg.connect(gains[name]); seg.start(tOld); seg.stop(tLoop); next.push(seg);
+    const src = cx.createBufferSource(); src.buffer = cur.buffers[name]; src.loop = true; src.loopStart = 0; src.loopEnd = L;
+    src.connect(gains[name]); src.start(tLoop, (startPos + segS) % L); next.push(src);
+  }
+  sources = next; glides++;
 }
 function stopSources(){ sources.forEach(s => { try{ s.stop(); }catch(e){} }); sources = []; }
 
@@ -154,7 +191,7 @@ export function setVolume(db){ volumeDb = db; if(master) master.gain.value = db 
 export function debug(){
   if(!current) return null;
   const zc = b => { const d = b.getChannelData(0); let n = 0; for(let i = 1; i < d.length; i++) if((d[i - 1] < 0) !== (d[i] < 0) && Math.abs(d[i] - d[i - 1]) > 1e-4) n++; return n; };
-  const o = { bpm: current.bpm, semis: current.semis, lengths: {}, zc: {} };
+  const o = { bpm: current.bpm, semis: current.semis, glides, lengths: {}, zc: {} };
   for(const [n, b] of Object.entries(current.buffers)){ o.lengths[n] = b.length; o.zc[n] = zc(b); o[n] = { len: b.length, zc: zc(b) }; }
   return o;
 }
