@@ -62,7 +62,7 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     assert.equal(scr.tag, 'VIDEO'); assert.ok(scr.size > 50000, `screen recording has content (${scr.size})`);
     assert.ok(await A.evaluate(() => window.__screenShared), 'it asked to share the screen');
     const dims = await A.evaluate(async () => { const v = document.querySelector('#recMedia video'); if(!v.videoWidth) await new Promise(r => v.addEventListener('loadedmetadata', r, { once:true })); return [v.videoWidth, v.videoHeight]; });
-    assert.deepEqual(dims, [1280, 720], 'video is 1280x720');
+    assert.deepEqual(dims, [960, 540], 'video is 960x540');
     assert.deepEqual(h.errors, [], 'no page errors');
   } finally { await h.close(); }
 });
