@@ -118,6 +118,11 @@ button,input,select{font:inherit;color:inherit}
 .p.on{box-shadow:0 0 0 3px var(--accent),0 24px 50px rgba(255,180,0,.28)}
 .p .cam{position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.55) 0 18%,transparent 19%),radial-gradient(ellipse at 50% 95%,rgba(255,255,255,.45) 0 34%,transparent 35%)}
 .p .gear{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:58%;filter:drop-shadow(0 16px 22px rgba(40,25,10,.18))}
+.p .char{position:absolute;left:50%;top:6%;width:72%;transform:translateX(-50%);filter:drop-shadow(0 14px 18px rgba(40,25,10,.16));animation:bob .625s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translate(-50%,0)}to{transform:translate(-50%,-5px)}}
+.p .char .eyes{animation:glow 1.25s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.7}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.p .char,.p .char .eyes{animation:none}}
 .p .tag{display:flex;align-items:center;gap:8px;position:relative}
 .p .tag b{font-size:1.02rem;color:#17151c}
 .p .tag small{font-weight:700;color:rgba(23,21,28,.62);font-size:.8rem}
@@ -237,6 +242,50 @@ button,input,select{font:inherit;color:inherit}
     <g fill="#2b2730"><rect x="46" y="196" width="28" height="9" rx="3"/><rect x="44" y="236" width="32" height="9" rx="3"/></g>
     <g stroke="#9a94a3" stroke-width="1.3"><path d="M56 6v236M59 6v236M62 6v236M65 6v236"/></g>
   </symbol>
+  <!-- the AI band, after the jam room's pixel players: Moss on drums (beanie, visor), Juno on bass (purple hair, teal bass) -->
+  <symbol id="moss" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="80" ry="6" fill="#17151c" opacity=".08"/>
+    <path d="M78 116 52 92M122 116l26-24" stroke="#0984e3" stroke-width="15" stroke-linecap="round"/>
+    <rect x="68" y="98" width="64" height="62" rx="26" fill="#0984e3"/><path d="M80 104q20 10 40 0" stroke="#0a6fc0" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <g class="sticks" stroke="#e2b46a" stroke-width="5" stroke-linecap="round"><path d="M52 92 34 62M148 92l18-30"/></g>
+    <circle cx="52" cy="92" r="8" fill="#e8b48f"/><circle cx="148" cy="92" r="8" fill="#e8b48f"/>
+    <circle cx="100" cy="70" r="30" fill="#e8b48f"/>
+    <ellipse cx="72" cy="76" rx="6" ry="9" fill="#d8a444"/><ellipse cx="128" cy="76" rx="6" ry="9" fill="#d8a444"/>
+    <path d="M68 68q0-34 32-34t32 34z" fill="#2f8f4e"/><rect x="66" y="58" width="68" height="13" rx="6.5" fill="#236b3a"/><circle cx="100" cy="32" r="7" fill="#2f8f4e"/>
+    <rect x="74" y="74" width="52" height="17" rx="8.5" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="79" width="11" height="7" rx="3.5"/><rect x="105" y="79" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 95q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g stroke="#6b6672" stroke-width="3" stroke-linecap="round"><path d="M30 116v72M170 112v76"/></g>
+    <ellipse cx="30" cy="114" rx="24" ry="5.5" fill="url(#cym)"/><ellipse cx="170" cy="110" rx="22" ry="5" fill="url(#cym)"/>
+    <rect x="58" y="124" width="34" height="22" rx="5" fill="#ff8fb1"/><ellipse cx="75" cy="124" rx="17" ry="5" fill="#fff0f5"/>
+    <rect x="108" y="124" width="34" height="22" rx="5" fill="#9fd2ff"/><ellipse cx="125" cy="124" rx="17" ry="5" fill="#eaf4ff"/>
+    <circle cx="100" cy="160" r="32" fill="#236b3a"/><circle cx="100" cy="160" r="25" fill="#f4f1ea"/>
+    <text x="100" y="165" text-anchor="middle" font-size="13" font-weight="800" fill="#2b2730" font-family="system-ui,sans-serif">air.</text>
+  </symbol>
+  <symbol id="juno" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="64" ry="6" fill="#17151c" opacity=".08"/>
+    <rect x="64" y="40" width="72" height="92" rx="32" fill="#7b4fd6"/>
+    <rect x="84" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/><rect x="103" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/>
+    <ellipse cx="89" cy="187" rx="10" ry="5" fill="#1b1b1b"/><ellipse cx="111" cy="187" rx="10" ry="5" fill="#1b1b1b"/>
+    <rect x="72" y="102" width="56" height="58" rx="22" fill="#29a19c"/>
+    <path d="M124 114q16 2 28-8" stroke="#29a19c" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-36 100 140)">
+      <rect x="96" y="134" width="88" height="9" rx="3" fill="url(#wood)"/>
+      <path d="M182 131h16l3 15h-19z" fill="url(#wood)"/>
+      <g fill="#c9ced6"><circle cx="188" cy="128" r="3"/><circle cx="196" cy="128" r="3"/><circle cx="188" cy="149" r="3"/><circle cx="196" cy="149" r="3"/></g>
+      <path d="M100 138c-6-12-22-18-34-14-10 3-10 9-6 14-10 2-14 10-10 18s14 10 22 6c4 6 14 8 22 2 8-6 10-16 6-26z" fill="#2a9d8f"/>
+      <path d="M92 132c-8-4-18-2-22 4 6 2 8 8 4 14 8 4 18 2 22-6z" fill="#f4f1ea" opacity=".9"/>
+      <rect x="76" y="134" width="4" height="10" rx="1.5" fill="#2b2730"/><rect x="86" y="134" width="4" height="10" rx="1.5" fill="#2b2730"/>
+      <g stroke="#9a94a3" stroke-width="1"><path d="M70 136.5h126M70 140.5h126"/></g>
+    </g>
+    <path d="M78 116q-4 18 10 30" stroke="#29a19c" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <circle class="strum" cx="90" cy="146" r="7.5" fill="#c68a62"/><circle cx="153" cy="104" r="7.5" fill="#c68a62"/>
+    <circle cx="100" cy="72" r="28" fill="#c68a62"/>
+    <path d="M71 74q1-34 29-34t29 34q-12-16-29-15t-29 15z" fill="#7b4fd6"/>
+    <rect x="75" y="72" width="50" height="16" rx="8" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="76.5" width="11" height="7" rx="3.5"/><rect x="105" y="76.5" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 93q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </symbol>
   <!-- microphone -->
   <symbol id="mic" viewBox="0 0 100 200">
     <rect x="28" y="6" width="44" height="70" rx="22" fill="#d9d4de"/>
@@ -331,8 +380,8 @@ button,input,select{font:inherit;color:inherit}
     <div class="players" id="players">
       <div class="p on" style="--c1:#ffd6c2;--c2:#ffb48f"><div class="cam"></div><div class="eq"><s></s><s></s><s></s></div><div class="tag"><b>You</b><small>Guitar</small></div><div class="lvl"><i style="width:60%"></i></div></div>
       <div class="p" style="--c1:#e3dcff;--c2:#c4b5ff"><div class="cam"></div><span class="ms"><span class="dot"></span>22 ms</span><div class="tag"><b>Maya</b><small>Keys · Dublin</small></div><div class="lvl"><i style="width:40%"></i></div></div>
-      <div class="p" style="--c1:#d2f5e7;--c2:#8fe3c3"><span class="badge">AI</span><svg class="gear ill" viewBox="0 0 240 200"><use href="#drums"/></svg><div class="tag"><b>Drums</b><small>The band</small></div><div class="lvl"><i style="width:70%"></i></div></div>
-      <div class="p" style="--c1:#d9eeff;--c2:#9fd2ff"><span class="badge">AI</span><svg class="gear ill" viewBox="0 0 120 280" style="width:28%"><use href="#bass"/></svg><div class="tag"><b>Bass</b><small>The band</small></div><div class="lvl"><i style="width:55%"></i></div></div>
+      <div class="p" style="--c1:#d2f5e7;--c2:#8fe3c3"><span class="badge">AI</span><svg class="char" viewBox="0 0 200 200"><use href="#moss"/></svg><div class="tag"><b>Moss</b><small>Drums</small></div><div class="lvl"><i style="width:70%"></i></div></div>
+      <div class="p" style="--c1:#d9eeff;--c2:#9fd2ff"><span class="badge">AI</span><svg class="char" viewBox="0 0 200 200" style="animation-delay:-.31s"><use href="#juno"/></svg><div class="tag"><b>Juno</b><small>Bass</small></div><div class="lvl"><i style="width:55%"></i></div></div>
     </div>
   </div>
 
