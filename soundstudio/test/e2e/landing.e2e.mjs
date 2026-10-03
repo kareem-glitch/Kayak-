@@ -13,17 +13,7 @@ test('landing page: start, paste an invite, old links, the app', { timeout: 6000
     const A = await h.page('Visitor');
     await A.goto(root);
     assert.match(await A.textContent('h1'), /Jam with anyone/);
-    if(SHOTS){
-      await A.waitForTimeout(800); await A.screenshot({ path: SHOTS + '/landing.png', fullPage: true });
-      await A.click('#theme'); await A.waitForTimeout(500); await A.screenshot({ path: SHOTS + '/landing-dark.png', fullPage: true });
-      await A.setViewportSize({ width: 390, height: 844 }); await A.screenshot({ path: SHOTS + '/landing-phone.png', fullPage: true }); await A.click('#theme');
-      await A.setViewportSize({ width: 1400, height: 900 });
-    }
-    // light / dark: the switch flips it and remembers
-    await A.click('#theme'); const t1 = await A.evaluate(() => document.documentElement.dataset.theme);
-    await A.click('#theme'); const t2 = await A.evaluate(() => document.documentElement.dataset.theme);
-    assert.ok(t1 && t2 && t1 !== t2, `the switch flips light and dark (${t1}, ${t2})`);
-    assert.equal(await A.evaluate(() => localStorage.getItem('ss.theme')), t2, 'remembered');
+    if(SHOTS){ await A.waitForTimeout(800); await A.screenshot({ path: SHOTS + '/landing.png', fullPage: true }); }
     await A.click('.hero .btn-primary'); await A.waitForURL(/\/jam\/$/);
     assert.ok(await A.isVisible('#joinBtn'), 'Start a jam opens the room');
     await A.goto(root); await A.fill('#inviteInput', 'https://air.band/?join=abcdef1234&g=8'); await A.click('#inviteForm button');
