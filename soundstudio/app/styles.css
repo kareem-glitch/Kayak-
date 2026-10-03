@@ -437,3 +437,4 @@ html{touch-action:manipulation}
 .rate-row button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font:600 .85rem/1 inherit;cursor:pointer;color:var(--ink)}
 .rate-row button[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
 .linkbtn{border:0;background:none;color:var(--amber);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
+.join-card .btn.pf-google{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;background:var(--surface)}

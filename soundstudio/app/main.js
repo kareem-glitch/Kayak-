@@ -760,9 +760,9 @@ function levels(){
 const pfMsg = (t, k = '') => { $('#pfMsg').textContent = t; $('#pfMsg').className = 'small pf-msg ' + k; };
 function showAccount(){
   const signed = account.saved(), pending = !signed && account.email();
-  $('#pfLine').textContent = signed ? `Saved to ${account.email()}: your profile and jams are on every device you sign in on.`
+  $('#pfLine').textContent = signed ? `Saved to ${account.email() || 'your Google account'}: your profile and jams are on every device you sign in on.`
     : pending ? `Check ${account.email()} and tap the link to keep your profile.` : 'Saved on this device. Add your email to keep it everywhere.';
-  $('#pfSignedLinks').hidden = !signed; $('#pfSignIn').hidden = signed;
+  $('#pfSignedLinks').hidden = !signed; $('#pfSignIn').hidden = signed; if(signed) $('#pfGoogle').hidden = true;
   $('#pfEmail').value = account.email() || $('#pfEmail').value;
 }
 async function loadProfile(){
@@ -789,6 +789,10 @@ $('#pfSignIn').onclick = async () => {
 $('#pfSignOut').onclick = async () => { await account.signOut(); pfMsg('Signed out.'); loadProfile(); };
 $('#pfDelete').onclick = async () => { if(!confirm('Delete your air.band account, profile and jam history? This can’t be undone.')) return; await account.deleteMe(); pfMsg('Deleted.'); loadProfile(); };
 account.hooks.onChange = () => { showAccount(); loadProfile(); };
+// Google (once it's switched on). Not inside the desktop app yet: Google doesn't allow
+// signing in from an app's own web window, only a real browser.
+$('#pfGoogle').onclick = async () => { pfMsg('Opening Google…'); try{ await account.google(); }catch(err){ pfMsg('Couldn’t open Google: ' + err.message, 'warn'); } };
+account.googleOn().then(on => { $('#pfGoogle').hidden = !on || audio.IN_APP; });
 // "Would you jam with them again?" after your last jam
 function showRating(){
   let last = null; try{ last = JSON.parse(store.get('ss.lastJam') || 'null'); }catch(e){}

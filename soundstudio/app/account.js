@@ -39,7 +39,7 @@ async function attempt(name){
 }
 export const id = () => user && user.id;
 export const email = () => user && (user.email || user.new_email) || '';
-export const saved = () => !!(user && user.email && !user.is_anonymous);   // a full account (email confirmed)
+export const saved = () => !!(user && !user.is_anonymous && (user.email || (user.identities || []).length));   // a full account (email or Google)
 
 // ---- profile ----
 export async function profile(){
@@ -66,6 +66,18 @@ export async function signIn(address){
   if(!await init()) throw new Error('Accounts are offline right now');
   const { error } = await sb.auth.signInWithOtp({ email: address, options: { shouldCreateUser: false, emailRedirectTo: 'https://air.band/' } });
   if(error) throw error;
+}
+// Google: offered only once it's switched on in the project (it needs Google's keys).
+export async function googleOn(){
+  try{ const r = await fetch(SB_URL + '/auth/v1/settings', { headers: { apikey: KEY } }); return !!(await r.json()).external.google; }catch(e){ return false; }
+}
+// Continue with Google: adds Google to this account (anonymous: keeps its jams); if that
+// Google account already has an air.band account, signs in to that one instead.
+export async function google(){
+  if(!await init()) throw new Error('Accounts are offline right now');
+  const opts = { provider: 'google', options: { redirectTo: location.origin + location.pathname } };
+  if(user.is_anonymous){ const { error } = await sb.auth.linkIdentity(opts); if(!error) return; if(!/already|exists|linked/i.test(error.message)) throw error; }
+  const { error } = await sb.auth.signInWithOAuth(opts); if(error) throw error;
 }
 export async function signOut(){ if(!sb) return; await sb.auth.signOut(); user = null; ready = null; localStorage.removeItem('ss.lastJam'); await init(); hooks.onChange(); }
 export async function deleteMe(){ if(!await init()) return; await sb.rpc('delete_me'); await signOut(); }
