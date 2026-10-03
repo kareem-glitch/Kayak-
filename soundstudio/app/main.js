@@ -361,7 +361,7 @@ if(store.get('ss.inCh')) $('#inCh').value = $('#scCh').value = store.get('ss.inC
 
 // ---- controls ----
 // The desktop app loads this site, so only its native audio engine can be out of date.
-const APP_VERSION = '0.6.2';
+const APP_VERSION = '0.6.3';
 const older = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) < (y[i] || 0); } return false; };
 const dl = () => /Mac/.test(navigator.userAgent) ? `/download/air.band-${APP_VERSION}-Mac.zip` : `/download/air.band-${APP_VERSION}-Windows-setup.exe`;
 // From 0.6.1 the app updates itself; older ones need one download.
