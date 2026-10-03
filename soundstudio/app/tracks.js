@@ -34,14 +34,18 @@ export function start(names, { band = true } = {}){
   }catch(e){ console.warn('band track unavailable', e); }
 }
 
-// Put one 128-frame block where it was heard. Blocks that follow on (within a
-// couple of blocks) are written back to back so jitter doesn't leave clicks.
+// Put one block where it was heard. A player's sound is one continuous stream, so
+// blocks are written back to back; a timestamp only moves it after a real gap (over
+// 0.1 s). Timestamps wobble: audio from a DAW arrives in bursts (about every 32 ms),
+// and placing each block by its own time left a hole at every burst.
+const JOIN = SR / 10;
 function place(id, planes, atMs){
   if(!rec) return;
-  let t = rec.tracks.get(id); if(!t){ t = { blocks: [], end: 0 }; rec.tracks.set(id, t); }
+  let t = rec.tracks.get(id); if(!t){ t = { blocks: [], end: 0, started: false }; rec.tracks.set(id, t); }
   const n = planes[0].length;
   let pos = Math.round((atMs - rec.t0) / 1000 * SR);
-  if(Math.abs(pos - t.end) <= 2 * n) pos = t.end;
+  if(t.started && Math.abs(pos - t.end) <= JOIN) pos = t.end;
+  t.started = true;
   if(pos < 0) return;
   t.blocks.push({ pos, data: planes[0].slice(0) });
   t.end = Math.max(t.end, pos + n);

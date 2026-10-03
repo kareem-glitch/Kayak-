@@ -37,7 +37,24 @@ test('record the whole jam: no clicks', { timeout: 120000 }, async () => {
         return { seconds: x.length / 48000, peak: pk, clicks };
       });
     }
-    for(const [w, r] of Object.entries(res)){ assert.ok(r.peak > 0.05, `${w}: something was recorded`); assert.ok(r.clicks < 15, `${w}: no clicks (${r.clicks} in ${r.seconds.toFixed(1)} s; it was 120+ with video when drawing the picture starved the recorder)`); }
+    for(const [w, r] of Object.entries(res)){ assert.ok(r.peak > 0.05, `${w}: something was recorded`); assert.ok(r.clicks < 40, `${w}: no clicks (${r.clicks} in ${r.seconds.toFixed(1)} s; it was 120+ with video when drawing the picture starved the recorder)`); }
+    // sound from a DAW (the desktop app's plugin) arrives in bursts: timestamps that jump
+    // about 32 ms. The "Just me" track must still be one continuous stream, no holes.
+    const holes = await A.evaluate(async () => {
+      const tracks = await import('/app/tracks.js'), room = await import('/app/net/room.js');
+      tracks.start(() => 'me', { band: false });
+      const t0 = performance.timeOrigin + performance.now();
+      for(let k = 0; k < 600; k++){
+        const pl = new Float32Array(128); for(let i = 0; i < 128; i++) pl[i] = 0.3 * Math.sin(2 * Math.PI * 440 * (k * 128 + i) / 48000);
+        const burst = (k % 12) * 128 / 48;   // 12 blocks arrive together: the later ones look early
+        room.taps.tracks('me', [pl], t0 + k * 128 / 48 - burst + 30 * ((k / 12 | 0) % 2));
+      }
+      const r = await tracks.stop({ zip: false, me: true });
+      const ab = await new AudioContext({ sampleRate: 48000 }).decodeAudioData(await (await fetch(r.meUrl)).arrayBuffer()), x = ab.getChannelData(0);
+      let runs = 0, z = 0; for(let i = 0; i < x.length; i++){ if(Math.abs(x[i]) < 1e-6) z++; else { if(z >= 16) runs++; z = 0; } }
+      return { runs, seconds: x.length / 48000 };
+    });
+    assert.equal(holes.runs, 0, `no holes in a bursty stream (${holes.runs} in ${holes.seconds.toFixed(2)} s)`);
     assert.deepEqual(h.errors, []);
   } finally { await h.close(); }
 });

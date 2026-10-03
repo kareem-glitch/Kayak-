@@ -43,7 +43,13 @@ export async function start({ video, screen = false }){
     // held back by the same HOLD, so it all stays in sync.
     let base = null;   // ms on the page's clock when this context's frame 0 played
     const frameOf = ms => { const b = clkNow() - ctx.currentTime * 1000; base = base == null ? b : base + (b - base) * 0.01; return Math.round((ms - base) / 1000 * ctx.sampleRate); };
-    room.taps.mix = (id, planes, at) => mix.port.postMessage({ id, planes: planes.map(p => p.slice(0)), at: frameOf(at + HOLD) });
+    // each player's stream back to back (timestamps wobble; see tracks.js), moved only after a real gap
+    const next = new Map();
+    room.taps.mix = (id, planes, at) => {
+      const e = next.get(id); if(e != null && Math.abs(at - e) < 100) at = e;
+      next.set(id, at + planes[0].length / 48);
+      mix.port.postMessage({ id, planes: planes.map(p => p.slice(0)), at: frameOf(at + HOLD) });
+    };
     // the band, from Tone.js's own context (live, so delayed by HOLD less its own output delay)
     try{
       rec.bandDest = Tone.getContext().rawContext.createMediaStreamDestination(); Tone.connect(Tone.getDestination(), rec.bandDest);
