@@ -51,7 +51,7 @@ fn run(sock: &UdpSocket, sh: &Shared) {
                 if !sh.plugin_live.swap(true, Relaxed) { blocker = None; }   // just connected
                 sh.set_in_lat(p.latency_ms);
                 // your channel choice: both sides as stereo, otherwise one mono mix of the track
-                let want = if sh.channel() == InputChannel::Stereo && p.planes.len() > 1 { InputChannel::Stereo } else { InputChannel::Mix };
+                let want = if p.planes.len() > 1 { InputChannel::Stereo } else { InputChannel::Mix };   // a DAW chain is stereo: kept that way (the room still gets it in mono)
                 if blocker.as_ref().map_or(true, |(c, _)| *c != want) { blocker = Some((want, Blocker::new(want))); frames_in = 0; t0 = f64::NAN; last_at = f64::MIN; }
                 let (_, b) = blocker.as_mut().unwrap();
                 let gain = sh.mic_gain();
@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(&ack[..n], &link::ACK);
         let blocks: Vec<_> = rx.try_iter().filter_map(|o| match o { Out::Block { at_ms, planes } => Some((at_ms, planes)), _ => None }).collect();
         assert!(blocks.len() >= 370, "about 376 blocks of 128 frames (got {})", blocks.len());
-        assert!(blocks.iter().all(|(_, p)| p.len() == 1 && p[0].len() == 128), "mono mix by default, 128 frames each");
+        assert!(blocks.iter().all(|(_, p)| p.len() == 2 && p[0].len() == 128), "a stereo track stays stereo, 128 frames each");
         assert!(blocks.windows(2).all(|w| w[1].0 >= w[0].0 - 0.001), "time stamps never go backwards");
         assert!((sh.in_lat() - 6.0).abs() < 0.01, "the DAW's input delay is reported to the page");
         // the plugin on a second track while the first keeps going: ignored

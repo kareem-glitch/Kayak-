@@ -41,13 +41,14 @@ export function start(names, { band = true } = {}){
 const JOIN = SR / 10;
 function place(id, planes, atMs){
   if(!rec) return;
-  let t = rec.tracks.get(id); if(!t){ t = { blocks: [], end: 0, started: false }; rec.tracks.set(id, t); }
+  let t = rec.tracks.get(id); if(!t){ t = { blocks: [], end: 0, started: false, ch: 1 }; rec.tracks.set(id, t); }
   const n = planes[0].length;
   let pos = Math.round((atMs - rec.t0) / 1000 * SR);
   if(t.started && Math.abs(pos - t.end) <= JOIN) pos = t.end;
   t.started = true;
   if(pos < 0) return;
-  t.blocks.push({ pos, data: planes[0].slice(0) });
+  t.blocks.push({ pos, data: planes.slice(0, 2).map(p => p.slice(0)) });   // stereo kept (a DAW's chain through the plugin is stereo)
+  t.ch = Math.max(t.ch, Math.min(2, planes.length));
   t.end = Math.max(t.end, pos + n);
 }
 
@@ -58,11 +59,11 @@ export async function stop({ zip: wantZip = true, mix: wantMix = false, me: want
   const r = rec; rec = null; room.taps.tracks = null;
   const files = [], mono = []; let meTrack = null;
   for(const [id, t] of r.tracks){
-    const out = new Float32Array(t.end);
-    for(const b of t.blocks) out.set(b.data, b.pos);
-    mono.push(out);
-    if(wantMe && id === 'me') meTrack = out;
-    if(wantZip) files.push({ name: safe(id === 'me' ? 'You' : (r.names(id) || id)) + '.wav', data: wav24(out, SR) });
+    const L = new Float32Array(t.end), R = t.ch > 1 ? new Float32Array(t.end) : null;
+    for(const b of t.blocks){ L.set(b.data[0], b.pos); if(R) R.set(b.data[1] || b.data[0], b.pos); }
+    mono.push([L, R || L]);
+    if(wantMe && id === 'me') meTrack = [L, R];
+    if(wantZip) files.push({ name: safe(id === 'me' ? 'You' : (r.names(id) || id)) + '.wav', data: wav24(L, SR, R) });
   }
   let bandL = null, bandR = null;
   if(r.band){
@@ -78,11 +79,11 @@ export async function stop({ zip: wantZip = true, mix: wantMix = false, me: want
     }
   }
   const res = {};
-  if(meTrack && meTrack.length) res.meUrl = URL.createObjectURL(new Blob([wav24(meTrack, SR)], { type: 'audio/wav' }));   // just you, 24-bit, seamless
+  if(meTrack && meTrack[0].length) res.meUrl = URL.createObjectURL(new Blob([wav24(meTrack[0], SR, meTrack[1])], { type: 'audio/wav' }));   // just you, 24-bit, seamless
   if(wantZip && files.length) res.zipUrl = URL.createObjectURL(new Blob([zip(files)], { type: 'application/zip' }));
   if(wantMix && (mono.length || bandL)){
-    const n = Math.max(0, ...mono.map(x => x.length), bandL ? bandL.length : 0), L = new Float32Array(n), R = new Float32Array(n);
-    for(const x of mono) for(let i = 0; i < x.length; i++){ L[i] += x[i]; R[i] += x[i]; }
+    const n = Math.max(0, ...mono.map(x => x[0].length), bandL ? bandL.length : 0), L = new Float32Array(n), R = new Float32Array(n);
+    for(const [xl, xr] of mono) for(let i = 0; i < xl.length; i++){ L[i] += xl[i]; R[i] += xr[i]; }
     if(bandL) for(let i = 0; i < bandL.length; i++){ L[i] += bandL[i]; R[i] += bandR[i]; }
     let pk = 0; for(let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(L[i]), Math.abs(R[i]));
     if(pk > 0.99){ const g = 0.99 / pk; for(let i = 0; i < n; i++){ L[i] *= g; R[i] *= g; } }   // no clipping when it all adds up
