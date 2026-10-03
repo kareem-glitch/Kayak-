@@ -12,10 +12,10 @@
 <style>
 :root{
   color-scheme:light;
-  --bg:#fbf8f4; --card:#ffffff; --card-2:#f6f1ea; --ink:#17151c; --muted:#6b6672; --line:rgba(23,21,28,.09);
+  --bg:#f8f7f5; --card:#ffffff; --card-2:#f2f1ee; --ink:#17151c; --muted:#6b6672; --line:rgba(23,21,28,.07);
   --accent:#ffcc00; --accent-ink:#1a1500; --accent-deep:#a87f00; --ok:#1fae63; --warn:#e08a00;
   --peach:#ffb48f; --lilac:#c4b5ff; --mint:#8fe3c3; --sky:#9fd2ff; --rose:#ff8fb1;
-  --blob:.45; --shadow:0 1px 2px rgba(23,21,28,.04),0 10px 30px rgba(23,21,28,.07); --shadow-lg:0 2px 6px rgba(23,21,28,.05),0 24px 60px rgba(60,40,10,.12);
+  --blob:.45; --shadow:0 1px 2px rgba(23,21,28,.03),0 6px 20px rgba(23,21,28,.04); --shadow-lg:0 2px 6px rgba(23,21,28,.04),0 20px 50px rgba(23,21,28,.08);
   --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -95,19 +95,19 @@ button,input,select{font:inherit;color:inherit}
 .steps .stp button{width:28px;height:28px;border-radius:50%;border:0;background:var(--card);box-shadow:var(--shadow);cursor:pointer;font-weight:800}
 .beats{display:flex;gap:6px;margin-left:auto}
 .beats i{width:10px;height:10px;border-radius:50%;background:var(--line)}
-.beats i.on{background:var(--accent);box-shadow:0 0 12px rgba(255,204,0,.6)}
-.turn{background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 22%,var(--card)),var(--card) 70%);border:1px solid var(--line);border-radius:24px;padding:18px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;gap:12px}
+.beats i.on{background:var(--accent)}
+.turn{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center;gap:12px}
 .turn .line{display:flex;align-items:center;gap:12px}
-.turn .line b{font-size:1.5rem;letter-spacing:-.03em}
+.turn .line b{font-size:1.4rem;letter-spacing:-.03em;font-weight:700}
 .turn .line .count{margin-left:auto;font-weight:800;font-size:1.6rem;color:var(--accent-deep)}
 .bars{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
 .bars i{height:10px;border-radius:99px;background:var(--line)}
-.bars i.on{background:linear-gradient(90deg,#ffb100,#ffcc00)}
+.bars i.on{background:var(--accent)}
 .turn .next{font-size:.88rem;color:var(--muted);font-weight:600}
 .players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-content:start}
-.p{position:relative;border-radius:26px;background:linear-gradient(165deg,var(--c1),var(--c2));aspect-ratio:1/1;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;overflow:hidden;box-shadow:var(--shadow)}
-.p.on{box-shadow:0 0 0 3px var(--accent),0 24px 50px rgba(255,180,0,.28)}
-.p .who{position:absolute;left:50%;top:9%;width:56%;transform:translateX(-50%);fill:rgba(255,255,255,.72);filter:drop-shadow(0 12px 18px rgba(40,25,10,.10))}
+.p{position:relative;border-radius:24px;background:linear-gradient(165deg,color-mix(in srgb,var(--c1) 75%,#fff),color-mix(in srgb,var(--c2) 75%,#fff));aspect-ratio:1/1;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;overflow:hidden;box-shadow:var(--shadow)}
+.p.on{box-shadow:0 0 0 2px var(--accent)}
+.p .who{position:absolute;left:50%;top:9%;width:56%;transform:translateX(-50%);fill:rgba(255,255,255,.78)}
 .p .gear{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:58%;filter:drop-shadow(0 16px 22px rgba(40,25,10,.18))}
 .p .char{position:absolute;left:50%;top:6%;width:72%;transform:translateX(-50%);filter:drop-shadow(0 14px 18px rgba(40,25,10,.16));animation:bob .625s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translate(-50%,0)}to{transform:translate(-50%,-5px)}}
@@ -127,7 +127,11 @@ button,input,select{font:inherit;color:inherit}
 @keyframes eq{0%,100%{height:4px}50%{height:18px}}
 .side{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:14px;min-height:0}
 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:16px;background:var(--card-2)}
-.tabs button{border:0;background:none;border-radius:12px;padding:8px 2px;font-weight:700;font-size:.8rem;color:var(--muted);cursor:pointer}
+.tabs button{position:relative;border:0;background:none;border-radius:12px;padding:9px 2px;color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.tabs button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs button:hover{color:var(--ink)}
+.tabs button::after{content:attr(data-tip);position:absolute;top:calc(100% + 8px);left:50%;transform:translate(-50%,-4px);padding:5px 9px;border-radius:8px;background:var(--ink);color:#fff;font-size:.74rem;font-weight:600;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:5}
+.tabs button:hover::after,.tabs button:focus-visible::after{opacity:1;transform:translate(-50%,0)}
 .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 .track{display:flex;gap:12px;align-items:center;padding:12px;border-radius:18px;background:var(--card-2);border:1px solid var(--line)}
 .track .art{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--peach),var(--rose));display:grid;place-items:center;font-size:1.4rem}
@@ -369,15 +373,15 @@ button,input,select{font:inherit;color:inherit}
       </div>
     </div>
     <div class="players" id="players">
-      <div class="p on" style="--c1:#ffd6c2;--c2:#ffb48f"><svg class="who" viewBox="0 0 100 100" aria-hidden="true"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><div class="eq"><s></s><s></s><s></s></div><div class="tag"><b>You</b><small>Guitar</small></div><div class="lvl"><i style="width:60%"></i></div></div>
-      <div class="p" style="--c1:#e3dcff;--c2:#c4b5ff"><svg class="who" viewBox="0 0 100 100" aria-hidden="true"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><span class="ms"><span class="dot"></span>22 ms</span><div class="tag"><b>Maya</b><small>Keys · Dublin</small></div><div class="lvl"><i style="width:40%"></i></div></div>
+      <div class="p on" style="--c1:#ffd6c2;--c2:#ffb48f"><svg class="who" viewBox="0 0 100 100" aria-hidden="true"><rect x="32" y="4" width="36" height="36" rx="13"/><path d="M14 100V72c0-12 9-22 21-22h30c12 0 21 10 21 22v28z"/></svg><div class="eq"><s></s><s></s><s></s></div><div class="tag"><b>You</b><small>Guitar</small></div><div class="lvl"><i style="width:60%"></i></div></div>
+      <div class="p" style="--c1:#e3dcff;--c2:#c4b5ff"><svg class="who" viewBox="0 0 100 100" aria-hidden="true"><rect x="32" y="4" width="36" height="36" rx="13"/><path d="M14 100V72c0-12 9-22 21-22h30c12 0 21 10 21 22v28z"/></svg><span class="ms"><span class="dot"></span>22 ms</span><div class="tag"><b>Maya</b><small>Keys · Dublin</small></div><div class="lvl"><i style="width:40%"></i></div></div>
       <div class="p" style="--c1:#d2f5e7;--c2:#8fe3c3"><span class="badge">AI</span><svg class="char" viewBox="0 0 200 200"><use href="#moss"/></svg><div class="tag"><b>Moss</b><small>Drums</small></div><div class="lvl"><i style="width:70%"></i></div></div>
       <div class="p" style="--c1:#d9eeff;--c2:#9fd2ff"><span class="badge">AI</span><svg class="char" viewBox="0 0 200 200" style="animation-delay:-.31s"><use href="#juno"/></svg><div class="tag"><b>Juno</b><small>Bass</small></div><div class="lvl"><i style="width:55%"></i></div></div>
     </div>
   </div>
 
   <aside class="side">
-    <div class="tabs" data-seg><button class="on">Band</button><button>Mix</button><button>Tone</button><button>Record</button></div>
+    <div class="tabs" data-seg><button class="on" data-tip="Band" aria-label="Band"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></button><button data-tip="Mix" aria-label="Mix"><svg viewBox="0 0 24 24"><path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/></svg></button><button data-tip="Tone" aria-label="Tone"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 12l3.5-3.5"/><path d="M12 4v1.5M4 12h1.5M18.5 12H20"/></svg></button><button data-tip="Record" aria-label="Record"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></svg></button></div>
     <div class="track"><div class="art">🎸</div><div><b>Slow funk</b><small>Stock track · drums, bass, keys</small></div></div>
     <div><span class="lbl">Game</span><div class="games" data-seg><button>4</button><button class="on">8</button><button>16</button><button>32</button><button>Free</button></div></div>
     <div><span class="lbl">Your mix</span><div class="list">
