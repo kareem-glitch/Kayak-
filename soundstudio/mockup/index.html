@@ -116,7 +116,7 @@ button,input,select{font:inherit;color:inherit}
 .players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;align-content:start}
 .p{position:relative;border-radius:26px;background:linear-gradient(165deg,var(--c1),var(--c2));aspect-ratio:1/1;display:flex;flex-direction:column;justify-content:flex-end;padding:16px;overflow:hidden;box-shadow:var(--shadow)}
 .p.on{box-shadow:0 0 0 3px var(--accent),0 24px 50px rgba(255,180,0,.28)}
-.p .cam{position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.55) 0 18%,transparent 19%),radial-gradient(ellipse at 50% 95%,rgba(255,255,255,.45) 0 34%,transparent 35%)}
+.p .who{position:absolute;left:50%;top:9%;width:56%;transform:translateX(-50%);fill:rgba(255,255,255,.72);filter:drop-shadow(0 12px 18px rgba(40,25,10,.10))}
 .p .gear{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:58%;filter:drop-shadow(0 16px 22px rgba(40,25,10,.18))}
 .p .char{position:absolute;left:50%;top:6%;width:72%;transform:translateX(-50%);filter:drop-shadow(0 14px 18px rgba(40,25,10,.16));animation:bob .625s ease-in-out infinite alternate}
 @keyframes bob{from{transform:translate(-50%,0)}to{transform:translate(-50%,-5px)}}
@@ -378,8 +378,8 @@ button,input,select{font:inherit;color:inherit}
       </div>
     </div>
     <div class="players" id="players">
-      <div class="p on" style="--c1:#ffd6c2;--c2:#ffb48f"><div class="cam"></div><div class="eq"><s></s><s></s><s></s></div><div class="tag"><b>You</b><small>Guitar</small></div><div class="lvl"><i style="width:60%"></i></div></div>
-      <div class="p" style="--c1:#e3dcff;--c2:#c4b5ff"><div class="cam"></div><span class="ms"><span class="dot"></span>22 ms</span><div class="tag"><b>Maya</b><small>Keys · Dublin</small></div><div class="lvl"><i style="width:40%"></i></div></div>
+      <div class="p on" style="--c1:#ffd6c2;--c2:#ffb48f"><svg class="who" viewBox="0 0 100 100" aria-hidden="true"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><div class="eq"><s></s><s></s><s></s></div><div class="tag"><b>You</b><small>Guitar</small></div><div class="lvl"><i style="width:60%"></i></div></div>
+      <div class="p" style="--c1:#e3dcff;--c2:#c4b5ff"><svg class="who" viewBox="0 0 100 100" aria-hidden="true"><rect x="31" y="12" width="38" height="38" rx="14"/><path d="M14 96V80c0-11 8-20 19-20h34c11 0 19 9 19 20v16z"/></svg><span class="ms"><span class="dot"></span>22 ms</span><div class="tag"><b>Maya</b><small>Keys · Dublin</small></div><div class="lvl"><i style="width:40%"></i></div></div>
       <div class="p" style="--c1:#d2f5e7;--c2:#8fe3c3"><span class="badge">AI</span><svg class="char" viewBox="0 0 200 200"><use href="#moss"/></svg><div class="tag"><b>Moss</b><small>Drums</small></div><div class="lvl"><i style="width:70%"></i></div></div>
       <div class="p" style="--c1:#d9eeff;--c2:#9fd2ff"><span class="badge">AI</span><svg class="char" viewBox="0 0 200 200" style="animation-delay:-.31s"><use href="#juno"/></svg><div class="tag"><b>Juno</b><small>Bass</small></div><div class="lvl"><i style="width:55%"></i></div></div>
     </div>
