@@ -50,6 +50,26 @@ window.__audioContexts = [];
     </div>
     <div id="inviteField" hidden><label for="inviteInput">Invite link (leave empty to start a new jam)</label>
     <input id="inviteInput" autocomplete="off" placeholder="Paste the link someone sent you"></div>
+    <section class="rate-card" id="rateCard" hidden aria-labelledby="rateTitle">
+      <b id="rateTitle">Would you jam with them again?</b>
+      <div id="rateList"></div>
+    </section>
+    <section class="profile-box" id="profileBox" aria-labelledby="pfTitle">
+      <div class="pf-head"><b id="pfTitle">Your profile</b><button type="button" class="linkbtn" id="pfToggle" aria-expanded="false">Edit</button></div>
+      <p class="muted small" id="pfLine">Saved on this device. Add your email to keep it everywhere.</p>
+      <div id="pfBody" hidden>
+        <span class="muted small sc-label">Instruments</span>
+        <div class="chips" id="pfInstruments"></div>
+        <span class="muted small sc-label">Styles you like</span>
+        <div class="chips" id="pfGenres"></div>
+        <span class="muted small sc-label">Level</span>
+        <div class="modes four" id="pfLevel" role="radiogroup" aria-label="Level"></div>
+        <label for="pfEmail">Email (to keep your profile and jams on every device)</label>
+        <div class="name-row"><input id="pfEmail" type="email" autocomplete="email" placeholder="you@example.com"><button type="button" class="btn btn-quiet pf-save" id="pfSaveEmail">Save</button></div>
+        <p class="small pf-msg" id="pfMsg" aria-live="polite"></p>
+        <p class="muted small pf-links"><button type="button" class="linkbtn" id="pfSignIn">Already have an account? Sign in</button><span id="pfSignedLinks" hidden> · <button type="button" class="linkbtn" id="pfSignOut">Sign out</button></span> · <button type="button" class="linkbtn" id="pfDelete">Delete my account</button></p>
+      </div>
+    </section>
     <section class="sound-check" id="soundCheck" aria-labelledby="scTitle">
       <div class="sc-head"><span class="sc-step" aria-hidden="true"></span><b id="scTitle">Sound check</b><span class="muted small" id="scState">Before you join</span></div>
       <p class="muted small" id="scIntro">Plug in your instrument or audio interface and wired headphones, then check you can hear yourself.</p>

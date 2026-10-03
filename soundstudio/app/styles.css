@@ -418,3 +418,22 @@ html{touch-action:manipulation}
 .lcd-step button:not(:disabled):active{background:var(--amber);color:var(--amber-ink)}
 .lcd-step button:disabled{opacity:.35;cursor:default}
 .lcd-note{margin:0;font-size:.72rem;color:#8b8c91}
+/* profile and "jam again?" on the start screen */
+.profile-box,.rate-card{margin-top:18px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--raised)}
+.pf-head{display:flex;align-items:center;justify-content:space-between}
+.profile-box p,.rate-card p{margin:6px 0 0}
+.profile-box label{margin:14px 0 6px}
+.profile-box input{background:var(--surface)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:7px 12px;font:600 .8rem/1 inherit;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.modes.four{grid-template-columns:repeat(4,1fr);background:var(--surface)}
+.join-card .btn.pf-save{width:auto;margin:0;padding:0 16px}
+.pf-msg{color:var(--muted);min-height:1em} .pf-msg.ok{color:var(--ok)} .pf-msg.warn{color:var(--warn)}
+.pf-links .linkbtn{font-size:inherit}
+.rate-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.rate-row span{font-weight:600}
+.rate-row .btns{display:flex;gap:6px}
+.rate-row button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;font:600 .85rem/1 inherit;cursor:pointer;color:var(--ink)}
+.rate-row button[aria-pressed="true"]{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.linkbtn{border:0;background:none;color:var(--amber);font:inherit;text-decoration:underline;cursor:pointer;padding:0}

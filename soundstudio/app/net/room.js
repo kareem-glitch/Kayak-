@@ -327,7 +327,7 @@ export function connectionStats(){
       const jitter = sorted ? Math.max(0, sorted[Math.floor(sorted.length * 0.95)] - sorted[sorted.length >> 1]) : 0;
       const block = FRAMES / RATE * 1000;
       const budget = { in: Math.round(p.inMs || 0), packet: Math.round((clk() - (p.directAt || 0) < 1000 ? (p.frames || 64) / RATE * 1000 : block) * 10) / 10, network: Math.round(net), jitter: Math.round(jitter), buffer: Math.round(buf), out: Math.round(myOut) };
-      return { name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: clk() - (p.directAt || 0) < 1000 ? 'app' : p.route || null, budget };
+      return { id, name: p.name, netMs: Math.round(net), arriveMs: Math.round(age), bufferMs: buf, totalMs: Math.round((p.inMs || 0) + age + buf + myOut), route: clk() - (p.directAt || 0) < 1000 ? 'app' : p.route || null, budget };
     }),
     lossPct: recv ? 100 * lost / (recv + lost) : 0,
     debug: [...peers.entries()].map(([id, p]) => `${p.name || id.slice(0,6)}: ${p.conn.open ? 'open' : 'opening'}/${p.conn.peerConnection ? p.conn.peerConnection.iceConnectionState : '–'}/${p.audio ? p.audio.readyState : '–'}`).join(' · ') || 'nobody yet',

@@ -15,6 +15,7 @@ import * as synth from './synth.js';
 import * as layout from './layout.js';
 import { TONES, defaults as toneDefaults } from './audio/tone.js';
 import * as toneIcons from './tone-icons.js';
+import * as account from './account.js';
 
 const params = new URLSearchParams(location.search);
 // If this tab created the room and got reloaded, its old invite id is dead: create again.
@@ -38,10 +39,13 @@ session.hooks.onNote = t => { $('#genStatus').textContent = t; };
 if(params.get('band') === 'tone' || store.get('ss.band') === 'tone') session.setLyria(false);
 room.events.onStatus = (t, o = {}) => { ui.status(t); if(!o.progress) ui.notice(t); };   // progress ('Connecting…') stays out of the notice bar
 room.events.onRoomGone = () => { roomGone().catch(e => console.warn(e)); };
-room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); showRoomStatus(); ui.render(); };
+room.events.onMember = (id, name) => { ui.tileFor({ identity:id, name }); avatar.tellNewcomer(id); tellUid(id); showRoomStatus(); ui.render(); };
 room.events.onVideo = (id, stream) => { const p = room.peers.get(id); ui.showVideoIn(ui.tileFor({ identity:id, name:p && p.name }), stream); };
 room.events.onLeave = id => { const t = ui.tiles.get(id); if(t) session.playerLeft(t.dataset.name); ui.removeTile(id); session.peerLeft(id); showRoomStatus(); ui.render(); };
-room.events.onMessage = (m, id) => trade.handle(m, id) || avatar.handle(m, id) || session.handleMessage(m, id);
+room.events.onMessage = (m, id) => gotUid(m, id) || trade.handle(m, id) || avatar.handle(m, id) || session.handleMessage(m, id);
+// Accounts: each player tells the others their account id (for jam history and "jam again?").
+function gotUid(m, id){ if(m.t !== 'uid') return false; const p = room.peers.get(id); if(p) p.uid = m.uid; return true; }
+const tellUid = id => { if(account.id()) room.send({ t:'uid', uid:account.id() }, id); };
 trade.hooks.onTurn = ui.showTurn; trade.start();
 
 function showRoomStatus(){
@@ -84,6 +88,7 @@ async function join(){
     else if(audioProblem) ui.notice('Audio couldn’t start on this device (' + (audioProblem.message || audioProblem.name || audioProblem) + '). Video still works.');
     else if(cameraProblem) ui.notice('Camera unavailable (' + (cameraProblem.name || cameraProblem) + '). Check System Settings → Privacy & Security → Camera. Audio still works.');
     setInterval(showConnection, 250);
+    logJam();
   }catch(e){
     $('#joinErr').textContent = 'Couldn’t start: ' + (e.message || e.type || e) + '. Allow camera and microphone, then try again.'; $('#joinBtn').disabled = false;
   }
@@ -554,7 +559,8 @@ $('#smoother').onchange = () => {
 };
 const copy = async (btn, text, done) => { try{ await navigator.clipboard.writeText(inviteLink); const t = btn.textContent; btn.textContent = done; setTimeout(() => btn.textContent = t, 2000); }catch(e){ prompt('Copy this invite link', inviteLink); } };
 $('#inviteBtn').onclick = () => copy($('#inviteBtn'), inviteLink, 'Link copied');
-$('#leaveBtn').onclick = () => { room.leave(); location.href = location.pathname; };
+$('#leaveBtn').onclick = () => { rememberJam(); account.left(); room.leave(); location.href = location.pathname; };
+addEventListener('pagehide', () => { if(!$('#roomView').hidden){ rememberJam(); account.left(); } });
 $('#micBtn').onclick = () => { const on = !audio.micEnabled(); audio.setMicEnabled(on); avatar.setMuted(!on); $('#micBtn').setAttribute('aria-pressed', String(on)); $('#micBtn').title = on ? 'Mic on' : 'Mic off'; };
 let camBusy = false;
 function setCam(on, retry = false){
@@ -717,3 +723,90 @@ window.jamSynthOut = () => synth.outNode();
 window.jamLevel = id => room.levelNow(id);
 window.jamState = S;
 window.jamRecord = toggleRecording;
+window.jamAccount = account;
+
+// ---- accounts: profile, jam history, "jam again?" (account.js) ----
+// Never in the way: it loads after the page, and a jam goes ahead whether it works or not.
+async function logJam(){
+  if(!await account.init($('#nameInput').value.trim())) return;
+  account.saveProfile({ display_name: me.name });
+  await account.joined(room.roomId(), { creator: !joinId, instrument: part === 'none' ? 'lead' : part, engine: audio.IN_APP && audio.NATIVE ? 'app ' + window.__SS_NATIVE.version : 'browser', mode: S.game.mode, bars: S.game.bars });
+  for(const id of room.peers.keys()) tellUid(id);
+  // how far apart you are from each player, once a minute (matchmaking learns from this)
+  setInterval(() => { const c = room.connectionStats(); for(const pl of c.players){ const p = room.peers.get(pl.id); if(p && p.uid) account.latency(p.uid, { totalMs: pl.totalMs, netMs: pl.netMs, jitterMs: pl.budget.jitter, lossPct: c.lossPct, route: pl.route }); } }, 60000);
+  // the jam's settings, from whoever started it
+  let last = '';
+  setInterval(() => { if(joinId || !S.arr) return; const info = { track: S.arr.title, bpm: S.arr.bpm, musical_key: S.arr.key, mode: S.game.mode, bars: S.game.bars }, k = JSON.stringify(info); if(k !== last){ last = k; account.jamInfo(info); } }, 5000);
+}
+// Leaving: who you played with, so the start screen can ask "jam again?"
+function rememberJam(){
+  const players = [...room.peers.values()].filter(p => p.uid && p.name).map(p => ({ uid: p.uid, name: p.name }));
+  if(players.length && account.currentJam()) store.set('ss.lastJam', JSON.stringify({ jam: account.currentJam(), players }));
+}
+const INSTRUMENTS = ['Guitar', 'Bass', 'Keys', 'Drums', 'Vocals', 'Other'];
+const GENRES = ['Funk', 'Rock', 'Jazz', 'Blues', 'Soul', 'Hip hop', 'Lo-fi', 'Reggae', 'Pop', 'Electronic'];
+const LEVELS = [['beginner', 'Learning'], ['intermediate', 'Getting there'], ['advanced', 'Confident'], ['pro', 'Pro']];
+let pf = { instruments: [], genres: [], level: null };
+function chips(box, list, key){
+  box.replaceChildren(...list.map(name => { const b = document.createElement('button'); b.type = 'button'; b.textContent = name; const v = name.toLowerCase();
+    b.setAttribute('aria-pressed', String(pf[key].includes(v)));
+    b.onclick = () => { pf[key] = pf[key].includes(v) ? pf[key].filter(x => x !== v) : [...pf[key], v]; b.setAttribute('aria-pressed', String(pf[key].includes(v))); account.saveProfile({ [key]: pf[key] }); };
+    return b; }));
+}
+function levels(){
+  $('#pfLevel').replaceChildren(...LEVELS.map(([v, label]) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.textContent = label;
+    b.setAttribute('aria-checked', String(pf.level === v)); b.onclick = () => { pf.level = v; levels(); account.saveProfile({ level: v }); }; return b; }));
+}
+const pfMsg = (t, k = '') => { $('#pfMsg').textContent = t; $('#pfMsg').className = 'small pf-msg ' + k; };
+function showAccount(){
+  const signed = account.saved(), pending = !signed && account.email();
+  $('#pfLine').textContent = signed ? `Saved to ${account.email()}: your profile and jams are on every device you sign in on.`
+    : pending ? `Check ${account.email()} and tap the link to keep your profile.` : 'Saved on this device. Add your email to keep it everywhere.';
+  $('#pfSignedLinks').hidden = !signed; $('#pfSignIn').hidden = signed;
+  $('#pfEmail').value = account.email() || $('#pfEmail').value;
+}
+async function loadProfile(){
+  const p = await account.profile(); if(!p) { $('#profileBox').hidden = true; return; }
+  pf = { instruments: p.instruments || [], genres: p.genres || [], level: p.level || null };
+  if(!pf.instruments.length && part !== 'none') pf.instruments = [part];   // what you picked under "I play"
+  if(p.display_name && !store.get('ss.name')) $('#nameInput').value = p.display_name;
+  chips($('#pfInstruments'), INSTRUMENTS, 'instruments'); chips($('#pfGenres'), GENRES, 'genres'); levels(); showAccount();
+}
+$('#pfToggle').onclick = () => { const open = $('#pfBody').hidden; $('#pfBody').hidden = !open; $('#pfToggle').setAttribute('aria-expanded', String(open)); $('#pfToggle').textContent = open ? 'Done' : 'Edit'; };
+const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+$('#pfSaveEmail').onclick = async () => {
+  const e = $('#pfEmail').value.trim(); if(!validEmail(e)) return pfMsg('That email doesn’t look right.', 'warn');
+  pfMsg('Sending…');
+  try{ await account.addEmail(e); pfMsg(`Sent. Open the email on ${audio.IN_APP ? 'any device' : 'this device'} and tap the link to keep your profile.`, 'ok'); showAccount(); }
+  catch(err){ pfMsg(/rate|limit|seconds/i.test(err.message) ? 'Too many emails just now. Try again in a few minutes.' : /already|registered|exists/i.test(err.message) ? 'That email already has an account: use “Already have an account? Sign in”.' : 'Couldn’t send: ' + err.message, 'warn'); }
+};
+$('#pfSignIn').onclick = async () => {
+  const e = $('#pfEmail').value.trim(); if(!validEmail(e)){ $('#pfEmail').focus(); return pfMsg('Type your email above, then tap Sign in again.'); }
+  pfMsg('Sending…');
+  try{ await account.signIn(e); pfMsg(audio.IN_APP ? 'Sent. The link opens air.band in your browser, signed in (signing in inside the app is coming).' : 'Sent. Tap the link in the email to sign in here.', 'ok'); }
+  catch(err){ pfMsg(/not found|signups not allowed|user/i.test(err.message) ? 'No account with that email yet: tap Save to make one.' : 'Couldn’t send: ' + err.message, 'warn'); }
+};
+$('#pfSignOut').onclick = async () => { await account.signOut(); pfMsg('Signed out.'); loadProfile(); };
+$('#pfDelete').onclick = async () => { if(!confirm('Delete your air.band account, profile and jam history? This can’t be undone.')) return; await account.deleteMe(); pfMsg('Deleted.'); loadProfile(); };
+account.hooks.onChange = () => { showAccount(); loadProfile(); };
+// "Would you jam with them again?" after your last jam
+function showRating(){
+  let last = null; try{ last = JSON.parse(store.get('ss.lastJam') || 'null'); }catch(e){}
+  if(!last || !last.players || !last.players.length) return;
+  $('#rateCard').hidden = false;
+  const done = new Set();
+  $('#rateList').replaceChildren(...last.players.map(pl => {
+    const row = document.createElement('div'); row.className = 'rate-row';
+    const name = document.createElement('span'); name.textContent = pl.name;
+    const btns = document.createElement('div'); btns.className = 'btns';
+    for(const [again, label] of [[true, 'Yes'], [false, 'Not really']]){
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.setAttribute('aria-pressed', 'false');
+      b.onclick = async () => { btns.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); await account.rate(last.jam, pl.uid, again); done.add(pl.uid);
+        if(done.size === last.players.length){ try{ localStorage.removeItem('ss.lastJam'); }catch(e){} setTimeout(() => { $('#rateCard').hidden = true; }, 900); } };
+      btns.appendChild(b);
+    }
+    row.append(name, btns); return row;
+  }));
+}
+// start accounts once the page is up (idle), never before the jam UI
+(window.requestIdleCallback || (f => setTimeout(f, 300)))(() => { account.init($('#nameInput').value.trim()).then(u => { if(u){ loadProfile(); showRating(); } else $('#profileBox').hidden = true; }); });

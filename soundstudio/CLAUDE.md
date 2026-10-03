@@ -25,6 +25,11 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
 - `index.html`, `app/` — the site (also what the desktop app shows).
 - `app/audio/web-io.js` / `native-io.js` — audio in the browser / in the desktop app (same exports).
 - `api/` — Vercel functions (`stems.js`: prompt → ElevenLabs music → stems).
+- `app/account.js`, `supabase/migrations/` — accounts and jam history (Supabase project
+  `kjfhwttykgghpbjjovwu`, free plan). Everyone is signed in silently (anonymous); an email
+  makes it a full account. Database rules are in the migration; joining a jam goes through
+  `join_jam()`. The publishable key is in the page by design; the secret key and the
+  personal access token are never committed.
 - `desktop/` — Tauri app (native audio engine in Rust); built by `.github/workflows/desktop.yml`.
 - `plugin/` — JUCE "air.band Send" (AU/VST3), streams a DAW track into the app.
 - `test/` — unit tests (`npm test`) and browser end-to-end tests (`npm run test:e2e`).
