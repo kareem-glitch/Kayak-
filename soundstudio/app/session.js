@@ -118,6 +118,7 @@ export async function startBand(countIn){
   if(S.arr.engine === 'lyria'){ if(await startLyria()) return; }
   if(S.arr.engine === 'stems'){   // no count-in; a little longer for everyone to be ready
     await everyoneHasTrack();
+    await stems.match(S.arr.bpm, S.arr.transpose || 0);   // a new tempo: start on the re-timed track, not the old one
     const at = clk() + 1500; bandT0 = at; bandCounter0 = 0;
     broadcastState(); room.send({ t:'start', at, counter:0 });
     await band.playAt(at, 0); broadcastState(); return;

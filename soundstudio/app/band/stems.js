@@ -57,7 +57,7 @@ export async function match(bpm, semis){
     for(let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c).slice());
     const on = e => { if(e.data.id !== id) return; worker.removeEventListener('message', on); res(e.data.channels); };
     worker.addEventListener('message', on);
-    worker.postMessage({ id, channels: chans, tempo, semis: UNPITCHED.has(name) ? 0 : semis }, chans.map(c => c.buffer));
+    worker.postMessage({ id, channels: chans, tempo, semis: UNPITCHED.has(name) ? 0 : semis, slice: UNPITCHED.has(name) ? buf.sampleRate * 15 / cur.origBpm : 0 }, chans.map(c => c.buffer));
   });
   const out = {};
   for(const [name, buf] of Object.entries(cur.orig)){
@@ -150,7 +150,7 @@ async function glide(tOld, tNew, posNew, planned){
     const sr = buf.sampleRate, n = Math.round(segS * sr), i0 = Math.round(startPos * sr), loopN = Math.round(L * sr), chans = [];
     for(let c = 0; c < buf.numberOfChannels; c++){ const d = buf.getChannelData(c), seg = new Float32Array(n); for(let i = 0; i < n; i++) seg[i] = d[(i0 + i) % loopN] || 0; chans.push(seg); }
     const id = 'g' + mine + ':' + name;
-    const res = await new Promise(r => { const on = e => { if(e.data.id !== id) return; worker.removeEventListener('message', on); r(e.data.channels); }; worker.addEventListener('message', on); worker.postMessage({ id, channels: chans, tempo: segS / (segS + moveS), semis: 0 }, chans.map(c => c.buffer)); });
+    const res = await new Promise(r => { const on = e => { if(e.data.id !== id) return; worker.removeEventListener('message', on); r(e.data.channels); }; worker.addEventListener('message', on); worker.postMessage({ id, channels: chans, tempo: segS / (segS + moveS), semis: 0, slice: UNPITCHED.has(name) ? sr * 15 / cur.bpm : 0 }, chans.map(c => c.buffer)); });
     if(mine !== glideId || current !== cur) return;
     const b = cx.createBuffer(res.length, res[0].length, sr); res.forEach((d, c) => b.copyToChannel(d, c)); out[name] = b;
   }
