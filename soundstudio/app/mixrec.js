@@ -155,6 +155,6 @@ function paint(g, canvas){
     g.fillStyle = '#fff'; g.fillText(name, x + 28, y + h - 32);
   });
   g.font = '800 20px "Geist", system-ui, sans-serif'; g.fillStyle = 'rgba(240,162,56,.9)'; g.textAlign = 'right'; g.textBaseline = 'alphabetic';
-  g.fillText('air.band', c.width - 20, c.height - 16);
+  g.fillText('airband', c.width - 20, c.height - 16);
 }
 export const drawFrame = canvas => paint(canvas.getContext('2d'), canvas);   // tests

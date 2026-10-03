@@ -67,7 +67,7 @@ export const setDirectBits = bits => tell({ t: 'directBits', bits });
 export const setDirectEcho = on => tell({ t: 'directEcho', on });
 // packets carry times on this page's clock: tell the engine how it differs from wall-clock time
 const tellClock = () => tell({ t: 'clk', off: performance.timeOrigin + performance.now() - Date.now() });
-// The air.band plugin (in your DAW) streams to the app; while it does, it's your input.
+// The airband plugin (in your DAW) streams to the app; while it does, it's your input.
 // Apps before 0.4.0 don't have it.
 const newer = (a, b) => { const x = String(a).split('.').map(Number), y = b.split('.').map(Number); for(let i = 0; i < 3; i++){ if((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return true; };
 export const canPlugin = () => newer((window.__SS_NATIVE || {}).version || '0', '0.4.0');

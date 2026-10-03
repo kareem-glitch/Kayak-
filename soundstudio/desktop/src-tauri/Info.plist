@@ -2,9 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>CFBundleName</key>
+  <string>airband</string>
+  <key>CFBundleDisplayName</key>
+  <string>airband</string>
   <key>NSMicrophoneUsageDescription</key>
-  <string>air.band sends your instrument or voice to the other players in your jam.</string>
+  <string>airband sends your instrument or voice to the other players in your jam.</string>
   <key>NSCameraUsageDescription</key>
-  <string>air.band shows your video to the other players in your jam.</string>
+  <string>airband shows your video to the other players in your jam.</string>
 </dict>
 </plist>

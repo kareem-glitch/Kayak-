@@ -26,7 +26,7 @@ test('sound check before joining: level, hear yourself, amp advice, then the roo
     await A.click('[data-part="guitar"]');
     assert.match(await A.textContent('#scAmpNote'), /plugged straight into your interface\? Pick an amp/);
 
-    // hear yourself: your input comes back through air.band's player
+    // hear yourself: your input comes back through airband's player
     await A.click('#scHear');
     assert.equal(await A.getAttribute('#scHear', 'aria-pressed'), 'true');
     await A.waitForFunction(() => window.jamStats.players && window.jamStats.players.monitor, null, { timeout: 5000 });

@@ -43,7 +43,7 @@ pub fn serve() -> std::io::Result<(u16, String)> {
     let port = listener.local_addr()?.port();
     let (out_tx, out_rx) = crossbeam_channel::unbounded::<Out>();
     let shared = Shared::new(out_tx);
-    crate::plugin::listen(shared.clone());   // the air.band plugin in your DAW (plugin.rs)
+    crate::plugin::listen(shared.clone());   // the airband plugin in your DAW (plugin.rs)
     let direct = crate::direct::Direct::start(shared.clone()).ok();   // app-to-app audio (direct.rs); without it, WebRTC only
     let writer: Writer = Arc::new(Mutex::new(None));
     { let (w, sh) = (writer.clone(), shared.clone()); std::thread::spawn(move || hub(out_rx, w, sh)); }
@@ -106,7 +106,7 @@ fn proxy(mut stream: TcpStream, token: &str) -> Result<(), String> {
     if let Some(ct) = header("content-type") { req = req.set("content-type", &ct); }
     let resp = match if body.is_empty() && method == "GET" { req.call() } else { req.send_bytes(&body) } {
         Ok(r) => r, Err(ureq::Error::Status(_, r)) => r,
-        Err(e) => { let msg = format!("Couldn’t reach air.band ({e}). Check your internet connection."); let out = format!("HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{msg}", msg.len()); let _ = stream.write_all(out.as_bytes()); return Ok(()); }
+        Err(e) => { let msg = format!("Couldn’t reach airband ({e}). Check your internet connection."); let out = format!("HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{msg}", msg.len()); let _ = stream.write_all(out.as_bytes()); return Ok(()); }
     };
     let status = resp.status();
     let ctype = resp.header("content-type").unwrap_or("application/octet-stream").to_string();
@@ -326,7 +326,7 @@ mod tests {
         let get = |path: &str| { let mut s = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap(); write!(s, "GET {path} HTTP/1.1\r\nHost: x\r\n\r\n").unwrap(); let mut r = Vec::new(); s.read_to_end(&mut r).unwrap(); String::from_utf8_lossy(&r).to_string() };
         let page = get("/");
         assert!(page.starts_with("HTTP/1.1 200"), "{}", &page[..page.len().min(200)]);
-        assert!(page.contains("air.band") && page.contains("text/html"));
+        assert!(page.contains("airband") && page.contains("text/html"));
         assert!(get("/app/main.js").contains("javascript"));
         // the audio link: wrong token refused, right token answers a devices request
         assert!(tungstenite::connect(format!("ws://127.0.0.1:{port}/?t=nope")).is_err());

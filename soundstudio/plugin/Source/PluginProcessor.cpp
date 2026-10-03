@@ -17,7 +17,7 @@ void AirBandSendProcessor::prepareToPlay(double sampleRate, int maxBlockSize) {
 
 void AirBandSendProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&) {
     juce::ScopedNoDenormals noDenormals;
-    // the track's audio is left exactly as it is; a copy goes to air.band
+    // the track's audio is left exactly as it is; a copy goes to airband
     link.push(buffer.getArrayOfReadPointers(), juce::jmin(buffer.getNumChannels(), getTotalNumInputChannels()), buffer.getNumSamples());
 }
 

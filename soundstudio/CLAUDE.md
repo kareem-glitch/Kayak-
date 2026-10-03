@@ -1,4 +1,4 @@
-# air.band
+# airband
 
 Jam room: up to 4 players, low-latency audio, BARS (trading bars), an AI band.
 Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine.vercel.app still works).
@@ -11,7 +11,9 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
   live site, so page-only changes carry over automatically; anything that touches audio
   (tones, synth, delay test, input/output) needs its native counterpart in
   `app/audio/native-io.js` + `desktop/src-tauri`. Names, look (the Roland P-6 theme) and
-  version numbers match everywhere.
+  version numbers match everywhere. The name is **airband**, one word, everywhere people see it;
+  air.band is only the web address (and the app's and plugin's file names, which stay so installs
+  and updates keep working).
 - Latency is the core experience: never add work to the audio path lightly, and keep the
   page light while playing.
 - Ask before creating paid cloud resources or anything that costs money.
@@ -37,7 +39,7 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
   https://kjfhwttykgghpbjjovwu.supabase.co/auth/v1/callback). Manual linking is on, so it
   upgrades the anonymous account.
 - `desktop/` — Tauri app (native audio engine in Rust); built by `.github/workflows/desktop.yml`.
-- `plugin/` — JUCE "air.band Send" (AU/VST3), streams a DAW track into the app.
+- `plugin/` — JUCE "airband Send" (AU/VST3), streams a DAW track into the app.
 - `test/` — unit tests (`npm test`) and browser end-to-end tests (`npm run test:e2e`).
 - `download/` — git-ignored; app and plugin downloads, deployed with the site. Files keep
   their version in the name (`air.band-0.6.4-Mac.zip`, …); `APP_VERSION` in `app/main.js` points the links.

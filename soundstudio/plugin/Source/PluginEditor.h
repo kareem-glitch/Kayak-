@@ -1,4 +1,4 @@
-// The plugin's small window, in air.band's faceplate style: a jewel light
+// The plugin's small window, in airband's faceplate style: a jewel light
 // (green when the app is receiving), a line of plain status, and a level meter.
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>

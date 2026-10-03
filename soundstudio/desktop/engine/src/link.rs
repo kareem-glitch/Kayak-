@@ -1,4 +1,4 @@
-//! The link from the air.band plugin (inside your DAW) to the app, on your own
+//! The link from the airband plugin (inside your DAW) to the app, on your own
 //! computer only (UDP on 127.0.0.1). The plugin sends your track's audio,
 //! already at 48 kHz, in packets of up to 256 frames; the app answers now and
 //! then so the plugin can show it's connected.

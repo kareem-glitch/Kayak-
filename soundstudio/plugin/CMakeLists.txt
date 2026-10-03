@@ -1,9 +1,9 @@
-# air.band Send: a plugin you put on a track in your DAW. It passes the track
-# through untouched and streams it to the air.band desktop app on the same
+# airband Send: a plugin you put on a track in your DAW. It passes the track
+# through untouched and streams it to the airband desktop app on the same
 # computer, which uses it as your input (desktop/src-tauri/src/plugin.rs).
 # Builds AU + VST3 on Mac and VST3 on Windows (and Linux, for tests).
 cmake_minimum_required(VERSION 3.22)
-project(AirBandSend VERSION 0.6.4 LANGUAGES C CXX)
+project(AirBandSend VERSION 0.6.5 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 
 include(FetchContent)
@@ -16,8 +16,9 @@ if(APPLE)
 endif()
 
 juce_add_plugin(AirBandSend
-  PRODUCT_NAME "air.band Send"
-  COMPANY_NAME "air.band"
+  PRODUCT_NAME "air.band Send"   # the file name (installs and updates find it by this)
+  PLUGIN_NAME "airband Send"     # the name your DAW shows
+  COMPANY_NAME "airband"
   BUNDLE_ID app.airband.send
   PLUGIN_MANUFACTURER_CODE Airb
   PLUGIN_CODE AbSd

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>air.band</title>
+<title>airband</title>
 <link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@ window.__audioContexts = [];
 
 <div class="join" id="joinView">
   <div class="join-card">
-    <h1><a href="/" class="home-link">air.band</a></h1>
+    <h1><a href="/" class="home-link">airband</a></h1>
     <h2>Jam room</h2>
     <p class="muted small" id="roomLine">Camera and live audio, straight from browser to browser.</p>
     <label for="nameInput">Your name</label>
@@ -88,7 +88,7 @@ window.__audioContexts = [];
         <p class="muted small" id="scOutNote" hidden>This browser plays through your computer’s sound output: set that to your headphones or interface. (Chrome or Edge let you choose here.)</p>
         <div class="sc-row"><button type="button" class="btn btn-quiet" id="scBeep">Play a test sound</button><button type="button" class="btn btn-quiet" id="scHear" aria-pressed="false">Hear myself</button></div>
         <label class="check small" id="scSpeakerRow"><input type="checkbox" id="scSpeaker"> Echo cancellation: turn on if you use a microphone without headphones (the others hear themselves otherwise)</label>
-        <p class="muted small" id="scHearNote">“Hear myself” plays your input back through air.band, the way the room will hear you. Make sure you can hear yourself, then turn it off.</p>
+        <p class="muted small" id="scHearNote">“Hear myself” plays your input back through airband, the way the room will hear you. Make sure you can hear yourself, then turn it off.</p>
         <span class="muted small sc-label">Amp</span>
         <div class="modes tones sc-amps" id="scAmps" role="radiogroup" aria-label="Amp"></div>
         <p class="muted small" id="scAmpNote"></p>
@@ -103,8 +103,8 @@ window.__audioContexts = [];
 
 <div id="roomView" class="room" hidden>
   <header class="top">
-    <span class="logo" aria-hidden="true"><img class="mark" src="/logo.svg" alt="" width="30" height="30">air<b>.</b>band</span>
-    <h1 id="roomTitle" class="sr-only">air.band jam</h1>
+    <span class="logo" aria-hidden="true"><img class="mark" src="/logo.svg" alt="" width="30" height="30">airband</span>
+    <h1 id="roomTitle" class="sr-only">airband jam</h1>
     <button class="badge" id="gameBadge" type="button" data-open="band" title="Game and band">Free jam</button>
     <span class="spacer"></span>
     <button class="conn-dot" id="connDot" type="button" data-open="stats" title="Connection"><i id="connJewel"></i><span id="connDotText" class="sr-only">Connecting…</span></button>
@@ -191,7 +191,7 @@ window.__audioContexts = [];
         </section>
         <section class="pane" data-drawer="tone" hidden>
           <div class="pane-head"><h2>Tone</h2><button class="close" type="button" data-close aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-          <p class="muted small" id="toneEmpty" hidden>Amps aren’t in the app’s own audio engine yet. To use one, pick it on the start screen (Sound check → Amp): the app switches to browser audio, which adds a few ms. Or use your own amp, pedals or modeller, or your DAW with the air.band Send plugin.</p>
+          <p class="muted small" id="toneEmpty" hidden>Amps aren’t in the app’s own audio engine yet. To use one, pick it on the start screen (Sound check → Amp): the app switches to browser audio, which adds a few ms. Or use your own amp, pedals or modeller, or your DAW with the airband Send plugin.</p>
           <div id="toneSection">
                     <div class="modes tones" role="radiogroup" aria-label="Tone" id="toneBox"></div>
           <div class="eq" id="eqBox" hidden>
@@ -222,7 +222,7 @@ window.__audioContexts = [];
             <p class="muted small" id="synthNote" hidden></p>
           </div>
           <div class="plugin-row" id="pluginRow" hidden>
-          <div class="plugin-text"><b>Play through your DAW</b><span class="muted small" id="pluginStatus">Put the air.band Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.</span></div>
+          <div class="plugin-text"><b>Play through your DAW</b><span class="muted small" id="pluginStatus">Put the airband Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.</span></div>
           <button class="btn btn-quiet" id="pluginInstall" type="button">Install the plugin</button>
         </div>
         <label class="muted small" for="inDev">Input (mic or audio interface)</label>

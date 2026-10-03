@@ -78,7 +78,7 @@ export async function googleOn(){
   try{ const r = await fetch(SB_URL + '/auth/v1/settings', { headers: { apikey: KEY } }); return !!(await r.json()).external.google; }catch(e){ return false; }
 }
 // Continue with Google: adds Google to this account (anonymous: keeps its jams); if that
-// Google account already has an air.band account, signs in to that one instead.
+// Google account already has an airband account, signs in to that one instead.
 export async function google(){
   if(!await init()) throw new Error('Accounts are offline right now');
   const opts = { provider: 'google', options: { redirectTo: JAM } };

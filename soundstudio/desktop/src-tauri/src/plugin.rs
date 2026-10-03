@@ -1,4 +1,4 @@
-// The air.band plugin: drop it on a track in your DAW and that track becomes
+// The airband plugin: drop it on a track in your DAW and that track becomes
 // your input here, with your whole chain (amp sims, pedals, anything). It
 // streams to this app over your own computer only (see ssengine::link).
 //  - While the plugin is streaming it replaces your audio device as the input;
@@ -78,7 +78,7 @@ fn run(sock: &UdpSocket, sh: &Shared) {
 
 // ---- installing the plugin into your DAW's plugin folders ----
 
-const VST3: &str = "air.band Send.vst3";
+const VST3: &str = "air.band Send.vst3";   // file names stay (installs and updates find them); the name people see is "airband Send"
 #[cfg(target_os = "macos")]
 const AU: &str = "air.band Send.component";
 

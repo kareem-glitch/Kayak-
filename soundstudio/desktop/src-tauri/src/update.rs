@@ -1,4 +1,4 @@
-//! Auto-update. On start the app asks air.band whether there's a newer version
+//! Auto-update. On start the app asks airband whether there's a newer version
 //! (download/latest.json, signed with the release key), downloads it in the
 //! background and tells the page, which offers "Restart now". Otherwise it's put
 //! in place when you quit, so an update never interrupts a jam.

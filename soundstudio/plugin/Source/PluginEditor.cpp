@@ -40,10 +40,10 @@ void AirBandSendEditor::paint(juce::Graphics& g) {
     g.setColour(c); g.fillRoundedRectangle(light, 2.0f);
     row.removeFromLeft(10);
     g.setColour(ink); g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-    g.drawText(connected ? "Live in air.band" : "Waiting for air.band", row, juce::Justification::centredLeft);
+    g.drawText(connected ? "Live in airband" : "Waiting for airband", row, juce::Justification::centredLeft);
     r.removeFromTop(4);
     g.setColour(muted); g.setFont(juce::FontOptions(12.0f));
-    g.drawText(connected ? "This track is your input in the jam." : "Open the air.band app and join a room.", r.removeFromTop(18), juce::Justification::centredLeft);
+    g.drawText(connected ? "This track is your input in the jam." : "Open the airband app and join a room.", r.removeFromTop(18), juce::Justification::centredLeft);
     // level: a row of 16 step lights (the last two turn red near clipping)
     r.removeFromTop(12);
     auto m = r.removeFromTop(10).toFloat();

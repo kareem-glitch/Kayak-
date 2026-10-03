@@ -1,4 +1,4 @@
-// The plugin's side of the link to the air.band app (same computer, UDP on
+// The plugin's side of the link to the airband app (same computer, UDP on
 // 127.0.0.1). Packet format: see desktop/engine/src/link.rs.
 //   audio thread:  push()  resamples your track to 48 kHz into a lock-free queue
 //   sender thread: sends it in packets of 128 frames, reads the app's replies
@@ -59,7 +59,7 @@ inline int encodePacket(uint8_t* dst, int channels, int frames, uint32_t seq, fl
 
 class Link : private juce::Thread {
 public:
-    Link() : juce::Thread("air.band link") {}
+    Link() : juce::Thread("airband link") {}
     ~Link() override { stop(); }
 
     // Audio settings changed (or first use): sampleRate, the DAW's block size, channels (1 or 2).

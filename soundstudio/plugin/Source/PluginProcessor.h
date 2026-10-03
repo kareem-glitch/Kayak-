@@ -1,5 +1,5 @@
-// air.band Send: passes your track through untouched and streams it to the
-// air.band app (see Link.h). No settings: drop it on the track and play.
+// airband Send: passes your track through untouched and streams it to the
+// airband app (see Link.h). No settings: drop it on the track and play.
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Link.h"
@@ -15,7 +15,7 @@ public:
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
-    const juce::String getName() const override { return "air.band Send"; }
+    const juce::String getName() const override { return "airband Send"; }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     double getTailLengthSeconds() const override { return 0.0; }

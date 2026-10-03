@@ -36,7 +36,7 @@ pub struct Shared {
     pub out_tx: Sender<Out>,
     mic_gain: AtomicU32, peak: AtomicU32, in_lat: AtomicU32, out_lat: AtomicU32,
     pub rec: AtomicBool,
-    /// The air.band plugin is streaming your DAW's audio: it's your input (see plugin.rs).
+    /// The airband plugin is streaming your DAW's audio: it's your input (see plugin.rs).
     pub plugin_live: AtomicBool,
     /// Your input channel choice (InputChannel as a number), for the plugin input too.
     pub channel: AtomicU32,

@@ -151,7 +151,7 @@ if(audio.canPlugin()){
   $('#pluginRow').hidden = false;
   $('#pluginInstall').onclick = async () => {
     const b = $('#pluginInstall'); b.disabled = true; b.textContent = 'Installing…';
-    try{ const r = await audio.installPlugin(); b.textContent = 'Installed'; $('#pluginStatus').textContent = 'Installed. Restart your DAW (or rescan plugins), then add “air.band Send” to your guitar track. It goes into: ' + r.paths.join(' · '); }
+    try{ const r = await audio.installPlugin(); b.textContent = 'Installed'; $('#pluginStatus').textContent = 'Installed. Restart your DAW (or rescan plugins), then add “airband Send” to your guitar track. It goes into: ' + r.paths.join(' · '); }
     catch(e){ b.disabled = false; b.textContent = 'Install the plugin'; $('#pluginStatus').textContent = 'Couldn’t install: ' + (e.message || e); }
   };
 }
@@ -161,7 +161,7 @@ function showPlugin(){
   $('#pluginRow').classList.toggle('live', live);
   $('#inDev').disabled = live;
   if(live) $('#pluginStatus').textContent = 'Live: your DAW track is your input. Stop playback or remove the plugin to go back to your audio device.';
-  else if($('#pluginInstall').textContent !== 'Installed') $('#pluginStatus').textContent = 'Put the air.band Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.';
+  else if($('#pluginInstall').textContent !== 'Installed') $('#pluginStatus').textContent = 'Put the airband Send plugin on your guitar track (Logic, Ableton, Reaper…). Your whole chain, amp sims and all, becomes your input here.';
 }
 
 function showConnection(){
@@ -234,7 +234,7 @@ function barsHint(c){
 // computer is blocking the mic for this app or browser. Say so, once, plainly.
 let heardInput = false, joinedAt = 0, silenceTold = false;
 const blockedMicTip = () => audio.IN_APP
-  ? (/Mac/.test(navigator.userAgent) ? 'Nothing is coming in from your mic or interface. On a Mac: System Settings → Privacy & Security → Microphone → turn on air.band, then restart the app.' : 'Nothing is coming in from your mic or interface. On Windows: Settings → Privacy → Microphone → turn on “Let desktop apps access your microphone”, then restart the app.')
+  ? (/Mac/.test(navigator.userAgent) ? 'Nothing is coming in from your mic or interface. On a Mac: System Settings → Privacy & Security → Microphone → turn on airband, then restart the app.' : 'Nothing is coming in from your mic or interface. On Windows: Settings → Privacy → Microphone → turn on “Let desktop apps access your microphone”, then restart the app.')
   : 'Nothing is coming in from your mic or interface. Check the browser allows the microphone (the icon in the address bar) and the right input is picked in Audio settings.';
 function noteInput(pk){
   if(pk > 0) heardInput = true;
@@ -296,7 +296,7 @@ function showTone(id){
   toneNow = id; showAmpNote();
   document.querySelectorAll('[data-tone]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.tone === id)));
   $('#eqBox').hidden = id === 'off';
-  $('#toneNote').textContent = toneNotes[id] || 'You hear your tone through air.band. Turn off direct monitoring on your interface so you don’t hear the dry signal too.';
+  $('#toneNote').textContent = toneNotes[id] || 'You hear your tone through airband. Turn off direct monitoring on your interface so you don’t hear the dry signal too.';
 }
 async function pickTone(id){
   showTone(id); store.set('ss.tone', id);
@@ -372,7 +372,7 @@ if(audio.IN_APP) document.addEventListener('click', async e => {
   const a = e.target.closest && e.target.closest('a[download]');
   if(!a || !/^blob:/.test(a.href)) return;
   e.preventDefault();
-  if(older(window.__SS_NATIVE.version, '0.6.3')){ ui.notice(audio.stats.update ? 'Saving takes needs the update that’s ready: quit air.band and open it again.' : 'Saving takes from the app comes with the next update (it installs itself). For now, open air.band in Chrome to download.'); return; }
+  if(older(window.__SS_NATIVE.version, '0.6.3')){ ui.notice(audio.stats.update ? 'Saving takes needs the update that’s ready: quit airband and open it again.' : 'Saving takes from the app comes with the next update (it installs itself). For now, open airband in Chrome to download.'); return; }
   const was = a.textContent;
   try{
     a.textContent = 'Saving…';
@@ -389,10 +389,10 @@ setInterval(() => {
   const v = audio.IN_APP && audio.stats.update; if(!v || updateShown) return;
   updateShown = true;
   const restart = () => audio.installUpdate().catch(e => ui.notice('Couldn’t install the update: ' + (e.message || e)));
-  if($('#roomView').hidden){ $('#appNote').innerHTML = `air.band ${esc(v)} is ready. <button type="button" class="linkbtn" id="updateNow">Restart now</button> or it installs when you quit.`; $('#updateNow').onclick = restart; }
-  else ui.notice(`air.band ${v} is ready. It installs when you quit the app.`, { action: { label: 'Restart now', run: restart }, key: 'update' });
+  if($('#roomView').hidden){ $('#appNote').innerHTML = `airband ${esc(v)} is ready. <button type="button" class="linkbtn" id="updateNow">Restart now</button> or it installs when you quit.`; $('#updateNow').onclick = restart; }
+  else ui.notice(`airband ${v} is ready. It installs when you quit the app.`, { action: { label: 'Restart now', run: restart }, key: 'update' });
 }, 2000);
-if(!audio.IN_APP && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/air.band-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/air.band-${APP_VERSION}-Windows-setup.exe">Windows</a><br>Play through your DAW with the air.band Send plugin (works with the app): <a href="/download/airband-send-${APP_VERSION}-Mac.zip">Mac AU/VST3</a> · <a href="/download/airband-send-${APP_VERSION}-Windows.zip">Windows VST3</a>`;
+if(!audio.IN_APP && !audio.isPhone()) $('#appNote').innerHTML = `For the lowest delay, get the desktop app: <a href="/download/air.band-${APP_VERSION}-Mac.zip">Mac</a> · <a href="/download/air.band-${APP_VERSION}-Windows-setup.exe">Windows</a><br>Play through your DAW with the airband Send plugin (works with the app): <a href="/download/airband-send-${APP_VERSION}-Mac.zip">Mac AU/VST3</a> · <a href="/download/airband-send-${APP_VERSION}-Windows.zip">Windows VST3</a>`;
 if(audio.IN_APP){ $('#inviteField').hidden = false; $('#roomLine').textContent = 'Native low-latency audio. Paste an invite link to join a jam, or leave it empty to start one.'; }
 if(joinId) $('#roomLine').textContent = 'You’ve been invited to a jam. Add your name and join.';
 // A ready-made name for first-timers (keep it or roll another), like Discord or Reddit.
@@ -410,7 +410,7 @@ $('#joinBtn').onclick = join;
 let hearing = false, scTimer = null, scHeard = 0, scStarted = 0, scHold = -60, scClip = 0;
 function setHear(on){
   hearing = on; $('#scHear').setAttribute('aria-pressed', String(on)); $('#scHear').textContent = on ? 'Stop hearing myself' : 'Hear myself';
-  // your input played back through air.band, the way it leaves you (in the browser an amp already plays you back)
+  // your input played back through airband, the way it leaves you (in the browser an amp already plays you back)
   room.taps.local = on ? planes => { if(!(toneNow !== 'off' && audio.canTone())) audio.deliver('monitor', planes); } : null;
   if(!on) audio.forget('monitor');
 }
@@ -588,7 +588,7 @@ function setCam(on, retry = false){
     navigator.mediaDevices.getUserMedia({ video:{ width:640, height:480 } }).then(s => {
       const t = s.getVideoTracks()[0]; media.addTrack(t);
       const vs = new MediaStream([t]); ui.showVideoIn(ui.tileFor({ identity:me.id, name:me.name }), vs); room.setVideo(vs); avatar.setCam(true);
-    }).catch(e => { setCam(false); ui.notice('Camera unavailable (' + (e.name || e) + '). ' + (/Mac/.test(navigator.userAgent) ? 'On a Mac: System Settings → Privacy & Security → Camera → turn on ' + (audio.IN_APP ? 'air.band' : 'your browser') + ', then restart it.' : 'Allow the camera for this site, then try again.'), { key: 'cam' }); })
+    }).catch(e => { setCam(false); ui.notice('Camera unavailable (' + (e.name || e) + '). ' + (/Mac/.test(navigator.userAgent) ? 'On a Mac: System Settings → Privacy & Security → Camera → turn on ' + (audio.IN_APP ? 'airband' : 'your browser') + ', then restart it.' : 'Allow the camera for this site, then try again.'), { key: 'cam' }); })
       .finally(() => { camBusy = false; });
   }
   avatar.setCam(on && !!v);
@@ -807,11 +807,11 @@ $('#pfSaveEmail').onclick = async () => {
 $('#pfSignIn').onclick = async () => {
   const e = $('#pfEmail').value.trim(); if(!validEmail(e)){ $('#pfEmail').focus(); return pfMsg('Type your email above, then tap Sign in again.'); }
   pfMsg('Sending…');
-  try{ await account.signIn(e); pfMsg(audio.IN_APP ? 'Sent. The link opens air.band in your browser, signed in (signing in inside the app is coming).' : 'Sent. Tap the link in the email to sign in here.', 'ok'); }
+  try{ await account.signIn(e); pfMsg(audio.IN_APP ? 'Sent. The link opens airband in your browser, signed in (signing in inside the app is coming).' : 'Sent. Tap the link in the email to sign in here.', 'ok'); }
   catch(err){ pfMsg(/not found|signups not allowed|user/i.test(err.message) ? 'No account with that email yet: tap Save to make one.' : 'Couldn’t send: ' + err.message, 'warn'); }
 };
 $('#pfSignOut').onclick = async () => { await account.signOut(); pfMsg('Signed out.'); loadProfile(); };
-$('#pfDelete').onclick = async () => { if(!confirm('Delete your air.band account, profile and jam history? This can’t be undone.')) return; await account.deleteMe(); pfMsg('Deleted.'); loadProfile(); };
+$('#pfDelete').onclick = async () => { if(!confirm('Delete your airband account, profile and jam history? This can’t be undone.')) return; await account.deleteMe(); pfMsg('Deleted.'); loadProfile(); };
 account.hooks.onChange = () => { showAccount(); loadProfile(); };
 // Google (once it's switched on). Not inside the desktop app yet: Google doesn't allow
 // signing in from an app's own web window, only a real browser.
