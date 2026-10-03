@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>air.band: jam together, live, from anywhere</title>
-<meta name="description" content="A jam room for musicians. Real-time audio between browsers or the air.band app, BARS mode for trading solos over any distance, and an AI band that plays along.">
+<title>air.band: jam with anyone, anywhere</title>
+<meta name="description" content="Plug in, send a link, and play music with friends as if you were in the same room.">
 <script>
 // Invite links (?join=…), sign-in links coming back, and the desktop app go straight to the jam room.
 (() => { const q = new URLSearchParams(location.search), h = location.hash;
@@ -42,6 +42,7 @@ nav .wrap{display:flex;align-items:center;gap:22px;height:64px}
 nav .links{display:flex;gap:20px;margin-left:auto;align-items:center}
 nav .links a{text-decoration:none;color:var(--muted);font-weight:600;font-size:.95rem}
 nav .links a:hover{color:var(--ink)}
+nav .links a.btn-primary{color:var(--amber-ink)} nav .links a.btn-ghost{color:var(--ink)}
 nav .btn{padding:9px 16px}
 /* hero */
 .hero{padding:72px 0 56px}
@@ -114,18 +115,18 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 <body>
 <nav><div class="wrap">
   <a class="logo" href="/">air<i>.</i>band</a>
-  <div class="links"><a href="#how">How it works</a><a href="#bars">BARS</a><a href="#gear">Download</a>
-    <a class="btn btn-ghost" href="#account" id="navAccount">Sign in</a><a class="btn btn-primary" href="/jam/">Start a jam</a></div>
+  <div class="links"><a href="#how">Features</a><a href="#bars">How it works</a><a href="#gear">Download</a>
+    <a class="btn btn-ghost" href="#account" id="navAccount">Sign in</a><a class="btn btn-primary" href="/jam/">Start jamming</a></div>
 </div></nav>
 
 <header class="hero"><div class="wrap">
   <div>
-    <span class="label">Jam room · up to 4 players</span>
-    <h1>Play together.<br><em>Live.</em> From anywhere.</h1>
-    <p class="lead">A jam room for musicians. Plug in, send a link, and play with friends in real time, or trade solos over any distance in BARS mode, with an AI band that keeps the groove.</p>
-    <div class="ctas"><a class="btn btn-primary" href="/jam/">Start a jam, free</a><a class="btn" href="#account" id="heroSignup">Sign up</a></div>
-    <form class="invite" id="inviteForm"><input id="inviteInput" placeholder="Got an invite? Paste the link" autocomplete="off" aria-label="Invite link"><button class="btn" type="submit">Join</button></form>
-    <p class="hint">No sign-up needed to jam. Wired headphones work best.</p>
+    <span class="label">Music, together</span>
+    <h1>Jam with anyone.<br><em>Anywhere.</em></h1>
+    <p class="lead">Plug in, send a link, and play with friends as if you were in the same room. No studio. No hassle. Just music.</p>
+    <div class="ctas"><a class="btn btn-primary" href="/jam/">Start jamming</a><a class="btn" href="#account" id="heroSignup">Create account</a></div>
+    <form class="invite" id="inviteForm"><input id="inviteInput" placeholder="Have an invite? Paste it here" autocomplete="off" aria-label="Invite link"><button class="btn" type="submit">Join</button></form>
+    <p class="hint">Free to play. No account needed.</p>
   </div>
   <div class="plate" aria-hidden="true">
     <div class="lcd"><span class="label">Slow funk · BARS 8</span><b>Em · 96</b><div class="leds" id="leds"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></div>
@@ -137,56 +138,56 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between}
 </div></header>
 
 <section id="how"><div class="wrap">
-  <span class="label">What you get</span>
-  <h2>Built for timing first</h2>
-  <p class="sub">Most video calls smear music. air.band sends your instrument raw and measures every millisecond, so you can hear where the delay goes and fix it.</p>
+  <span class="label">Why air.band</span>
+  <h2>It feels like the same room.</h2>
+  <p class="sub">Video calls weren’t made for music. air.band was. Nearby, you play together live. Miles apart, every solo still lands right on the beat.</p>
   <div class="grid">
-    <div class="card"><div class="dot" style="--c:var(--ok)"></div><h3>Real time</h3><p>Under 30 ms between nearby players: it feels like the same room. Straight from browser to browser, or app to app.</p></div>
-    <div class="card"><div class="dot" style="--c:var(--amber)"></div><h3>BARS</h3><p>Trade 4, 8 or 16 bars. Whoever's soloing is always on the beat for everyone, whatever the distance.</p></div>
-    <div class="card"><div class="dot" style="--c:var(--keys)"></div><h3>An AI band</h3><p>Pick a track or describe one. Take a part and the AI steps out; transpose or change the tempo any time.</p></div>
-    <div class="card"><div class="dot" style="--c:var(--bass)"></div><h3>Record it</h3><p>The whole jam, with video, plus a separate track per player for your DAW.</p></div>
+    <div class="card"><div class="dot" style="--c:var(--ok)"></div><h3>In the moment</h3><p>Play together, live, the way music is meant to be made.</p></div>
+    <div class="card"><div class="dot" style="--c:var(--amber)"></div><h3>Take turns, perfectly</h3><p>Trade solos with friends anywhere in the world. Every phrase arrives right on time.</p></div>
+    <div class="card"><div class="dot" style="--c:var(--keys)"></div><h3>A band that’s always ready</h3><p>Pick a groove or describe one. The band plays along, and steps aside when you take the lead.</p></div>
+    <div class="card"><div class="dot" style="--c:var(--bass)"></div><h3>Keep the magic</h3><p>Record every jam, video and all, with each player’s part ready to mix.</p></div>
   </div>
 </div></section>
 
 <section id="bars"><div class="wrap">
-  <span class="label">How a jam works</span>
-  <h2>Three steps</h2>
+  <span class="label">How it works</span>
+  <h2>Your first jam, in three steps.</h2>
   <div class="steps">
-    <div class="step"><b>Start a jam</b><span>Do a quick sound check, pick what you play, choose free jam or BARS.</span></div>
-    <div class="step"><b>Send the link</b><span>Up to three friends join from their browser or the app. No accounts needed.</span></div>
-    <div class="step"><b>Play</b><span>Start the band and go. The connection panel shows each player's delay, part by part.</span></div>
+    <div class="step"><b>Start a room</b><span>Choose your instrument and check your sound. It takes seconds.</span></div>
+    <div class="step"><b>Invite your friends</b><span>Send a link. Up to three friends join from any browser.</span></div>
+    <div class="step"><b>Play</b><span>Count it in, and lose yourself in the music.</span></div>
   </div>
 </div></section>
 
 <section id="gear"><div class="wrap">
-  <span class="label">Lowest delay</span>
-  <h2>The app and the plugin</h2>
+  <span class="label">For your setup</span>
+  <h2>Even tighter, with the app.</h2>
   <div class="gear">
-    <div class="card"><h3>Desktop app</h3><p>Native audio for the lowest delay (ASIO on Windows), app-to-app connections, and it updates itself.</p><div class="dl" id="dlApp"><a class="btn" href="/download/">Mac</a><a class="btn" href="/download/">Windows</a></div></div>
-    <div class="card"><h3>DAW plugin</h3><p>Put air.band Send on a track in Logic, Ableton or Reaper: your whole chain, amp sims and all, becomes your input.</p><div class="dl" id="dlPlugin"><a class="btn" href="/download/">Mac AU/VST3</a><a class="btn" href="/download/">Windows VST3</a></div></div>
+    <div class="card"><h3>air.band for Mac and Windows</h3><p>The tightest timing, made for your audio interface. Free, and always up to date.</p><div class="dl" id="dlApp"><a class="btn" href="/download/">Mac</a><a class="btn" href="/download/">Windows</a></div></div>
+    <div class="card"><h3>air.band in your studio</h3><p>Play straight from Logic, Ableton or Reaper, with your whole sound, effects and all.</p><div class="dl" id="dlPlugin"><a class="btn" href="/download/">Mac</a><a class="btn" href="/download/">Windows</a></div></div>
   </div>
 </div></section>
 
 <section id="account"><div class="wrap"><div class="auth">
   <span class="label">Your account</span>
-  <h2 id="authTitle">Sign up or sign in</h2>
-  <p class="sub" id="authSub" style="margin:0 auto 24px">Keep your profile, instruments and jam history on every device. Free.</p>
+  <h2 id="authTitle">Make it yours.</h2>
+  <p class="sub" id="authSub" style="margin:0 auto 24px">Save your profile and every jam, on all your devices.</p>
   <div class="card" id="authForm">
     <button class="btn" type="button" id="googleBtn" hidden><svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>Continue with Google</button>
     <div class="or" id="googleOr" hidden>or</div>
     <form id="emailForm"><label for="email">Email</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com" required>
     <button class="btn btn-primary" type="submit" id="emailBtn">Continue with email</button></form>
     <p class="msg" id="authMsg" aria-live="polite"></p>
-    <p class="fine">We'll email you a link to sign in. New here? The same link makes your account.</p>
+    <p class="fine">We’ll email you a link. No password to remember.</p>
   </div>
   <div class="card" id="authIn" hidden>
     <p style="margin:0">Signed in as <b id="authWho"></b>.</p>
-    <a class="btn btn-primary" href="/jam/">Start a jam</a>
+    <a class="btn btn-primary" href="/jam/">Start jamming</a>
     <button class="btn" type="button" id="signOut">Sign out</button>
   </div>
 </div></div></section>
 
-<footer><div class="wrap"><span>air.band</span><span>Made for musicians. Wired headphones, please.</span></div></footer>
+<footer><div class="wrap"><span>air.band</span><span>Made for musicians, everywhere.</span></div></footer>
 
 <script type="module">
 // The turn lights in the mock: a bar at a time, the solo passing round.
@@ -219,7 +220,7 @@ const acc = async () => account || (account = await import('/app/account.js'));
 const msg = (t, k = '') => { const m = document.getElementById('authMsg'); m.textContent = t; m.className = 'msg ' + k; };
 function signedIn(u){
   document.getElementById('authForm').hidden = !!u; document.getElementById('authIn').hidden = !u;
-  document.getElementById('authTitle').textContent = u ? 'Welcome back' : 'Sign up or sign in';
+  document.getElementById('authTitle').textContent = u ? 'Welcome back.' : 'Make it yours.';
   document.getElementById('authWho').textContent = u ? (u.email || 'your Google account') : '';
   document.getElementById('navAccount').textContent = u ? 'Account' : 'Sign in';
 }
@@ -237,8 +238,8 @@ document.getElementById('emailForm').onsubmit = async e => {
   e.preventDefault();
   const email = document.getElementById('email').value.trim(), btn = document.getElementById('emailBtn');
   btn.disabled = true; msg('Sending…');
-  try{ const a = await acc(); await a.emailLink(email); msg(`Check ${email} and tap the link. It brings you straight into air.band.`, 'ok'); }
-  catch(err){ msg(/rate|limit|seconds/i.test(err.message) ? 'Too many emails just now. Try again in a few minutes, or start a jam without signing in.' : 'Couldn’t send: ' + err.message, 'warn'); }
+  try{ const a = await acc(); await a.emailLink(email); msg(`Check your inbox. We’ve sent a link to ${email}.`, 'ok'); }
+  catch(err){ msg(/rate|limit|seconds/i.test(err.message) ? 'We’ve sent a lot of emails just now. Try again in a few minutes, or start jamming without an account.' : 'Couldn’t send: ' + err.message, 'warn'); }
   btn.disabled = false;
 };
 document.getElementById('googleBtn').onclick = async () => { msg('Opening Google…'); try{ await (await acc()).googleIn(); }catch(err){ msg('Couldn’t open Google: ' + err.message, 'warn'); } };

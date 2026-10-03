@@ -12,7 +12,7 @@ test('landing page: start, paste an invite, old links, the app', { timeout: 6000
     const root = h.base.replace(/\/jam\/\?.*$/, '/');
     const A = await h.page('Visitor');
     await A.goto(root);
-    assert.match(await A.textContent('h1'), /Play together/);
+    assert.match(await A.textContent('h1'), /Jam with anyone/);
     if(SHOTS){ await A.screenshot({ path: SHOTS + '/landing.png', fullPage: true }); await A.setViewportSize({ width: 390, height: 844 }); await A.screenshot({ path: SHOTS + '/landing-phone.png', fullPage: true }); await A.setViewportSize({ width: 1400, height: 900 }); }
     await A.click('.hero .btn-primary'); await A.waitForURL(/\/jam\/$/);
     assert.ok(await A.isVisible('#joinBtn'), 'Start a jam opens the room');
