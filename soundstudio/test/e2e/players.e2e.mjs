@@ -19,7 +19,7 @@ test('camera on/off: the room sees your camera or a person icon; characters are 
     await B.waitForFunction(() => [...document.querySelectorAll('.tile.nocam')].some(t => t.dataset.name === 'Host'), null, { timeout: 30000 });
     assert.ok(await iconFor(B, 'Host'), 'the guest sees a person icon for the host (camera off)');
     assert.ok(!await iconFor(B, 'Guest'), '... and their own camera');
-    assert.equal(await B.locator('.tile canvas.sprite').count(), 0, 'no pixel characters for people');
+    assert.equal(await B.locator('.tile svg.char').count(), 0, 'no characters for people');
     assert.equal(await A.getAttribute('#camToggle', 'aria-pressed'), 'false');
     if(SHOTS){ await B.waitForTimeout(1500); await B.screenshot({ path: SHOTS + '/players-room.png' }); await A.screenshot({ path: SHOTS + '/players-host.png' }); }
     await A.click('#camToggle');   // camera back on in the room
@@ -28,7 +28,7 @@ test('camera on/off: the room sees your camera or a person icon; characters are 
     // only who's really there stands in the circle: no band yet, so just the two of them
     const spots = () => B.evaluate(() => [...document.querySelectorAll('.spot')].map(sp => sp.querySelector('.who').textContent + (sp.classList.contains('muted') ? ' (muted)' : '')));
     assert.ok((await spots()).includes('Drums'), 'the band is loaded: its parts stand there too');
-    await B.waitForFunction(() => document.querySelector('.spot.ai canvas.sprite'), null, { timeout: 5000 });   // the AI players are characters
+    await B.waitForFunction(() => document.querySelector('.spot.ai svg.char use'), null, { timeout: 5000 });   // the AI players are characters (Moss, Juno, Blaze, Dex)
     // tap an AI player to mute it, just for you
     await B.click('.spot.ai[data-seat="drums"]');
     assert.ok((await spots()).includes('Drums (muted)'), 'tapping the AI drummer mutes it for the guest');

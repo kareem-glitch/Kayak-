@@ -10,7 +10,7 @@ Live at https://air.band (Vercel project `soundstudio`; the old soundstudio-wine
   DAW plugin (`plugin/`), in the same change or the one straight after. The app loads the
   live site, so page-only changes carry over automatically; anything that touches audio
   (tones, synth, delay test, input/output) needs its native counterpart in
-  `app/audio/native-io.js` + `desktop/src-tauri`. Names, look (the Roland P-6 theme) and
+  `app/audio/native-io.js` + `desktop/src-tauri`. Names, look (the light look: Plus Jakarta Sans, soft white cards, pastel player tiles, the AI band as drawn characters; see the end of app/styles.css) and
   version numbers match everywhere. The name is **airband**, one word, everywhere people see it;
   air.band is only the web address (and the app's and plugin's file names, which stay so installs
   and updates keep working).

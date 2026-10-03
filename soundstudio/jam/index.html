@@ -7,7 +7,7 @@
 <link rel="icon" href="/logo.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/logo-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Saira:wdth,wght@125,600;125,700;125,800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script>
 // Remember every AudioContext the page creates, including the one inside Tone.js,
 // so the output device picker can switch all of them (AudioContext.setSinkId).
@@ -19,6 +19,95 @@ window.__audioContexts = [];
 <link rel="stylesheet" href="/app/styles.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  .display .big{margin:0;gap:6px}
+  .display .big b{font-size:1.3rem}
+</defs>
+  <symbol id="moss" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="80" ry="6" fill="#17151c" opacity=".08"/>
+    <path d="M78 116 52 92M122 116l26-24" stroke="#0984e3" stroke-width="15" stroke-linecap="round"/>
+    <rect x="68" y="98" width="64" height="62" rx="26" fill="#0984e3"/><path d="M80 104q20 10 40 0" stroke="#0a6fc0" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <g class="sticks" stroke="#e2b46a" stroke-width="5" stroke-linecap="round"><path d="M52 92 34 62M148 92l18-30"/></g>
+    <circle cx="52" cy="92" r="8" fill="#e8b48f"/><circle cx="148" cy="92" r="8" fill="#e8b48f"/>
+    <circle cx="100" cy="70" r="30" fill="#e8b48f"/>
+    <ellipse cx="72" cy="76" rx="6" ry="9" fill="#d8a444"/><ellipse cx="128" cy="76" rx="6" ry="9" fill="#d8a444"/>
+    <path d="M68 68q0-34 32-34t32 34z" fill="#2f8f4e"/><rect x="66" y="58" width="68" height="13" rx="6.5" fill="#236b3a"/><circle cx="100" cy="32" r="7" fill="#2f8f4e"/>
+    <rect x="74" y="74" width="52" height="17" rx="8.5" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="79" width="11" height="7" rx="3.5"/><rect x="105" y="79" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 95q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g stroke="#6b6672" stroke-width="3" stroke-linecap="round"><path d="M30 116v72M170 112v76"/></g>
+    <ellipse cx="30" cy="114" rx="24" ry="5.5" fill="url(#cym)"/><ellipse cx="170" cy="110" rx="22" ry="5" fill="url(#cym)"/>
+    <rect x="58" y="124" width="34" height="22" rx="5" fill="#ff8fb1"/><ellipse cx="75" cy="124" rx="17" ry="5" fill="#fff0f5"/>
+    <rect x="108" y="124" width="34" height="22" rx="5" fill="#9fd2ff"/><ellipse cx="125" cy="124" rx="17" ry="5" fill="#eaf4ff"/>
+    <circle cx="100" cy="160" r="32" fill="#236b3a"/><circle cx="100" cy="160" r="25" fill="#f4f1ea"/>
+    <text x="100" y="165" text-anchor="middle" font-size="13" font-weight="800" fill="#2b2730" font-family="system-ui,sans-serif">air.</text>
+  </symbol>
+  <symbol id="juno" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="64" ry="6" fill="#17151c" opacity=".08"/>
+    <rect x="64" y="40" width="72" height="92" rx="32" fill="#7b4fd6"/>
+    <rect x="84" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/><rect x="103" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/>
+    <ellipse cx="89" cy="187" rx="10" ry="5" fill="#1b1b1b"/><ellipse cx="111" cy="187" rx="10" ry="5" fill="#1b1b1b"/>
+    <rect x="72" y="102" width="56" height="58" rx="22" fill="#29a19c"/>
+    <path d="M124 114q16 2 28-8" stroke="#29a19c" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-36 100 140)">
+      <rect x="96" y="134" width="88" height="9" rx="3" fill="url(#wood)"/>
+      <path d="M182 131h16l3 15h-19z" fill="url(#wood)"/>
+      <g fill="#c9ced6"><circle cx="188" cy="128" r="3"/><circle cx="196" cy="128" r="3"/><circle cx="188" cy="149" r="3"/><circle cx="196" cy="149" r="3"/></g>
+      <path d="M100 138c-6-12-22-18-34-14-10 3-10 9-6 14-10 2-14 10-10 18s14 10 22 6c4 6 14 8 22 2 8-6 10-16 6-26z" fill="#2a9d8f"/>
+      <path d="M92 132c-8-4-18-2-22 4 6 2 8 8 4 14 8 4 18 2 22-6z" fill="#f4f1ea" opacity=".9"/>
+      <rect x="76" y="134" width="4" height="10" rx="1.5" fill="#2b2730"/><rect x="86" y="134" width="4" height="10" rx="1.5" fill="#2b2730"/>
+      <g stroke="#9a94a3" stroke-width="1"><path d="M70 136.5h126M70 140.5h126"/></g>
+    </g>
+    <path d="M78 116q-4 18 10 30" stroke="#29a19c" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <circle class="strum" cx="90" cy="146" r="7.5" fill="#c68a62"/><circle cx="153" cy="104" r="7.5" fill="#c68a62"/>
+    <circle cx="100" cy="72" r="28" fill="#c68a62"/>
+    <path d="M71 74q1-34 29-34t29 34q-12-16-29-15t-29 15z" fill="#7b4fd6"/>
+    <rect x="75" y="72" width="50" height="16" rx="8" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="76.5" width="11" height="7" rx="3.5"/><rect x="105" y="76.5" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 93q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="blaze" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="80" ry="6" fill="#17151c" opacity=".08"/>
+    <rect x="70" y="96" width="60" height="56" rx="24" fill="#34322d"/>
+    <path d="M78 112q-14 14-22 30M122 112q14 14 22 30" stroke="#34322d" stroke-width="14" fill="none" stroke-linecap="round"/>
+    <circle cx="100" cy="66" r="28" fill="#f6d2b8"/>
+    <path d="M70 66l-2-26 12 10 6-20 10 14 8-18 8 18 10-14 6 20 12-10-2 26q-12-12-30-12t-38 12z" fill="#d8322a"/>
+    <rect x="75" y="68" width="50" height="16" rx="8" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="72.5" width="11" height="7" rx="3.5"/><rect x="105" y="72.5" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 89q6 5 12 0" stroke="#a33a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g stroke="#6b6672" stroke-width="3.5" stroke-linecap="round"><path d="M40 170l-10 20M160 170l10 20"/></g>
+    <rect x="18" y="136" width="164" height="36" rx="9" fill="#2b2730"/>
+    <rect x="26" y="146" width="148" height="20" rx="4" fill="#fffdf8"/>
+    <g stroke="#d8d2cb" stroke-width="1.5"><path d="M44.5 146v20M63 146v20M81.5 146v20M100 146v20M118.5 146v20M137 146v20M155.5 146v20"/></g>
+    <g fill="#2b2730"><rect x="39" y="146" width="8" height="12" rx="1.5"/><rect x="58" y="146" width="8" height="12" rx="1.5"/><rect x="95" y="146" width="8" height="12" rx="1.5"/><rect x="113" y="146" width="8" height="12" rx="1.5"/><rect x="132" y="146" width="8" height="12" rx="1.5"/></g>
+    <g fill="#ffcc00"><circle cx="34" cy="141" r="2.2"/><circle cx="42" cy="141" r="2.2"/></g>
+    <circle class="strum" cx="58" cy="142" r="7.5" fill="#f6d2b8"/><circle cx="142" cy="142" r="7.5" fill="#f6d2b8"/>
+  </symbol>
+  <symbol id="dex" viewBox="0 0 200 200">
+    <ellipse cx="100" cy="192" rx="64" ry="6" fill="#17151c" opacity=".08"/>
+    <rect x="84" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/><rect x="103" y="150" width="13" height="36" rx="6" fill="#2d3a4a"/>
+    <ellipse cx="89" cy="187" rx="10" ry="5" fill="#1b1b1b"/><ellipse cx="111" cy="187" rx="10" ry="5" fill="#1b1b1b"/>
+    <rect x="72" y="102" width="56" height="58" rx="22" fill="#f0a238"/>
+    <path d="M124 114q16 2 28-8" stroke="#f0a238" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <g transform="rotate(-34 100 140)">
+      <rect x="98" y="135" width="72" height="8" rx="3" fill="url(#wood)"/>
+      <path d="M168 132h14l3 13h-17z" fill="url(#wood)"/>
+      <g fill="#c9ced6"><circle cx="173" cy="129" r="2.6"/><circle cx="180" cy="129" r="2.6"/><circle cx="173" cy="148" r="2.6"/><circle cx="180" cy="148" r="2.6"/></g>
+      <path d="M100 138c-6-11-20-16-31-13-9 3-9 8-6 13-9 2-13 9-9 16s13 9 20 5c4 6 13 7 20 2 7-5 9-14 6-23z" fill="#e07b1f"/>
+      <path d="M92 133c-7-3-16-2-20 4 6 2 7 7 4 12 7 4 16 2 20-5z" fill="#fff8ee" opacity=".92"/>
+      <rect x="77" y="135" width="3.5" height="9" rx="1.5" fill="#2b2730"/><rect x="85" y="135" width="3.5" height="9" rx="1.5" fill="#2b2730"/>
+      <g stroke="#9a94a3" stroke-width="1"><path d="M70 137h110M70 141h110"/></g>
+    </g>
+    <path d="M78 116q-4 18 10 30" stroke="#f0a238" stroke-width="13" fill="none" stroke-linecap="round"/>
+    <circle class="strum" cx="90" cy="146" r="7.5" fill="#8d5a3b"/><circle cx="153" cy="104" r="7.5" fill="#8d5a3b"/>
+    <g fill="#2b1d16"><circle cx="100" cy="52" r="30"/><circle cx="74" cy="64" r="14"/><circle cx="126" cy="64" r="14"/></g>
+    <circle cx="100" cy="72" r="26" fill="#8d5a3b"/>
+    <path d="M74 66q2-24 26-24t26 24q-10-10-26-10t-26 10z" fill="#2b1d16"/>
+    <rect x="75" y="70" width="50" height="16" rx="8" fill="#15161a"/>
+    <g class="eyes" fill="#8fe8ff"><rect x="84" y="74.5" width="11" height="7" rx="3.5"/><rect x="105" y="74.5" width="11" height="7" rx="3.5"/></g>
+    <path d="M94 91q6 5 12 0" stroke="#5a2a20" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </symbol>
+</svg>
 
 <div class="join" id="joinView">
   <div class="join-card">
@@ -279,12 +368,16 @@ window.__audioContexts = [];
     </div>
     <div class="track"><b id="dockTitle">No band yet</b><span id="dockMeta">Waiting for the band</span></div>
     <div class="controls">
+      <div class="cl">
       <button class="ctl" id="micBtn" aria-pressed="true" aria-label="Mic" title="Mic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/><path class="off" d="M4 4l16 16"/></svg></button>
       <button class="ctl" id="camToggle" aria-pressed="true" aria-label="Camera on" title="Camera on (tap to turn it off)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/><path class="off" d="M3 4l18 17"/></svg></button>
       <button class="ctl" id="synthBtn" aria-pressed="false" aria-label="Synth" title="Play a synth on screen" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 6v7M12 6v7M16 6v7"/></svg></button>
+      </div>
       <button class="play" id="playBtn" aria-label="Play" disabled><svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+      <div class="cr">
       <button class="ctl rec" id="recBtn" aria-pressed="false" aria-label="Record" title="Record"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel"></span></button>
       <button class="ctl leave" id="leaveBtn" aria-label="Leave" title="Leave"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 17l5-5-5-5M21 12H9M12 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/></svg></button>
+      </div>
     </div>
     <span class="dock-end muted small" id="recStatus"></span>
   </footer>

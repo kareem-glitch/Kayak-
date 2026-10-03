@@ -47,6 +47,7 @@ export const charOf = v => Number.isInteger(v) && v >= 0 && v < CHARS.length ? v
 // Each part has its pad colour (like a lit pad), and the AI band its own players.
 export { PAD } from './avatar-colors.js';
 export const AI_CHAR = { drums:3, bass:1, keys:0, guitar:2 };
+const SYMBOL = { drums:'moss', bass:'juno', keys:'blaze', guitar:'dex' };
 
 // The character with its instrument: a Strat (or a longer-necked bass) across the
 // body, a keyboard in front, or a drum kit seen from above. Rows of colour keys.
@@ -114,7 +115,10 @@ setInterval(() => {
   document.querySelectorAll('.spot.ai').forEach(sp => {
     const seat = sp.dataset.seat, out = sp.classList.contains('off');
     const on = S.playing && !out && !sp.classList.contains('muted') && beatNow;
-    draw(sprite(sp.querySelector('.fig')), AI_CHAR[seat] ?? 0, seat, on, on, true);
+    // the AI band: Blaze, Juno, Dex and Moss, drawn (jam/index.html); they bob on the beat while they play
+    const fig = sp.querySelector('.fig'), sym = SYMBOL[seat] || 'moss';
+    if(!fig.querySelector(`svg.char[data-sym="${sym}"]`)) fig.innerHTML = `<svg class="char" data-sym="${sym}" viewBox="0 0 200 200" aria-hidden="true"><use href="#${sym}"/></svg>`;
+    sp.classList.toggle('playing', on);
   });
 }, 80);
 
