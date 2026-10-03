@@ -23,14 +23,16 @@ let split = false, mixFailed = null;
 export async function start(kind, alsoTracks = false){
   what = kind; split = alsoTracks && kind !== 'me'; mixFailed = null;
   tracks.start(id => (room.peers.get(id) || {}).name, { band: kind !== 'me' }); audio.startRecording();   // 'me' too: your take, block by block with no seams   // always: the exact capture behind the timing check
-  if(what !== 'me'){ try{ await mixrec.start({ video: what === 'video', screen: what === 'screen' }); }catch(e){ console.warn('mix recording unavailable', e); mixFailed = e; } }
+  // the whole jam as audio: mixed here from the seamless per-player tracks, as a WAV (a
+  // compressed live recording clicked in Safari and the Mac app); video still records live
+  if(what === 'video' || what === 'screen'){ try{ await mixrec.start({ video: what === 'video', screen: what === 'screen' }); }catch(e){ console.warn('mix recording unavailable', e); mixFailed = e; } }
   return what;
 }
 export const seconds = () => audio.recordedSeconds();
 export const onScreenEnded = fn => { mixrec.hooks.screenEnded = fn; };
 
 export async function stop(){
-  const mix = what === 'me' || mixFailed ? null : mixrec.stop();
+  const mix = (what === 'video' || what === 'screen') && !mixFailed ? mixrec.stop() : null;
   const inMs = audio.inputLatencyMs(), outMs = audio.outputLatencyMs();
   const { mic, out, sampleRate: sr, heardAt } = await audio.stopRecording();
   const n = out.length, you = new Float32Array(n);

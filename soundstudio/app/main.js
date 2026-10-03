@@ -372,7 +372,7 @@ if(audio.IN_APP) document.addEventListener('click', async e => {
   const a = e.target.closest && e.target.closest('a[download]');
   if(!a || !/^blob:/.test(a.href)) return;
   e.preventDefault();
-  if(older(window.__SS_NATIVE.version, '0.6.3')){ ui.notice('Saving takes needs the newest app: quit air.band and open it again to update.'); return; }
+  if(older(window.__SS_NATIVE.version, '0.6.3')){ ui.notice(audio.stats.update ? 'Saving takes needs the update that’s ready: quit air.band and open it again.' : 'Saving takes from the app comes with the next update (it installs itself). For now, open air.band in Chrome to download.'); return; }
   const was = a.textContent;
   try{
     a.textContent = 'Saving…';

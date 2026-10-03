@@ -37,7 +37,7 @@ test('record the whole jam: no clicks', { timeout: 120000 }, async () => {
         return { seconds: x.length / 48000, peak: pk, clicks };
       });
     }
-    for(const [w, r] of Object.entries(res)){ assert.ok(r.peak > 0.05, `${w}: something was recorded`); assert.ok(r.clicks < 40, `${w}: no clicks (${r.clicks} in ${r.seconds.toFixed(1)} s; it was 120+ with video when drawing the picture starved the recorder)`); }
+    console.log("CLICKS", JSON.stringify(res)); for(const [w, r] of Object.entries(res)){ assert.ok(r.peak > 0.05, `${w}: something was recorded`); assert.ok(r.clicks < 40, `${w}: no clicks (${r.clicks} in ${r.seconds.toFixed(1)} s; it was 120+ with video when drawing the picture starved the recorder)`); }
     // sound from a DAW (the desktop app's plugin) arrives in bursts: timestamps that jump
     // about 32 ms. The "Just me" track must still be one continuous stream, no holes.
     const holes = await A.evaluate(async () => {

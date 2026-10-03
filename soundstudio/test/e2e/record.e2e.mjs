@@ -38,7 +38,7 @@ test('record: just me, everyone, everyone + video', { timeout: 180000 }, async (
     assert.match(me.name, /\.wav$/); assert.equal(me.tag, 'AUDIO'); assert.ok(me.wavSeconds > 3.5 && me.wavSeconds < 5.5, `WAV holds ~4 s (${me.wavSeconds})`);
     assert.ok(me.timing, 'timing file offered too');
     const all = await take('all', 4);
-    assert.match(all.name, /\.(webm|m4a)$/); assert.equal(all.tag, 'AUDIO'); assert.match(all.type, /^audio\//); assert.ok(all.size > 20000, `audio file has content (${all.size})`);
+    assert.match(all.name, /\.wav$/, 'the whole jam as a WAV, mixed from the seamless tracks'); assert.equal(all.tag, 'AUDIO'); assert.match(all.type, /^audio\//); assert.ok(all.size > 20000, `audio file has content (${all.size})`);
     // separate tracks: a .zip with a 24-bit WAV each for you, the other player and the band, all about as long as the take
     await h.drawer(A, 'record'); await A.check('#recTracks');
     await take('all', 4);
